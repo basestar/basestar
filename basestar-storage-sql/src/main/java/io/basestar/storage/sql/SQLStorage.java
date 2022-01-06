@@ -44,7 +44,6 @@ import io.basestar.storage.sql.resolver.FieldResolver;
 import io.basestar.storage.sql.resolver.ValueResolver;
 import io.basestar.storage.sql.strategy.NamingStrategy;
 import io.basestar.storage.sql.strategy.SQLStrategy;
-import io.basestar.storage.sql.util.DelegatingDatabaseMetaData;
 import io.basestar.storage.util.KeysetPagingUtils;
 import io.basestar.util.Name;
 import io.basestar.util.*;
@@ -52,7 +51,6 @@ import lombok.Data;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
-import org.jooq.Named;
 import org.jooq.*;
 import org.jooq.conf.Settings;
 import org.jooq.exception.DataAccessException;
@@ -62,14 +60,11 @@ import org.jooq.impl.DSL;
 import javax.annotation.Nullable;
 import javax.sql.DataSource;
 import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -325,15 +320,13 @@ public class SQLStorage implements DefaultLayerStorage {
         }
     }
 
-    private boolean nameMatch(final org.jooq.Name name, final org.jooq.Name matchName) {
+    // Fix for https://groups.google.com/g/jooq-user/c/kABZWPQScSU
+    private boolean canUseKeysetPaging(final LinkableSchema schema, final List<Sort> sort) {
 
-        final org.jooq.Name[] nameParts = name.parts();
-        final org.jooq.Name[] matchNameParts = matchName.parts();
-        for (int i = 0; i != Math.min(nameParts.length, matchNameParts.length); ++i) {
-            if (i < nameParts.length) {
-                if (!nameParts[nameParts.length - (i + 1)].equalsIgnoreCase(matchNameParts[matchNameParts.length - (i + 1)])) {
-                    return false;
-                }
+        for (final Sort s : sort) {
+            final Use<?> type = schema.typeOf(s.getName());
+            if (type.isOptional()) {
+                return false;
             }
         }
         return true;
@@ -346,6 +339,8 @@ public class SQLStorage implements DefaultLayerStorage {
 
 
         final SQLDialect dialect = strategy.dialect();
+
+        final boolean useKeysetPaging = canUseKeysetPaging(schema, sort);
 
         final org.jooq.Name tableName = Optional.ofNullable(index)
                 .flatMap(index1 -> indexTableName((ReferableSchema) schema, index1))
@@ -366,11 +361,17 @@ public class SQLStorage implements DefaultLayerStorage {
                     .from(rawTable.getQualifiedName()).where(condition).orderBy(orderFields);
 
             final SelectForUpdateStep<Record> seek;
+            final long offset;
             if (token == null) {
                 seek = select.limit(DSL.inline(count));
-            } else {
+                offset = 0;
+            } else if (useKeysetPaging) {
                 final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
                 seek = select.seek(values.stream().map(dialect::bind).toArray(Object[]::new)).limit(DSL.inline(count));
+                offset = 0;
+            } else {
+                offset = Nullsafe.mapOrDefault(token, Page.Token::getLongValue, 0L);
+                seek = select.offset(DSL.inline(offset)).limit(DSL.inline(count));
             }
 
             return seek.fetchAsync().thenApply(results -> {
@@ -380,9 +381,11 @@ public class SQLStorage implements DefaultLayerStorage {
                 final Page.Token nextToken;
                 if (objects.size() < count) {
                     nextToken = null;
-                } else {
+                } else if (useKeysetPaging) {
                     final Map<String, Object> last = objects.get(objects.size() - 1);
                     nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
+                } else {
+                    nextToken = Page.Token.fromLongValue(offset + count);
                 }
 
                 return new Page<>(objects, nextToken);
@@ -776,65 +779,7 @@ public class SQLStorage implements DefaultLayerStorage {
     public Table<?> describeTable(final DSLContext context, final org.jooq.Name name) {
 
         try {
-            return tableCache.get(name, () -> {
-
-                final AtomicReference<Table<?>> result = new AtomicReference<>(null);
-                context.connection(c -> {
-
-                    final String tableCatalog;
-                    final String tableSchema;
-                    final String tableName;
-                    final String[] parts = name.getName();
-                    if (parts.length == 3) {
-                        tableCatalog = parts[0];
-                        tableSchema = parts[1];
-                        tableName = parts[2];
-                    } else if (name.parts().length == 2) {
-                        tableCatalog = null;
-                        tableSchema = parts[0];
-                        tableName = parts[1];
-                    } else {
-                        throw new IllegalStateException("Cannot understand table name " + name);
-                    }
-
-                    final DelegatingDatabaseMetaData jdbcMeta = new DelegatingDatabaseMetaData(c.getMetaData()) {
-
-                        @Override
-                        public ResultSet getSchemas() throws SQLException {
-
-                            return getSchemas(tableCatalog, tableSchema);
-                        }
-
-                        @Override
-                        public ResultSet getTables(final String catalog, final String schemaPattern, final String tableNamePattern, final String[] types) throws SQLException {
-
-                            return super.getTables(tableCatalog, tableSchema, tableName, types);
-                        }
-                    };
-                    final Meta meta = context.meta(jdbcMeta);
-                    final List<Table<?>> tables = meta.getTables();
-                    List<Table<?>> matchingTables = tables.stream()
-                            .filter(v -> nameMatch(v.getQualifiedName(), name))
-                            .collect(Collectors.toList());
-
-                    if (matchingTables.size() > 1) {
-                        List<String> matchingNames = matchingTables.stream()
-                                .map(Named::getQualifiedName)
-                                .map(n -> n.quotedName().toString())
-                                .collect(Collectors.toList());
-                        throw new IllegalStateException("Multiple matching tables found for " + name + ": " + matchingNames);
-                    } else if (!matchingTables.isEmpty()) {
-                        result.set(matchingTables.get(0));
-                    }
-
-                });
-
-                if (result.get() == null) {
-                    throw new IllegalStateException("Table " + name + " not found");
-                } else {
-                    return result.get();
-                }
-            });
+            return tableCache.get(name, () -> strategy.describeTable(context, name));
         } catch (final ExecutionException e) {
             throw new IllegalStateException(e);
         }
@@ -988,38 +933,6 @@ public class SQLStorage implements DefaultLayerStorage {
                 return BatchResponse.empty();
             });
         }
-
-//        public void createIndex(final ObjectSchema schema, final Index index, final String id, final Index.Key key, final Map<String, Object> projection) {
-//
-//            if (index.isMultiValue()) {
-//
-//                steps.add(context -> {
-//
-//                    context.insertInto(DSL.table(indexTableName(schema, index)))
-//                            .set(toRecord(schema, index, key, projection))
-//                            .execute();
-//
-//                    return BatchResponse.empty();
-//                });
-//
-//            } else {
-//                throw new UnsupportedOperationException();
-//            }
-//        }
-
-//        @Override
-//        public WriteTransaction updateIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key, final Map<String, Object> projection) {
-//
-//            // FIXME
-//            throw new UnsupportedOperationException();
-//        }
-//
-//        @Override
-//        public WriteTransaction deleteIndex(final ObjectSchema schema, final Index index, final String id, final long version, final Index.Key key) {
-//
-//            // FIXME
-//            throw new UnsupportedOperationException();
-//        }
 
         @Override
         public void writeHistoryLayer(final ReferableSchema schema, final String id, final Map<String, Object> after) {

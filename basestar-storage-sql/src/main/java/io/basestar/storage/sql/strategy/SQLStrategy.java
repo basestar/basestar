@@ -23,6 +23,8 @@ package io.basestar.storage.sql.strategy;
 import io.basestar.schema.Schema;
 import io.basestar.storage.sql.util.DDLStep;
 import org.jooq.DSLContext;
+import org.jooq.Name;
+import org.jooq.Table;
 import org.jooq.conf.StatementType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,4 +55,9 @@ public interface SQLStrategy {
     StatementType statementType();
 
     boolean useMetadata();
+
+    default Table<?> describeTable(final DSLContext context, final Name name) {
+
+        return dialect().describeTable(context, name);
+    }
 }

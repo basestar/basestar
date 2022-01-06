@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSchema {
 
@@ -46,5 +47,15 @@ public class TestSchema {
         final Query query = schema.requireQuery("byPet", true);
         assertEquals(Expression.parseAndBind(Context.init(), "pet.id == petId"), query.getExpression());
         assertEquals(1, query.getArguments().size());
+    }
+
+    @Test
+    void testUnknownSchemaType() throws Exception {
+
+        // This is unusual behaviour - JsonTypeInfo/JsonSubTypes does not have a concept of a default implementation only when unspecified
+        // Test added as documentation of this behaviour for now
+        final Namespace namespace = Namespace.load(TestInterfaceSchema.class.getResource("unknown.yml"));
+        final Schema<?> schema = namespace.requireSchema("Unknown");
+        assertTrue(schema instanceof ObjectSchema);
     }
 }

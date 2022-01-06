@@ -48,7 +48,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -261,10 +260,10 @@ public abstract class TestStorage {
 
         bulkLoad(storage, init);
 
-        final List<Sort> sort = ImmutableList.of(
+        final List<Sort> sort = schema.sort(ImmutableList.of(
                 Sort.desc(Name.of("city")),
                 Sort.asc(Name.of("zip"))
-        );
+        ));
 
         final Expression expr = Expression.parse("country == '" + country + "'");
         final Pager<Map<String, Object>> pager = storage.query(Consistency.ASYNC, schema, Immutable.map(), expr, sort, Collections.emptySet());
@@ -324,10 +323,10 @@ public abstract class TestStorage {
 
         bulkLoad(storage, init);
 
-        final List<Sort> sort = ImmutableList.of(
+        final List<Sort> sort = schema.sort(ImmutableList.of(
                 Sort.asc(Name.of("city")),
                 Sort.asc(Name.of("zip"))
-        );
+        ));
 
         final Expression expr = Expression.parse("country == '" + country + "'");
         final Pager<Map<String, Object>> pager = storage.query(Consistency.ASYNC, schema, Immutable.map(), expr, sort, Collections.emptySet());
@@ -348,8 +347,7 @@ public abstract class TestStorage {
             page.forEach(object -> results.add(Instance.getId(object)));
             token = page.getPaging();
         }
-        List<String> collect = results.stream().sorted()
-                .collect(Collectors.toList());
+
         assertEquals(100, results.size());
     }
 
