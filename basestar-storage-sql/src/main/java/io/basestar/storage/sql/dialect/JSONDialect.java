@@ -31,7 +31,7 @@ import java.util.*;
 @Slf4j
 public abstract class JSONDialect implements SQLDialect {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(BasestarModule.INSTANCE);
+    protected static final ObjectMapper objectMapper = new ObjectMapper().registerModule(BasestarModule.INSTANCE);
 
     protected abstract boolean isJsonEscaped();
 

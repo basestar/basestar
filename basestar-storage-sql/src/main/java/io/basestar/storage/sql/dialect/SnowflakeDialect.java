@@ -1,18 +1,25 @@
 package io.basestar.storage.sql.dialect;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ViewSchema;
 import io.basestar.schema.use.UseAny;
 import io.basestar.schema.use.UseArray;
 import io.basestar.schema.use.UseMap;
 import io.basestar.schema.use.UseSet;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultDataType;
+import org.jooq.impl.SQLDataType;
+import org.jooq.impl.TableImpl;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
-
+@Slf4j
 public class SnowflakeDialect extends JSONDialect {
 
     private static final org.jooq.SQLDialect DIALECT = SQLDialect.POSTGRES;
@@ -120,5 +127,80 @@ public class SnowflakeDialect extends JSONDialect {
     public QueryPart in(final Field<Object> lhs, final Field<Object> rhs) {
 
         return DSL.condition(DSL.sql("ARRAY_CONTAINS(?::VARIANT, ?)", lhs, rhs));
+    }
+
+    @Override
+    public List<Table<?>> describeTables(final DSLContext context, final String tableCatalog, final String tableSchema, final String tableName) {
+
+        final List<Table<?>> tables = new ArrayList<>();
+        final Name qualifiedSchemaName = tableCatalog == null ? DSL.name(tableSchema) : DSL.name(DSL.name(tableCatalog), DSL.name(tableSchema));
+        final Result<Record> tablesResult = context.resultQuery(DSL.sql("SHOW OBJECTS LIKE " + DSL.inline(tableName) + " IN SCHEMA " + qualifiedSchemaName)).fetch();
+        tablesResult.forEach(tableResult -> {
+            final String realTableName = tableResult.get("name", String.class);
+            final Name qualifiedName = qualifiedSchemaName.append(DSL.name(realTableName));
+            final Result<Record> columnsResult = context.resultQuery(DSL.sql("SHOW COLUMNS IN TABLE " + qualifiedName)).fetch();
+            final Table<?> table = new TableImpl<Record>(qualifiedName) {
+                {
+                    columnsResult.forEach(columnResult -> {
+                        final String realColumnName = columnResult.get("column_name", String.class);
+                        final String dataType = columnResult.get("data_type", String.class);
+                        createField(DSL.name(realColumnName), describedColumnType(dataType));
+                    });
+                }
+            };
+            tables.add(table);
+        });
+        return tables;
+    }
+
+    private DataType<?> describedColumnType(final String dataType) {
+
+        try {
+            final SnowflakeColumnType columnType = objectMapper.readValue(dataType, SnowflakeColumnType.class);
+            final String typeName = columnType.getType().toUpperCase();
+            final int precision = columnType.getPrecision();
+            final int scale = columnType.getScale();
+            final int length = columnType.getLength();
+            final boolean nullable = columnType.isNullable();
+            // Special cases for when known snowflake type doesn't correspond to the wrapped postgres dialect
+            switch (typeName) {
+                case "TIMESTAMP_NTZ":
+                    return SQLDataType.TIMESTAMP(precision).nullable(nullable);
+                case "TIMESTAMP_TZ":
+                    return SQLDataType.TIMESTAMPWITHTIMEZONE(precision).nullable(nullable);
+                case "TEXT":
+                    return SQLDataType.LONGVARCHAR(length);
+                case "FIXED":
+                    return SQLDataType.NUMERIC(precision, scale).nullable(nullable);
+                case "REAL":
+                    return SQLDataType.DOUBLE.nullable(nullable);
+                case "BINARY":
+                    return SQLDataType.LONGVARBINARY(length).nullable(nullable);
+                case "VARIANT":
+                case "OBJECT":
+                case "ARRAY":
+                    return SQLDataType.OTHER.nullable(nullable);
+                default:
+                    return DefaultDataType.getDataType(DIALECT.family(), typeName, precision, scale).length(length).nullable(nullable);
+            }
+        } catch (final Exception e) {
+            log.error("Failed to calculate snowflake data type for {}", dataType, e);
+            return SQLDataType.OTHER;
+        }
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private static class SnowflakeColumnType {
+
+        private String type;
+
+        private int length;
+
+        private int precision;
+
+        private int scale;
+
+        private boolean nullable;
     }
 }
