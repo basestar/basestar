@@ -26,7 +26,6 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.type.Numbers;
 import io.basestar.schema.Bucketing;
-import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.exception.InvalidKeyException;
 import io.basestar.schema.exception.TypeSyntaxException;
@@ -181,7 +180,7 @@ public interface Use<T> extends Serializable, UseValidated<T> {
 
     void collectDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
 
-    void collectMaterializationDependencies(Set<Name> expand, Map<Name, LinkableSchema> out);
+    void collectMaterializationDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
 
     boolean isCompatibleBucketing(List<Bucketing> other, Name name);
 

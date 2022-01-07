@@ -4,7 +4,6 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Bucketing;
 import io.basestar.schema.Constraint;
-import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.util.Cascade;
 import io.basestar.schema.util.Expander;
@@ -235,7 +234,7 @@ public class UseOptional<T> implements UseContainer<T, T> {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         type.collectMaterializationDependencies(expand, out);
     }

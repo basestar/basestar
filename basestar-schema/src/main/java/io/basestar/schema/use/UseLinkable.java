@@ -2,6 +2,7 @@ package io.basestar.schema.use;
 
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.Schema;
 import io.basestar.schema.ViewSchema;
 import io.basestar.util.Name;
 
@@ -25,10 +26,10 @@ public interface UseLinkable extends UseQueryable {
     LinkableSchema getSchema();
 
     @Override
-    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         final LinkableSchema schema = getSchema();
-        if(!out.containsKey(schema.getQualifiedName())) {
+        if (!out.containsKey(schema.getQualifiedName())) {
             out.put(schema.getQualifiedName(), schema);
             schema.collectMaterializationDependencies(expand, out);
         }

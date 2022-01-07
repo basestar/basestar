@@ -316,19 +316,6 @@ SqlView:
     count:
       type: integer
 
-SimpleSqlFunction:
-  type: function
-  arguments:
-    - name: x
-      type: string
-    - name: y
-      type: string
-  returns: string
-  language: sql
-  definition: |
-    begin
-      return "x" in ('a', 'b', 'c') and "y" in ('x', 'y', 'z');
-    end;
 ExternalView:
   type: view
   properties:

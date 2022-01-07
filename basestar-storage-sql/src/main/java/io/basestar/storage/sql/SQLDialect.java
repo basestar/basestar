@@ -8,16 +8,21 @@ import io.basestar.schema.util.Casing;
 import io.basestar.secret.Secret;
 import io.basestar.storage.sql.resolver.FieldResolver;
 import io.basestar.storage.sql.resolver.ValueResolver;
+import io.basestar.storage.sql.util.DelegatingDatabaseMetaData;
 import io.basestar.util.Name;
 import io.basestar.util.*;
 import org.jooq.Constraint;
+import org.jooq.Named;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -761,5 +766,80 @@ public interface SQLDialect {
     default QueryPart bind(final Object value) {
 
         return DSL.val(value);
+    }
+
+    default List<Table<?>> describeTables(final DSLContext context, final String tableCatalog, final String tableSchema, final String tableName) {
+
+        final AtomicReference<List<Table<?>>> result = new AtomicReference<>(Immutable.list());
+        context.connection(c -> {
+
+            final DelegatingDatabaseMetaData jdbcMeta = new DelegatingDatabaseMetaData(c.getMetaData()) {
+
+                @Override
+                public ResultSet getSchemas() throws SQLException {
+
+                    return getSchemas(tableCatalog, tableSchema);
+                }
+
+                @Override
+                public ResultSet getTables(final String catalog, final String schemaPattern, final String tableNamePattern, final String[] types) throws SQLException {
+
+                    return super.getTables(tableCatalog, tableSchema, tableName, types);
+                }
+            };
+            final Meta meta = context.meta(jdbcMeta);
+            result.set(meta.getTables());
+        });
+        return result.get();
+    }
+
+    default Table<?> describeTable(final DSLContext context, final org.jooq.Name name) {
+
+        final String tableCatalog;
+        final String tableSchema;
+        final String tableName;
+        final String[] parts = name.getName();
+        if (parts.length == 3) {
+            tableCatalog = parts[0];
+            tableSchema = parts[1];
+            tableName = parts[2];
+        } else if (name.parts().length == 2) {
+            tableCatalog = null;
+            tableSchema = parts[0];
+            tableName = parts[1];
+        } else {
+            throw new IllegalStateException("Cannot understand table name " + name);
+        }
+
+        final List<Table<?>> tables = describeTables(context, tableCatalog, tableSchema, tableName);
+        final List<Table<?>> matchingTables = tables.stream()
+                .filter(v -> nameMatch(v.getQualifiedName(), name))
+                .collect(Collectors.toList());
+
+        if (matchingTables.size() > 1) {
+            final List<String> matchingNames = matchingTables.stream()
+                    .map(Named::getQualifiedName)
+                    .map(n -> n.quotedName().toString())
+                    .collect(Collectors.toList());
+            throw new IllegalStateException("Multiple matching tables found for " + name + ": " + matchingNames);
+        } else if (!matchingTables.isEmpty()) {
+            return matchingTables.get(0);
+        } else {
+            throw new IllegalStateException("Table " + name + " not found");
+        }
+    }
+
+    default boolean nameMatch(final org.jooq.Name name, final org.jooq.Name matchName) {
+
+        final org.jooq.Name[] nameParts = name.parts();
+        final org.jooq.Name[] matchNameParts = matchName.parts();
+        for (int i = 0; i != Math.min(nameParts.length, matchNameParts.length); ++i) {
+            if (i < nameParts.length) {
+                if (!nameParts[nameParts.length - (i + 1)].equalsIgnoreCase(matchNameParts[matchNameParts.length - (i + 1)])) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }

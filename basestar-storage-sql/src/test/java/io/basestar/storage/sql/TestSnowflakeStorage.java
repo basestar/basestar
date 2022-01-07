@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.schema.use.UseString;
+import io.basestar.schema.util.Casing;
 import io.basestar.storage.Storage;
 import io.basestar.storage.sql.dialect.SnowflakeDialect;
 import io.basestar.storage.sql.strategy.DefaultNamingStrategy;
@@ -53,7 +54,10 @@ public class TestSnowflakeStorage extends TestSQLStorage {
 
     private static final String SNOWFLAKE_PASSWORD = Nullsafe.orDefault(System.getenv("SNOWFLAKE_PASSWORD"));
 
-    private static final String SNOWFLAKE_DATABASE = Nullsafe.orDefault(System.getenv("SNOWFLAKE_DATABASE"), "DEMO_DB");
+    private static final String SNOWFLAKE_DATABASE = Nullsafe.orDefault(System.getenv("SNOWFLAKE_DATABASE"));
+
+    // This database exists in a demo account, it is only used as the default DB in the custom name override test
+    private static final String SNOWFLAKE_DEFAULT_DATABASE = Nullsafe.orDefault(System.getenv("SNOWFLAKE_DEFAULT_DATABASE"), "SNOWFLAKE");
 
     @Override
     protected SQLDialect dialect() {
@@ -115,13 +119,14 @@ public class TestSnowflakeStorage extends TestSQLStorage {
         ds.setUrl("jdbc:snowflake://" + SNOWFLAKE_ACCOUNT + "." + SNOWFLAKE_REGION + ".snowflakecomputing.com/?TIMEZONE=UTC");
         ds.setUsername(SNOWFLAKE_USERNAME);
         ds.setPassword(SNOWFLAKE_PASSWORD);
-        ds.setDefaultCatalog("UTIL_DB");
+        ds.setDefaultCatalog(SNOWFLAKE_DEFAULT_DATABASE);
 
         final SQLDialect dialect = dialect();
 
         final String objectSchema = "obj_" + UUID.randomUUID().toString().replaceAll("-", "_");
         final SQLStrategy strategy = DefaultSQLStrategy.builder()
                 .namingStrategy(DefaultNamingStrategy.builder()
+                        .columnCasing(Casing.LOWERCASE_SNAKE)
                         .objectSchemaName(objectSchema)
                         .dialect(dialect)
                         .build())

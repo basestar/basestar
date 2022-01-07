@@ -10,7 +10,6 @@ import io.basestar.expression.Expression;
 import io.basestar.jackson.serde.AbbrevListDeserializer;
 import io.basestar.jackson.serde.AbbrevSetDeserializer;
 import io.basestar.schema.Bucketing;
-import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
@@ -120,7 +119,7 @@ public interface From extends Serializable {
 
     InferenceContext inferenceContext();
 
-    void collectMaterializationDependencies(Map<Name, LinkableSchema> out);
+    void collectMaterializationDependencies(Map<Name, Schema<?>> out);
 
     void collectDependencies(Map<Name, Schema<?>> out);
 

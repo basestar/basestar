@@ -630,7 +630,7 @@ public class ViewSchema implements LinkableSchema {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, LinkableSchema> out) {
+    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
 
         LinkableSchema.super.collectMaterializationDependencies(expand, out);
         this.from.collectMaterializationDependencies(out);
