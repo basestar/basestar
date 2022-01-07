@@ -256,7 +256,7 @@ public class FunctionSchema implements Schema<Callable> {
             final String name = Nullsafe.orDefault(matcher.group(1), matcher.group(2));
             final From use = using.get(name);
             if (use instanceof FromSchema) {
-                matcher.appendReplacement(buffer, replacer.apply(((FromSchema) use).getSchema()));
+                matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacer.apply(((FromSchema) use).getSchema())));
             } else {
                 throw new IllegalStateException("SQL view schema does not declare " + name);
             }
