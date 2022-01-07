@@ -53,7 +53,7 @@ public class SpringLikeTextProcessor implements UnaryOperator<String> {
             final String key = matcher.group(1);
             final String def = matcher.group(2);
             final String rep = lookup(key, def);
-            matcher.appendReplacement(result, Nullsafe.orDefault(rep));
+            matcher.appendReplacement(result, Matcher.quoteReplacement(Nullsafe.orDefault(rep)));
         }
         matcher.appendTail(result);
         return result.toString();
