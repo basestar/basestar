@@ -277,7 +277,7 @@ public class FunctionSchema implements Schema<Callable> {
                 .map(Pattern::quote)
                 .collect(Collectors.joining("|"));
 
-        final String regex = String.format("(?:[\\s]|(^))(%s)(?:[(\\s]|($))", groups);
+        final String regex = String.format("(?:[\\s(]|(^))(%s)(?:[(\\s;]|($))", groups);
         final Pattern pattern = Pattern.compile(regex);
         final int groupToReplace = 2;
 
