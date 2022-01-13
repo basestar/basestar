@@ -3,7 +3,6 @@ package io.basestar.storage.sql.strategy;
 import io.basestar.expression.constant.Constant;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
-import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.from.From;
 import io.basestar.schema.from.FromExternal;
 import io.basestar.schema.from.FromSchema;
@@ -24,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 
 @Data
@@ -153,48 +153,48 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
         return queries;
     }
 
+    @Override
+    public SQLExpressionVisitor expressionVisitor(final QueryableSchema schema) {
+
+        return expressionVisitor(schema, name -> DSL.field(DSL.name(namingStrategy.columnName(name.first()))));
+    }
+
+    @Override
+    public SQLExpressionVisitor expressionVisitor(final QueryableSchema schema, final Function<io.basestar.util.Name, QueryPart> columnResolver) {
+
+        return dialect().expressionResolver(getNamingStrategy(), schema, columnResolver);
+    }
+
     protected Select<?> viewQuery(final DSLContext context, final ViewSchema schema) {
 
         final Collection<SelectFieldOrAsterisk> fields = new ArrayList<>();
-        final InferenceContext inferenceContext = viewInferenceContext(schema);
-        final SQLExpressionVisitor visitor = new SQLExpressionVisitor(dialect(), inferenceContext, name -> DSL.field(DSL.name(namingStrategy.columnName(name.first()))));
-        final Field<?> idField = visitor.field(new Constant(null));
-        fields.add(idField.cast(String.class).as(ViewSchema.ID));
-        schema.getProperties().forEach((k, v) -> {
-            final Field<?> field = visitor.field(v.getExpression());
-            if (field == null) {
-                log.error("Cannot create view field " + k + " " + v.getExpression());
+
+        final From from = schema.getFrom();
+        if (from instanceof FromSchema) {
+            final LinkableSchema fromSchema = ((FromSchema) from).getLinkableSchema();
+
+            final SQLExpressionVisitor visitor = expressionVisitor(fromSchema);
+            final Field<?> idField = visitor.field(new Constant(null));
+            fields.add(idField.cast(String.class).as(ViewSchema.ID));
+            schema.getProperties().forEach((k, v) -> {
+                final Field<?> field = visitor.field(v.getExpression());
+                if (field == null) {
+                    log.error("Cannot create view field " + k + " " + v.getExpression());
+                } else {
+                    fields.add(visitor.field(v.getExpression()).as(k));
+                }
+            });
+
+            final Table<?> fromTable = DSL.table(namingStrategy.entityName(fromSchema));
+            final SelectJoinStep<?> step = context.select(fields).from(fromTable);
+
+            if (schema.isGrouping()) {
+                final Collection<GroupField> groupFields = new ArrayList<>();
+                schema.getGroup().forEach(k -> groupFields.add(DSL.field(DSL.name(namingStrategy.columnName(k)))));
+                return step.groupBy(groupFields);
             } else {
-                fields.add(visitor.field(v.getExpression()).as(k));
+                return step;
             }
-        });
-
-        final SelectJoinStep<?> step = context.select(fields).from(viewFrom(schema));
-
-        if (schema.isGrouping()) {
-            final Collection<GroupField> groupFields = new ArrayList<>();
-            schema.getGroup().forEach(k -> groupFields.add(DSL.field(DSL.name(namingStrategy.columnName(k)))));
-            return step.groupBy(groupFields);
-        } else {
-            return step;
-        }
-    }
-
-    private TableLike<?> viewFrom(final ViewSchema schema) {
-
-        final From from = schema.getFrom();
-        if (from instanceof FromSchema) {
-            return DSL.table(namingStrategy.entityName(((FromSchema) from).getSchema()));
-        } else {
-            throw new UnsupportedOperationException("Cannot create view from " + schema.getFrom().getClass());
-        }
-    }
-
-    private InferenceContext viewInferenceContext(final ViewSchema schema) {
-
-        final From from = schema.getFrom();
-        if (from instanceof FromSchema) {
-            return InferenceContext.from(((FromSchema) from).getLinkableSchema());
         } else {
             throw new UnsupportedOperationException("Cannot create view from " + schema.getFrom().getClass());
         }
