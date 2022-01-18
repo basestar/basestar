@@ -3,11 +3,13 @@ package io.basestar.storage.sql;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.schema.*;
+import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.*;
 import io.basestar.schema.util.Casing;
 import io.basestar.secret.Secret;
 import io.basestar.storage.sql.resolver.FieldResolver;
 import io.basestar.storage.sql.resolver.ValueResolver;
+import io.basestar.storage.sql.strategy.NamingStrategy;
 import io.basestar.storage.sql.util.DelegatingDatabaseMetaData;
 import io.basestar.util.Name;
 import io.basestar.util.*;
@@ -23,6 +25,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -841,5 +844,11 @@ public interface SQLDialect {
             }
         }
         return true;
+    }
+
+    default SQLExpressionVisitor expressionResolver(final NamingStrategy namingStrategy, final QueryableSchema schema, final Function<Name, QueryPart> columnResolver) {
+
+        final InferenceContext inferenceContext = InferenceContext.from(schema);
+        return new SQLExpressionVisitor(this, inferenceContext, columnResolver);
     }
 }

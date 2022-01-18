@@ -1,12 +1,23 @@
 package io.basestar.storage.sql.dialect;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ViewSchema;
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import io.basestar.expression.Expression;
+import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.iterate.ContextIterator;
+import io.basestar.expression.iterate.For;
+import io.basestar.expression.iterate.ForAll;
+import io.basestar.expression.iterate.ForAny;
+import io.basestar.schema.*;
+import io.basestar.schema.expression.InferenceContext;
+import io.basestar.schema.from.FromSql;
 import io.basestar.schema.use.UseAny;
 import io.basestar.schema.use.UseArray;
 import io.basestar.schema.use.UseMap;
 import io.basestar.schema.use.UseSet;
+import io.basestar.storage.sql.SQLExpressionVisitor;
+import io.basestar.storage.sql.strategy.NamingStrategy;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
@@ -18,6 +29,8 @@ import org.jooq.impl.TableImpl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class SnowflakeDialect extends JSONDialect {
@@ -136,9 +149,12 @@ public class SnowflakeDialect extends JSONDialect {
         final Name qualifiedSchemaName = tableCatalog == null ? DSL.name(tableSchema) : DSL.name(DSL.name(tableCatalog), DSL.name(tableSchema));
         final Result<Record> tablesResult = context.resultQuery(DSL.sql("SHOW OBJECTS LIKE " + DSL.inline(tableName) + " IN SCHEMA " + qualifiedSchemaName)).fetch();
         tablesResult.forEach(tableResult -> {
-            final String realTableName = tableResult.get("name", String.class);
-            final Name qualifiedName = qualifiedSchemaName.append(DSL.name(realTableName));
-            final Result<Record> columnsResult = context.resultQuery(DSL.sql("SHOW COLUMNS IN TABLE " + qualifiedName)).fetch();
+            final String resolvedTableCatalog = tableResult.get("database_name", String.class);
+            final String resolvedTableSchema = tableResult.get("schema_name", String.class);
+            final String resolvedTableName = tableResult.get("name", String.class);
+            final String resolvedKind = tableResult.get("kind", String.class);
+            final Name qualifiedName = DSL.name(DSL.name(resolvedTableCatalog), DSL.name(resolvedTableSchema), DSL.name(resolvedTableName));
+            final Result<Record> columnsResult = context.resultQuery(DSL.sql("SHOW COLUMNS IN " + resolvedKind + " " + qualifiedName)).fetch();
             final Table<?> table = new TableImpl<Record>(qualifiedName) {
                 {
                     columnsResult.forEach(columnResult -> {
@@ -202,5 +218,112 @@ public class SnowflakeDialect extends JSONDialect {
         private int scale;
 
         private boolean nullable;
+    }
+
+    @Override
+    public SQLExpressionVisitor expressionResolver(final NamingStrategy namingStrategy, final QueryableSchema schema, final Function<io.basestar.util.Name, QueryPart> columnResolver) {
+
+        final InferenceContext inferenceContext = InferenceContext.from(schema);
+        return new SQLExpressionVisitor(this, inferenceContext, columnResolver) {
+
+            private List<Field<?>> idFields(final QueryableSchema schema) {
+
+                if (schema instanceof ViewSchema) {
+                    final ViewSchema viewSchema = (ViewSchema) schema;
+                    if (viewSchema.getFrom() instanceof FromSql) {
+                        return ((FromSql) viewSchema.getFrom()).getPrimaryKey().stream()
+                                .map(name -> DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(name))))
+                                .collect(Collectors.toList());
+                    }
+                } else if (schema instanceof ReferableSchema) {
+                    return ImmutableList.of(DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(ReferableSchema.ID))));
+                }
+                throw new IllegalStateException("For any/for all only supported for object schemas, and view schemas with a primaryKey");
+            }
+
+            @Override
+            public QueryPart visitForAny(final ForAny expression) {
+
+                return visitFor(expression, false);
+            }
+
+            @Override
+            public QueryPart visitForAll(final ForAll expression) {
+
+                return visitFor(expression, true);
+            }
+
+            /*
+            Implements for-any and for-all behaviour, assuming the following:
+
+             - the current schema is an object schema, or a sql view with a defined primary key
+             - the iterator used is an array (value type) iterator rather than a map (key-value type) iterator
+             - the iterator is over a simple column (collapses to a constant name)
+
+             The last two conditions could probably be relaxed, but want to establish if this is a viable/performant
+             enough implementation first.
+
+             Approach used is to create a non-correlated subquery in the where clause that lateral joins the table
+             of the current row to the flattened iterated column, and then boolean and/or aggregate the result
+             of applying the lhs condition to each rhs value. This subquery is then implicitly joined to the current
+             row using tuple-equality over the id columns and the expected 'true' result of the boolean aggregation.
+
+             This may be less performant than a UDF implementation in that the result of other terms in the surrounding
+             query cannot short-circuit the inclusion of the related records in the subquery. However, this is more
+             likely to get optimized by the query planner than an opaque UDF.
+             */
+
+            private QueryPart visitFor(final For expression, final boolean all) {
+
+                final String alias1 = Reserved.PREFIX + "1";
+                final String alias2 = Reserved.PREFIX + "2";
+
+                final Table<?> table = DSL.table(namingStrategy.entityName(schema));
+
+                final ContextIterator iterator = expression.getIterator();
+                // map keys not supported
+                if (iterator instanceof ContextIterator.OfValue) {
+                    final ContextIterator.OfValue of = (ContextIterator.OfValue) iterator;
+                    if (of.getExpr() instanceof NameConstant) {
+                        final Expression lhs = expression.getYields().get(0);
+                        final NameConstant rhs = (NameConstant) of.getExpr();
+                        final String as = ((ContextIterator.OfValue) iterator).getValue();
+
+                        final List<Field<?>> idFields = idFields(schema);
+
+                        final SQLExpressionVisitor lhsVisitor = expressionResolver(namingStrategy, schema, name -> {
+                            if (name.first().equals(as)) {
+                                if (name.size() == 1) {
+                                    return DSL.field(DSL.name(alias2, "VALUE"));
+                                } else {
+                                    return DSL.field(DSL.sql(DSL.name(alias2, "VALUE") + ":" + namingStrategy.columnName(name.withoutFirst())));
+                                }
+                            } else {
+                                return DSL.field(DSL.name(alias1).append(namingStrategy.columnName(name)));
+                            }
+                        });
+
+                        final List<Field<?>> aggFields = new ArrayList<>(idFields);
+                        aggFields.add(DSL.field(DSL.sql(all ? "BOOLAND_AGG(?)" : "BOOLOR_AGG(?)", lhsVisitor.field(lhs))));
+
+                        final List<Field<?>> matchFields = new ArrayList<>(idFields);
+                        matchFields.add(DSL.inline(true));
+
+                        final Field<Object> match = DSL.field(DSL.sql("(" + Joiner.on(", ").join(matchFields) + ")"));
+                        final Condition query = match.in(DSL.select(aggFields).from(table.as(alias1),
+                                        DSL.table(DSL.sql("LATERAL FLATTEN(input => ?)", namingStrategy.columnName(rhs.getName()))).as(alias2))
+                                .groupBy(idFields));
+
+                        if (all) {
+                            // For-all over an empty array should always return true
+                            return DSL.field(DSL.sql("ARRAY_SIZE(?)", visit(rhs))).eq(DSL.inline(0)).or(query);
+                        } else {
+                            return query;
+                        }
+                    }
+                }
+                return null;
+            }
+        };
     }
 }
