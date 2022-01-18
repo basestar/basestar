@@ -42,6 +42,7 @@ public class TestFunctionSchema {
     private static Stream<Arguments> dotsReplacements() {
         return Stream.of(
                 Arguments.of("SELECT DOG,CONTEST FROM DOG.CONTEST;", "DOG.CONTEST", "SELECT DOG,CONTEST FROM dog.contestWinners;"),
+                Arguments.of("SELECT DOG,CONTEST FROM DOG.CONTEST, lateral flatten();", "DOG.CONTEST", "SELECT DOG,CONTEST FROM dog.contestWinners, lateral flatten();"),
                 Arguments.of("SELECT DOG,CONTEST FROM DOG.CONTEST", "DOG.CONTEST", "SELECT DOG,CONTEST FROM dog.contestWinners"),
                 Arguments.of("SELECT DOG,CONTEST FROM \"DOG\".\"CONTEST\"", "\"DOG\".\"CONTEST\"", "SELECT DOG,CONTEST FROM dog.contestWinners"),
                 Arguments.of("SELECT DOG_CONTEST FROM \"DOG\".\"CONTEST\"", "\"DOG\".\"CONTEST\"", "SELECT DOG_CONTEST FROM dog.contestWinners"),
@@ -87,6 +88,7 @@ public class TestFunctionSchema {
     private static Stream<Arguments> replacementAtTheEnd() {
         return Stream.of(
                 Arguments.of("SELECT * FROM test;", "test", "SELECT * FROM test.Object;"),
+                Arguments.of("SELECT * FROM test, lateral flatten()", "test", "SELECT * FROM test.Object, lateral flatten()"),
                 Arguments.of("SELECT * FROM test.targets;", "test.targets", "SELECT * FROM test.Object;"),
                 Arguments.of("SELECT * FROM \"test\".\"targets\";", "\"test\".\"targets\"", "SELECT * FROM test.Object;"),
                 Arguments.of("SELECT * FROM test_targets", "test_targets", "SELECT * FROM test.Object"),
