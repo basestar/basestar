@@ -41,6 +41,8 @@ public class SequenceSchema implements Schema {
 
     private final Long start;
 
+    private final Long increment;
+
     /**
      * Text description
      */
@@ -51,16 +53,8 @@ public class SequenceSchema implements Schema {
     @Nonnull
     private final Map<String, Serializable> extensions;
 
-    public String format(final Long value) {
-
-        if (format == null) {
-            return value.toString();
-        } else {
-            return format.evaluateAs(String.class, Context.init(Immutable.map(Reserved.VALUE, value)));
-        }
-    }
-
     @JsonDeserialize(as = Builder.class)
+    @JsonPropertyOrder({"type", "description", "version", "format", "start", "increment", "extensions"})
     public interface Descriptor extends Schema.Descriptor<SequenceSchema> {
 
         String TYPE = "sequence";
@@ -78,6 +72,9 @@ public class SequenceSchema implements Schema {
         @JsonInclude(JsonInclude.Include.NON_NULL)
         Long getStart();
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        Long getIncrement();
+
         interface Self extends Schema.Descriptor.Self<SequenceSchema>, SequenceSchema.Descriptor {
 
             @Override
@@ -91,6 +88,12 @@ public class SequenceSchema implements Schema {
 
                 return self().getStart();
             }
+
+            @Override
+            default Long getIncrement() {
+
+                return self().getIncrement();
+            }
         }
 
         @Override
@@ -102,7 +105,6 @@ public class SequenceSchema implements Schema {
 
     @Data
     @Accessors(chain = true)
-    @JsonPropertyOrder({"type", "description", "version", "values", "extensions"})
     public static class Builder implements Schema.Builder<SequenceSchema.Builder, SequenceSchema>, SequenceSchema.Descriptor {
 
         private Long version;
@@ -114,6 +116,8 @@ public class SequenceSchema implements Schema {
         private Expression format;
 
         private Long start;
+
+        private Long increment;
 
         @Nullable
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -134,9 +138,19 @@ public class SequenceSchema implements Schema {
         this.description = descriptor.getDescription();
         this.format = descriptor.getFormat();
         this.start = descriptor.getStart();
+        this.increment = descriptor.getIncrement();
         this.extensions = Immutable.sortedMap(descriptor.getExtensions());
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
+        }
+    }
+
+    public String format(final Long value) {
+
+        if (format == null) {
+            return value.toString();
+        } else {
+            return format.evaluateAs(String.class, Context.init(Immutable.map(Reserved.VALUE, value)));
         }
     }
 
@@ -150,9 +164,14 @@ public class SequenceSchema implements Schema {
 
     }
 
-    public Long getEffectiveStart() {
+    public long getEffectiveStart() {
 
         return Nullsafe.orDefault(start, 0L);
+    }
+
+    public long getEffectiveIncrement() {
+
+        return Nullsafe.orDefault(increment, 1L);
     }
 
     @Override

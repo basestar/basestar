@@ -344,4 +344,5 @@ DefaultSequence:
 CustomSequence:
   type: sequence
   start: 10
+  increment: 5
   format: "'ID-' + value"

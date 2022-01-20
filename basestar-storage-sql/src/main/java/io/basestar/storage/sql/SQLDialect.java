@@ -716,7 +716,7 @@ public interface SQLDialect {
         return createFunctionDDLHeader(context, name, returns, arguments, language) + " " + createFunctionDDLBody(context, definition);
     }
 
-    default String createSequenceDDL(final DSLContext context, final org.jooq.Name name, final Long start) {
+    default String createSequenceDDL(final DSLContext context, final org.jooq.Name name, final Long start, final Long increment) {
 
         throw new UnsupportedOperationException();
     }

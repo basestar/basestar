@@ -1448,7 +1448,7 @@ public abstract class TestStorage {
         assumeTrue(storage.storageTraits(schema).supportsSequence());
 
         assertEquals("ID-10", storage.increment(schema).thenApply(schema::format).join());
-        assertEquals("ID-11", storage.increment(schema).thenApply(schema::format).join());
-        assertEquals("ID-12", storage.increment(schema).thenApply(schema::format).join());
+        assertEquals("ID-15", storage.increment(schema).thenApply(schema::format).join());
+        assertEquals("ID-20", storage.increment(schema).thenApply(schema::format).join());
     }
 }

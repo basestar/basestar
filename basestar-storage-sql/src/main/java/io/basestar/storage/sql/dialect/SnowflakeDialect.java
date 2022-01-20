@@ -149,7 +149,7 @@ public class SnowflakeDialect extends JSONDialect {
     }
 
     @Override
-    public String createSequenceDDL(final DSLContext context, final Name name, final Long start) {
+    public String createSequenceDDL(final DSLContext context, final Name name, final Long start, final Long increment) {
 
         final StringBuilder str = new StringBuilder();
         str.append("CREATE SEQUENCE IF NOT EXISTS ");
@@ -157,6 +157,10 @@ public class SnowflakeDialect extends JSONDialect {
         if (start != null) {
             str.append(" WITH START = ");
             str.append(DSL.inline(start));
+        }
+        if (increment != null) {
+            str.append(" INCREMENT = ");
+            str.append(DSL.inline(increment));
         }
         return str.toString();
     }

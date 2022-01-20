@@ -67,6 +67,6 @@ public class DynamoDBStorageTraits implements StorageTraits {
     @Override
     public boolean supportsSequence() {
 
-        return false;
+        return true;
     }
 }

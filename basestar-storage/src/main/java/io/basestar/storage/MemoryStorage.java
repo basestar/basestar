@@ -348,7 +348,7 @@ public class MemoryStorage implements DefaultIndexStorage {
                     if (v == null) {
                         return schema.getEffectiveStart();
                     } else {
-                        return v + 1;
+                        return v + schema.getEffectiveIncrement();
                     }
                 });
                 state = copy;
