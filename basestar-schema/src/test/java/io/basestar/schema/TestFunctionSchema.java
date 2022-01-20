@@ -41,6 +41,8 @@ public class TestFunctionSchema {
 
     private static Stream<Arguments> dotsReplacements() {
         return Stream.of(
+                Arguments.of("SELECT DOG,CONTEST FROM DOG.CONTEST;", "DOG.CONTEST", "SELECT DOG,CONTEST FROM dog.contestWinners;"),
+                Arguments.of("SELECT DOG,CONTEST FROM DOG.CONTEST, lateral flatten();", "DOG.CONTEST", "SELECT DOG,CONTEST FROM dog.contestWinners, lateral flatten();"),
                 Arguments.of("SELECT DOG,CONTEST FROM DOG.CONTEST", "DOG.CONTEST", "SELECT DOG,CONTEST FROM dog.contestWinners"),
                 Arguments.of("SELECT DOG,CONTEST FROM \"DOG\".\"CONTEST\"", "\"DOG\".\"CONTEST\"", "SELECT DOG,CONTEST FROM dog.contestWinners"),
                 Arguments.of("SELECT DOG_CONTEST FROM \"DOG\".\"CONTEST\"", "\"DOG\".\"CONTEST\"", "SELECT DOG_CONTEST FROM dog.contestWinners"),
@@ -85,9 +87,10 @@ public class TestFunctionSchema {
 
     private static Stream<Arguments> replacementAtTheEnd() {
         return Stream.of(
-                Arguments.of("SELECT * FROM test", "test", "SELECT * FROM test.Object"),
-                Arguments.of("SELECT * FROM test.targets", "test.targets", "SELECT * FROM test.Object"),
-                Arguments.of("SELECT * FROM \"test\".\"targets\"", "\"test\".\"targets\"", "SELECT * FROM test.Object"),
+                Arguments.of("SELECT * FROM test;", "test", "SELECT * FROM test.Object;"),
+                Arguments.of("SELECT * FROM test, lateral flatten()", "test", "SELECT * FROM test.Object, lateral flatten()"),
+                Arguments.of("SELECT * FROM test.targets;", "test.targets", "SELECT * FROM test.Object;"),
+                Arguments.of("SELECT * FROM \"test\".\"targets\";", "\"test\".\"targets\"", "SELECT * FROM test.Object;"),
                 Arguments.of("SELECT * FROM test_targets", "test_targets", "SELECT * FROM test.Object"),
                 Arguments.of("SELECT * FROM \"test_targets\"", "test_targets", "SELECT * FROM test.Object")
         );
@@ -116,14 +119,16 @@ public class TestFunctionSchema {
     @Test
     public void shouldReplaceIfMultipleDifferentMatches() {
 
-        final String input = "SELECT * FROM test where result is null JOIN \"badTestRuns\" btr ON btr.id = id JOIN @{example_test_runs} on id JOIN badTestRuns ON id";
+        final String input = "SELECT first.function(second.function(someValue)) as transformed FROM test where result is null JOIN \"badTestRuns\" btr ON btr.id = id JOIN @{example_test_runs} on id JOIN badTestRuns ON id";
         final String output = FunctionSchema.getReplacedDefinition(input,
                 ImmutableMap.of("test", new FromSchema(ObjectSchema.builder().build(Name.of("test", "Object")), ImmutableSet.of()),
                         "badTestRuns", new FromSchema(ObjectSchema.builder().build(Name.of("bad", "test", "runs")), ImmutableSet.of()),
+                        "first.function", new FromSchema(ObjectSchema.builder().build(Name.of("first", "good")), ImmutableSet.of()),
+                        "second.function", new FromSchema(ObjectSchema.builder().build(Name.of("second", "good")), ImmutableSet.of()),
                         "example_test_runs", new FromSchema(ObjectSchema.builder().build(Name.of("example_test_runs")), ImmutableSet.of())
                 ),
                 v -> v.getQualifiedName().toString());
 
-        assertEquals("SELECT * FROM test.Object where result is null JOIN bad.test.runs btr ON btr.id = id JOIN example_test_runs on id JOIN bad.test.runs ON id", output);
+        assertEquals("SELECT first.good(second.good(someValue)) as transformed FROM test.Object where result is null JOIN bad.test.runs btr ON btr.id = id JOIN example_test_runs on id JOIN bad.test.runs ON id", output);
     }
 }

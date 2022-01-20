@@ -1094,22 +1094,22 @@ public abstract class TestStorage {
         assertEquals(1, Instance.getVersion(current));
     }
 
-    private Page<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {
+    protected Page<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final int count) {
 
         return page(storage, schema, expression, sort, Collections.emptySet(), count);
     }
 
-    private Page<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand, final int count) {
+    protected Page<Map<String, Object>> page(final Storage storage, final ObjectSchema schema, final Expression expression, final List<Sort> sort, final Set<Name> expand, final int count) {
 
         return storage.query(Consistency.ATOMIC, schema, Immutable.map(), expression.bind(Context.init()), sort, expand).page(count).join();
     }
 
-    private String createComplete(final Storage storage, final ObjectSchema schema, final Map<String, Object> data) {
+    protected String createComplete(final Storage storage, final ObjectSchema schema, final Map<String, Object> data) {
 
         return createComplete(storage, schema, UUID.randomUUID().toString(), data);
     }
 
-    private String createComplete(final Storage storage, final ObjectSchema schema, final String id, final Map<String, Object> data) {
+    protected String createComplete(final Storage storage, final ObjectSchema schema, final String id, final Map<String, Object> data) {
 
         final StorageTraits traits = storage.storageTraits(schema);
         final Map<String, Object> instance = instance(schema, id, 1L, data);
@@ -1127,12 +1127,12 @@ public abstract class TestStorage {
         return id;
     }
 
-    private Instance instance(final ObjectSchema schema, final String id, final long version) {
+    protected Instance instance(final ObjectSchema schema, final String id, final long version) {
 
         return instance(schema, id, version, Collections.emptyMap());
     }
 
-    private Instance instance(final ObjectSchema schema, final String id, final long version, final Map<String, Object> data) {
+    protected Instance instance(final ObjectSchema schema, final String id, final long version, final Map<String, Object> data) {
 
         final Instant now = ISO8601.now();
         final Map<String, Object> instance = new HashMap<>(data);
@@ -1145,7 +1145,7 @@ public abstract class TestStorage {
         return schema.create(instance, schema.getExpand(), false);
     }
 
-    private static void assertCause(final Class<? extends Throwable> except, final Executable exe) {
+    protected static void assertCause(final Class<? extends Throwable> except, final Executable exe) {
 
         boolean thrown = true;
         try {

@@ -27,6 +27,7 @@ import javax.sql.DataSource;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
@@ -170,5 +171,67 @@ public class TestSnowflakeStorage extends TestSQLStorage {
                 .page(10).get();
         assertEquals(1, page.size());
         assertEquals("record1", page.get(0).get("nameWithUnderscores"));
+    }
+
+    @Test
+    protected void testForAny() {
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
+
+        createComplete(storage, schema, ImmutableMap.of(
+                "arrayStruct", ImmutableList.of(
+                        new Instance(ImmutableMap.of("x", 10L, "y", 100L)),
+                        new Instance(ImmutableMap.of("x", 5L, "y", 10L))
+                )
+        ));
+
+        createComplete(storage, schema, ImmutableMap.of(
+                "arrayStruct", ImmutableList.of(
+                        new Instance(ImmutableMap.of("x", 10L, "y", 10L)),
+                        new Instance(ImmutableMap.of("x", 1L, "y", 10L))
+                )
+        ));
+
+        createComplete(storage, schema, ImmutableMap.of(
+                "arrayStruct", ImmutableList.of(
+                )
+        ));
+
+        final Expression expr = Expression.parse("p.x == 10 && p.y == 100 for any p of arrayStruct");
+        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, Immutable.map(), expr, Collections.emptyList(), Collections.emptySet()).page(100).join();
+        assertEquals(1, results.size());
+    }
+
+    @Test
+    protected void testForAll() {
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
+
+        createComplete(storage, schema, ImmutableMap.of(
+                "arrayStruct", ImmutableList.of(
+                        new Instance(ImmutableMap.of("x", 10L, "y", 100L)),
+                        new Instance(ImmutableMap.of("x", 5L, "y", 10L))
+                )
+        ));
+
+        createComplete(storage, schema, ImmutableMap.of(
+                "arrayStruct", ImmutableList.of(
+                        new Instance(ImmutableMap.of("x", 10L, "y", 10L)),
+                        new Instance(ImmutableMap.of("x", 1L, "y", 10L))
+                )
+        ));
+
+        createComplete(storage, schema, ImmutableMap.of(
+                "arrayStruct", ImmutableList.of(
+                )
+        ));
+
+        final Expression expr = Expression.parse("p.x > 0 && p.y > 0 for all p of arrayStruct");
+        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, Immutable.map(), expr, Collections.emptyList(), Collections.emptySet()).page(100).join();
+        assertEquals(3, results.size());
     }
 }
