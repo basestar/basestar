@@ -121,7 +121,7 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
 
             log.info("Creating sequence {}", sequenceName);
 
-            final String sql = dialect().createSequenceDDL(context, sequenceName, schema.getStart());
+            final String sql = dialect().createSequenceDDL(context, sequenceName, schema.getEffectiveStart());
             queries.add(DDLStep.from(context, sql));
         }
         return queries;

@@ -338,7 +338,10 @@ SqlQuery:
     count:
       type: integer
 
-Sequence:
+DefaultSequence:
+  type: sequence
+
+CustomSequence:
   type: sequence
   start: 10
   format: "'ID-' + value"

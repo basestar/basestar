@@ -26,7 +26,12 @@ import io.basestar.storage.StorageTraits;
 
 public class SQLStorageTraits implements StorageTraits {
 
-    public static final SQLStorageTraits INSTANCE = new SQLStorageTraits();
+    private final SQLDialect dialect;
+
+    public SQLStorageTraits(final SQLDialect dialect) {
+
+        this.dialect = dialect;
+    }
 
     @Override
     public Consistency getHistoryConsistency() {
@@ -67,6 +72,6 @@ public class SQLStorageTraits implements StorageTraits {
     @Override
     public boolean supportsSequence() {
 
-        return true;
+        return dialect.supportsSequences();
     }
 }

@@ -90,7 +90,9 @@ public abstract class TestStorage {
 
     protected static final String SQL_QUERY = "SqlQuery";
 
-    protected static final String SEQUENCE = "Sequence";
+    protected static final String DEFAULT_SEQUENCE = "DefaultSequence";
+
+    protected static final String CUSTOM_SEQUENCE = "CustomSequence";
 
     protected final Namespace namespace;
 
@@ -1427,10 +1429,22 @@ public abstract class TestStorage {
     }
 
     @Test
-    public void testSequence() {
+    public void testDefaultSequence() {
 
         final Storage storage = storage(namespace);
-        final SequenceSchema schema = namespace.requireSequenceSchema(SEQUENCE);
+        final SequenceSchema schema = namespace.requireSequenceSchema(DEFAULT_SEQUENCE);
+        assumeTrue(storage.storageTraits(schema).supportsSequence());
+
+        assertEquals("0", storage.increment(schema).thenApply(schema::format).join());
+        assertEquals("1", storage.increment(schema).thenApply(schema::format).join());
+        assertEquals("2", storage.increment(schema).thenApply(schema::format).join());
+    }
+
+    @Test
+    public void testCustomSequence() {
+
+        final Storage storage = storage(namespace);
+        final SequenceSchema schema = namespace.requireSequenceSchema(CUSTOM_SEQUENCE);
         assumeTrue(storage.storageTraits(schema).supportsSequence());
 
         assertEquals("ID-10", storage.increment(schema).thenApply(schema::format).join());

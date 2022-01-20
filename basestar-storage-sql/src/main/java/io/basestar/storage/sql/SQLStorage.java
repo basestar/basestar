@@ -649,7 +649,7 @@ public class SQLStorage implements DefaultLayerStorage {
     @Override
     public StorageTraits storageTraits(final Schema schema) {
 
-        return SQLStorageTraits.INSTANCE;
+        return new SQLStorageTraits(strategy.dialect());
     }
 
     @Override
