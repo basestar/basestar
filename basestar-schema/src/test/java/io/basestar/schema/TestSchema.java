@@ -55,7 +55,7 @@ public class TestSchema {
         // This is unusual behaviour - JsonTypeInfo/JsonSubTypes does not have a concept of a default implementation only when unspecified
         // Test added as documentation of this behaviour for now
         final Namespace namespace = Namespace.load(TestInterfaceSchema.class.getResource("unknown.yml"));
-        final Schema<?> schema = namespace.requireSchema("Unknown");
+        final Schema schema = namespace.requireSchema("Unknown");
         assertTrue(schema instanceof ObjectSchema);
     }
 }

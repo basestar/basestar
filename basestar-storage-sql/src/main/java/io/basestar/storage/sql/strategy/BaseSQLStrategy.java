@@ -99,8 +99,29 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
         final List<DDLStep> queries = new ArrayList<>();
 
         if (dialect.supportsUDFs()) {
+
+            final Name functionName = namingStrategy.functionName(schema);
+
+            log.info("Creating function {}", functionName);
+
             final String definition = schema.getReplacedDefinition(s -> namingStrategy.reference(s).toString());
-            final String sql = dialect().createFunctionDDL(context, namingStrategy.functionName(schema), schema.getReturns(), schema.getArguments(), schema.getLanguage(), definition);
+            final String sql = dialect().createFunctionDDL(context, functionName, schema.getReturns(), schema.getArguments(), schema.getLanguage(), definition);
+            queries.add(DDLStep.from(context, sql));
+        }
+        return queries;
+    }
+
+    protected List<DDLStep> createSequenceDDL(final DSLContext context, final SequenceSchema schema) {
+
+        final List<DDLStep> queries = new ArrayList<>();
+
+        if (dialect.supportsSequences()) {
+
+            final Name sequenceName = namingStrategy.sequenceName(schema);
+
+            log.info("Creating sequence {}", sequenceName);
+
+            final String sql = dialect().createSequenceDDL(context, sequenceName, schema.getStart());
             queries.add(DDLStep.from(context, sql));
         }
         return queries;
@@ -110,6 +131,8 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
 
         final List<DDLStep> queries = new ArrayList<>();
         final Name viewName = namingStrategy.viewName(schema);
+
+        log.info("Creating materialized view {}", viewName);
 
         final String query;
         if (schema.getFrom() instanceof FromSql) {
@@ -127,6 +150,8 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
         final List<DDLStep> queries = new ArrayList<>();
         final Name viewName = namingStrategy.entityName(schema);
 
+        log.info("Creating fake view {}", viewName);
+
         final Casing columnCasing = namingStrategy.getColumnCasing();
 
         final List<Field<?>> columns = dialect.fields(columnCasing, schema);
@@ -141,6 +166,8 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
 
         final List<DDLStep> queries = new ArrayList<>();
         final Name viewName = namingStrategy.viewName(schema);
+
+        log.info("Creating view {}", viewName);
 
         if (schema.getFrom() instanceof FromSql) {
             queries.add(DDLStep.from(context.createOrReplaceView(viewName)
@@ -239,9 +266,13 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
         }
 
         if (isHistoryTableEnabled()) {
-            log.info("Creating history table {}", historyTableName);
-            historyTableName.ifPresent(name -> queries.add(DDLStep.from(withHistoryPrimaryKey(schema, context.createTableIfNotExists(name)
-                    .columns(columns)))));
+            historyTableName.ifPresent(name -> {
+
+                log.info("Creating history table {}", name);
+
+                queries.add(DDLStep.from(withHistoryPrimaryKey(schema, context.createTableIfNotExists(name)
+                        .columns(columns))));
+            });
 
         }
 

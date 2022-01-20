@@ -116,16 +116,16 @@ public class NamespaceMojo extends AbstractMojo {
             }
 
             if(outputFilename == null || outputFilename.isEmpty()) {
-                for(final Map.Entry<Name, Schema.Descriptor<?, ?>> entry : all.getSchemas().entrySet()) {
+                for (final Map.Entry<Name, Schema.Descriptor<?>> entry : all.getSchemas().entrySet()) {
                     final Name name = entry.getKey();
-                    final Schema.Descriptor<?, ?> schema = entry.getValue();
+                    final Schema.Descriptor<?> schema = entry.getValue();
                     final File output = packageOutputDirectory(name);
                     output.mkdirs();
                     final File file = new File(output, name.last() + ".yml");
                     final Namespace.Builder one = Namespace.builder()
                             .setSchema(name, schema);
-                    try(final FileOutputStream fos = new FileOutputStream(file);
-                        final OutputStreamWriter writer = new OutputStreamWriter(fos, Charsets.UTF_8)) {
+                    try (final FileOutputStream fos = new FileOutputStream(file);
+                         final OutputStreamWriter writer = new OutputStreamWriter(fos, Charsets.UTF_8)) {
                         getLog().info("Writing schema " + name + " to " + file.getAbsolutePath());
                         one.yaml(writer);
                     }

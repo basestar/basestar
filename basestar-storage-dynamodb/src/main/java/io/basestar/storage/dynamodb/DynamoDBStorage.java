@@ -737,9 +737,16 @@ public class DynamoDBStorage implements DefaultIndexStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return DynamoDBStorageTraits.INSTANCE;
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        // FIXME: could implement trivially
+        throw new UnsupportedOperationException();
     }
 
     private class ScanSegment implements Scan.Segment {

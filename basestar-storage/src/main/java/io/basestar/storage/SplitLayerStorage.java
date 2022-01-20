@@ -1,10 +1,7 @@
 package io.basestar.storage;
 
 import io.basestar.expression.Expression;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.*;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
@@ -134,7 +131,7 @@ public class SplitLayerStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return objectStorage.storageTraits(schema);
     }
@@ -143,5 +140,11 @@ public class SplitLayerStorage implements DefaultLayerStorage {
     public Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
 
         return objectStorage.supportedExpand(schema, expand);
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        return objectStorage.increment(schema);
     }
 }

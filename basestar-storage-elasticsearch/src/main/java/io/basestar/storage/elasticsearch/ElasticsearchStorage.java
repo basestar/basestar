@@ -153,11 +153,17 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
                                 .thenApply(response -> {
                                     log.debug("Search response is {}", response);
                                     return stage.page(mappings, stats, token, count, response)
-                                            .map(v -> (Map<String, Object>)schema.create(v, expand, true));
+                                            .map(v -> (Map<String, Object>) schema.create(v, expand, true));
                                 });
 
                     }).orElse(CompletableFuture.completedFuture(Page.empty())));
         };
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -460,7 +466,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return ElasticsearchStorageTraits.INSTANCE;
     }

@@ -192,7 +192,7 @@
 //    }
 //
 //    @Override
-//    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+//    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 //
 //    }
 //

@@ -36,7 +36,7 @@ import java.util.concurrent.CompletableFuture;
 
 public interface DelegatingStorage extends Storage {
 
-    Storage storage(QueryableSchema schema);
+    Storage storage(Schema schema);
 
     @Override
     default void validate(final ObjectSchema schema) {
@@ -51,7 +51,7 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
-    default StorageTraits storageTraits(final ReferableSchema schema) {
+    default StorageTraits storageTraits(final Schema schema) {
 
         return storage(schema).storageTraits(schema);
     }
@@ -98,6 +98,12 @@ public interface DelegatingStorage extends Storage {
     default CompletableFuture<Set<Event>> afterDelete(final ObjectSchema schema, final String id, final long version, final Map<String, Object> before) {
 
         return storage(schema).afterDelete(schema, id, version, before);
+    }
+
+    @Override
+    default CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        return storage(schema).increment(schema);
     }
 
     @Override

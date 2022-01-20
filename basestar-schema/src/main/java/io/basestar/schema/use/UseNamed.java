@@ -79,7 +79,7 @@ public interface UseNamed<T> extends Use<T> {
         @Override
         public Use<?> resolve(final Schema.Resolver resolver) {
 
-            final Schema<?> schema = resolver.requireSchema(name);
+            final Schema schema = resolver.requireSchema(name);
             if(schema instanceof EnumSchema) {
                 return UseEnum.from((EnumSchema) schema, config);
             } else if(schema instanceof StructSchema) {
@@ -221,13 +221,13 @@ public interface UseNamed<T> extends Use<T> {
         }
 
         @Override
-        public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+        public void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+        public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
             throw new UnsupportedOperationException();
         }

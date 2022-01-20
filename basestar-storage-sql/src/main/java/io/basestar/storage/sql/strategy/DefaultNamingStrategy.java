@@ -61,6 +61,12 @@ public class DefaultNamingStrategy implements NamingStrategy {
     }
 
     @Override
+    public org.jooq.Name sequenceName(final SequenceSchema schema) {
+
+        return combineNames(DSL.name(objectSchemaName), customizeName(schema, () -> DSL.name(fullName(schema))));
+    }
+
+    @Override
     public Name viewName(final ViewSchema schema) {
 
         return combineNames(DSL.name(objectSchemaName), customizeName(schema, () -> DSL.name(fullName(schema))));
@@ -78,7 +84,7 @@ public class DefaultNamingStrategy implements NamingStrategy {
         return dialect.columnName(getColumnCasing(), name);
     }
 
-    private org.jooq.Name customizeName(final Schema<?> schema, final Supplier<Name> defaultName) {
+    private org.jooq.Name customizeName(final Schema schema, final Supplier<Name> defaultName) {
 
         return schema.getOptionalExtension(String.class, CUSTOM_TABLE_NAME_EXTENSION)
                 .map(SQLUtils::parseName)
@@ -117,16 +123,16 @@ public class DefaultNamingStrategy implements NamingStrategy {
     }
 
     @Override
-    public Optional<Name> getSchema(Schema<?> schema) {
+    public Optional<Name> getSchema(Schema schema) {
         return Optional.empty();
     }
 
     @Override
-    public Optional<Name> getCatalog(Schema<?> schema) {
+    public Optional<Name> getCatalog(Schema schema) {
         return Optional.empty();
     }
 
-    private String fullName(final Schema<?> schema) {
+    private String fullName(final Schema schema) {
 
         final Casing casing = getEntityCasing();
         return schema.getQualifiedName().stream()

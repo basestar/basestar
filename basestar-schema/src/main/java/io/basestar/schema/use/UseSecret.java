@@ -82,7 +82,7 @@ public class UseSecret implements UseScalar<Secret> {
     }
 
     @Override
-    public Schema<?> openApi(final Set<Name> expand) {
+    public Schema openApi(final Set<Name> expand) {
 
         return new StringSchema();
     }

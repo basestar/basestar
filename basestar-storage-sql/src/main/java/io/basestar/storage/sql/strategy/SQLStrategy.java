@@ -40,7 +40,7 @@ public interface SQLStrategy {
 
     NamingStrategy getNamingStrategy();
 
-    default void createEntities(final DSLContext context, final Collection<? extends Schema<?>> schemas) {
+    default void createEntities(final DSLContext context, final Collection<? extends Schema> schemas) {
 
         final Logger log = LoggerFactory.getLogger(SQLStrategy.class);
         for (final DDLStep query : createEntityDDL(context, schemas)) {
@@ -52,7 +52,7 @@ public interface SQLStrategy {
         }
     }
 
-    List<DDLStep> createEntityDDL(DSLContext context, Collection<? extends Schema<?>> schemas);
+    List<DDLStep> createEntityDDL(DSLContext context, Collection<? extends Schema> schemas);
 
     io.basestar.storage.sql.SQLDialect dialect();
 

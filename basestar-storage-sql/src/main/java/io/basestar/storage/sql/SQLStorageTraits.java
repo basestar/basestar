@@ -63,4 +63,10 @@ public class SQLStorageTraits implements StorageTraits {
 
         return Concurrency.OPTIMISTIC;
     }
+
+    @Override
+    public boolean supportsSequence() {
+
+        return true;
+    }
 }

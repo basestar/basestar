@@ -90,6 +90,8 @@ public abstract class TestStorage {
 
     protected static final String SQL_QUERY = "SqlQuery";
 
+    protected static final String SEQUENCE = "Sequence";
+
     protected final Namespace namespace;
 
     protected TestStorage() {
@@ -1405,5 +1407,34 @@ public abstract class TestStorage {
                 "count", 2L,
                 "state", "District of Columbia"
         )), firstPage.get(0));
+    }
+
+    @Test
+    public void testSqlQueryNull() throws Exception {
+
+        assumeTrue(supportsSql());
+
+        final Storage storage = storage(namespace);
+
+        bulkLoad(storage, loadAddresses());
+
+        final QuerySchema schema = namespace.requireQuerySchema(SQL_QUERY);
+
+        final Page<Map<String, Object>> firstPage = storage.query(Consistency.ATOMIC, schema, Immutable.map("city", null), Constant.TRUE, Immutable.list(), ImmutableSet.of())
+                .page(10).get();
+
+        assertEquals(13, firstPage.size());
+    }
+
+    @Test
+    public void testSequence() {
+
+        final Storage storage = storage(namespace);
+        final SequenceSchema schema = namespace.requireSequenceSchema(SEQUENCE);
+        assumeTrue(storage.storageTraits(schema).supportsSequence());
+
+        assertEquals("ID-10", storage.increment(schema).thenApply(schema::format).join());
+        assertEquals("ID-11", storage.increment(schema).thenApply(schema::format).join());
+        assertEquals("ID-12", storage.increment(schema).thenApply(schema::format).join());
     }
 }

@@ -113,7 +113,7 @@ public class Codegen {
             final String qualifierName = entry.getKey();
             final LanguageConfig.Qualifier qualifierConfig = entry.getValue();
 
-            for(final Schema<?> schema : namespace.getSchemas().values()) {
+            for (final Schema schema : namespace.getSchemas().values()) {
 
                 final Name relativePackage = schema.getQualifiedPackageName();
                 final CodegenContext context = CodegenContext.builder()
@@ -123,7 +123,7 @@ public class Codegen {
                         .codebehindPath(Nullsafe.orDefault(settings.getCodebehindPath(), Path.of("codebehind")))
                         .build();
                 final SchemaModel model = SchemaModel.from(context, schema);
-                if(model.generate()) {
+                if (model.generate()) {
                     final String outputName = outputName(qualifierName, qualifierConfig, schema);
                     final File file = new File(base, outputName);
                     new File(file.getParent()).mkdirs();
@@ -142,7 +142,7 @@ public class Codegen {
         return (name == null || name.isEmpty()) ? "" : name.toString(File.separator) + File.separator;
     }
 
-    private String outputName(final String qualifierName, final LanguageConfig.Qualifier qualifierConfig, final Schema<?> schema) {
+    private String outputName(final String qualifierName, final LanguageConfig.Qualifier qualifierConfig, final Schema schema) {
 
         final String pattern = qualifierConfig.getOutput();
         final Map<String, String> replacements = ImmutableMap.<String, String>builder()
@@ -152,7 +152,7 @@ public class Codegen {
                 .put("schema.name", schema.getName())
                 .build();
         String result = pattern;
-        for(final Map.Entry<String, String> entry : replacements.entrySet()) {
+        for (final Map.Entry<String, String> entry : replacements.entrySet()) {
             result = result.replaceAll("\\{" + Pattern.quote(entry.getKey()) + "}", Matcher.quoteReplacement(entry.getValue()));
         }
         return result;

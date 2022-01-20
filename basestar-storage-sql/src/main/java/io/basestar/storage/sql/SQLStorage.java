@@ -26,6 +26,7 @@ import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.visitor.DisjunctionVisitor;
 import io.basestar.schema.Index;
+import io.basestar.schema.Schema;
 import io.basestar.schema.*;
 import io.basestar.schema.from.FromSql;
 import io.basestar.schema.use.Use;
@@ -646,7 +647,7 @@ public class SQLStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return SQLStorageTraits.INSTANCE;
     }
@@ -655,6 +656,24 @@ public class SQLStorage implements DefaultLayerStorage {
     public Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
 
         return Collections.emptySet();
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        return withContext(context -> {
+
+            final org.jooq.Name sequenceName = strategy.getNamingStrategy().sequenceName(schema);
+            return strategy.dialect().incrementSequence(context, sequenceName).fetchAsync().thenApply(result -> {
+
+                final Iterator<Record1<Long>> iterator = result.iterator();
+                if (iterator.hasNext()) {
+                    return iterator.next().value1();
+                } else {
+                    throw new IllegalStateException("Sequence yielded no value");
+                }
+            });
+        });
     }
 
     private <T> CompletableFuture<T> withContext(final Function<DSLContext, CompletionStage<T>> with) {

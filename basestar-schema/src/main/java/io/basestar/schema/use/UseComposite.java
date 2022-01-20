@@ -292,7 +292,7 @@ public class UseComposite implements Use<Map<String, Object>> {
     }
 
     @Override
-    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         for (final Map.Entry<String, Use<?>> entry : types.entrySet()) {
@@ -304,7 +304,7 @@ public class UseComposite implements Use<Map<String, Object>> {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         for (final Map.Entry<String, Use<?>> entry : types.entrySet()) {

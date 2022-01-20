@@ -108,6 +108,8 @@ class TestDatabaseServer {
 
     private static final Name WITH_VERSIONED_REF = Name.of("WithVersionedRef");
 
+    private static final Name ORDER = Name.of("Order");
+
     private Namespace namespace;
 
     private DatabaseServer database;
@@ -139,7 +141,7 @@ class TestDatabaseServer {
         final MemoryStorage memoryStorage = MemoryStorage.builder().build();
         this.storage = new DelegatingStorage() {
             @Override
-            public Storage storage(final QueryableSchema schema) {
+            public Storage storage(final Schema schema) {
 
                 return memoryStorage;
             }
@@ -1114,5 +1116,17 @@ class TestDatabaseServer {
         final String b64 = Base64.getEncoder().encodeToString(EventSerialization.gzipBson().serialize(event));
         System.err.println(b64);
 
+    }
+
+    @Test
+    void testSequence() throws Exception {
+
+        final Map<String, Object> data = ImmutableMap.of();
+
+        final Map<String, Object> create0 = database.create(caller, ORDER, data).get();
+        assertObject(ORDER, "ORDER-0", 1, data, create0);
+
+        final Map<String, Object> create1 = database.create(caller, ORDER, data).get();
+        assertObject(ORDER, "ORDER-1", 1, data, create1);
     }
 }

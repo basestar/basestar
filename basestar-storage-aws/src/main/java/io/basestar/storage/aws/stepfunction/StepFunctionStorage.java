@@ -6,10 +6,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.BasestarModule;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.*;
 import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.util.*;
@@ -312,8 +309,14 @@ public class StepFunctionStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return StepFunctionStorageTraits.INSTANCE;
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        throw new UnsupportedOperationException();
     }
 }

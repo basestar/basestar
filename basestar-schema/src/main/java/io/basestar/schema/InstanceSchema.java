@@ -41,11 +41,11 @@ import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
 
-public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Property.Resolver, Layout {
+public interface InstanceSchema extends ValueSchema<Instance>, Member.Resolver, Property.Resolver, Layout {
 
-    interface Descriptor<S extends InstanceSchema> extends Schema.Descriptor<S, Instance>, Property.Resolver.Descriptor {
+    interface Descriptor<S extends InstanceSchema> extends ValueSchema.Descriptor<S, Instance>, Property.Resolver.Descriptor {
 
-        interface Self<S extends InstanceSchema> extends Schema.Descriptor.Self<S, Instance>, Descriptor<S> {
+        interface Self<S extends InstanceSchema> extends ValueSchema.Descriptor.Self<S, Instance>, Descriptor<S> {
 
             @Override
             default Map<String, Property.Descriptor> getProperties() {
@@ -55,7 +55,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
         }
     }
 
-    interface Builder<B extends Builder<B, S>, S extends InstanceSchema> extends Schema.Builder<B, S, Instance>, Descriptor<S>, Property.Resolver.Builder<B> {
+    interface Builder<B extends Builder<B, S>, S extends InstanceSchema> extends ValueSchema.Builder<B, S, Instance>, Descriptor<S>, Property.Resolver.Builder<B> {
 
     }
 
@@ -78,7 +78,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     }
 
     @Override
-    default Map<Name, Schema<?>> dependencies() {
+    default Map<Name, Schema> dependencies() {
 
         return dependencies(getExpand());
     }
@@ -490,7 +490,7 @@ public interface InstanceSchema extends Schema<Instance>, Member.Resolver, Prope
     }
 
     @Override
-    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
         getDeclaredMembers().forEach((k, v) -> {

@@ -344,14 +344,14 @@ public class UseMap<T> implements UseContainer<T, Map<String, T>> {
     }
 
     @Override
-    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         final Set<Name> union = Name.branch(expand).values().stream().reduce(Collections.emptySet(), Sets::union);
         type.collectDependencies(union, out);
     }
 
     @Override
-    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         final Set<Name> union = Name.branch(expand).values().stream().reduce(Collections.emptySet(), Sets::union);
         type.collectMaterializationDependencies(union, out);

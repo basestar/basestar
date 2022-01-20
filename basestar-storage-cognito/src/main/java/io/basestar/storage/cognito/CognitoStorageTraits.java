@@ -63,4 +63,10 @@ public class CognitoStorageTraits implements StorageTraits {
 
         return Concurrency.NONE;
     }
+
+    @Override
+    public boolean supportsSequence() {
+
+        return false;
+    }
 }
