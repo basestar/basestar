@@ -869,19 +869,14 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 try {
 
+                    final SQLDialect dialect = strategy.dialect();
+                    final org.jooq.Table<?> table = DSL.table(objectTableName(schema));
                     final Map<Field<?>, SelectField<?>> record = toRecord(context, schema, after);
 
-                    context.insertInto(DSL.table(objectTableName(schema)))
-                            .columns(record.keySet())
-                            .select(DSL.select(record.values().toArray(new SelectFieldOrAsterisk[0])))
-                            .execute();
-
-//                    final History history = schema.getHistory();
-//                    if(history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
-//                        context.insertInto(DSL.table(historyTableName(schema)))
-//                                .set(toRecord(schema, after))
-//                                .execute();
-//                    }
+                    final int result = dialect.createObjectLayer(context, table, idField(schema), id, record);
+                    if (result != 1) {
+                        throw new ObjectExistsException(schema.getQualifiedName(), id);
+                    }
 
                     return BatchResponse.fromRef(schema.getQualifiedName(), after);
 
@@ -902,24 +897,15 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 final Long version = before == null ? null : Instance.getVersion(before);
 
-                Condition condition = idField(schema).eq(id);
-                if (version != null) {
-                    condition = condition.and(versionField(schema).eq(version));
-                }
+                final SQLDialect dialect = strategy.dialect();
+                final org.jooq.Table<?> table = DSL.table(objectTableName(schema));
+                final Map<Field<?>, SelectField<?>> record = toRecord(context, schema, after);
 
-                if (context.update(DSL.table(objectTableName(schema))).set(toRecord(context, schema, after))
-                        .where(condition).limit(DSL.inline(1)).execute() != 1) {
+                final int result = dialect.updateObjectLayer(context, table, idField(schema), versionField(schema), id, version, record);
 
+                if (result != 1) {
                     throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                 }
-
-//                final History history = schema.getHistory();
-//                if (history.isEnabled() && history.getConsistency(Consistency.ATOMIC).isStronger(Consistency.ASYNC)) {
-//                    context.insertInto(DSL.table(historyTableName(schema)))
-//                            .set(toRecord(schema, after))
-//                            .execute();
-//                }
-
                 return BatchResponse.fromRef(schema.getQualifiedName(), after);
             });
         }
@@ -931,14 +917,12 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 final Long version = before == null ? null : Instance.getVersion(before);
 
-                Condition condition = idField(schema).eq(id);
-                if (version != null) {
-                    condition = condition.and(versionField(schema).eq(version));
-                }
+                final SQLDialect dialect = strategy.dialect();
+                final org.jooq.Table<?> table = DSL.table(objectTableName(schema));
 
-                if (context.deleteFrom(DSL.table(objectTableName(schema)))
-                        .where(condition).limit(DSL.inline(1)).execute() != 1) {
+                final int result = dialect.deleteObjectLayer(context, table, idField(schema), versionField(schema), id, version);
 
+                if (result != 1) {
                     throw new VersionMismatchException(schema.getQualifiedName(), id, version);
                 }
 
@@ -953,12 +937,18 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 try {
 
-                    final Map<Field<?>, SelectField<?>> record = toRecord(context, schema, after);
+                    final SQLDialect dialect = strategy.dialect();
+                    final Optional<org.jooq.Name> historyTableName = historyTableName(schema);
+                    if (historyTableName.isPresent()) {
 
-                    historyTableName(schema).ifPresent(name -> context.insertInto(DSL.table(name))
-                            .columns(record.keySet())
-                            .select(DSL.select(record.values().toArray(new SelectFieldOrAsterisk[0])))
-                            .execute());
+                        final org.jooq.Table<?> table = DSL.table(historyTableName.get());
+                        final Map<Field<?>, SelectField<?>> record = toRecord(context, schema, after);
+
+                        final int result = dialect.createHistoryLayer(context, table, idField(schema), versionField(schema), id, record);
+                        if (result != 1) {
+                            throw new ObjectExistsException(schema.getQualifiedName(), id);
+                        }
+                    }
 
                     return BatchResponse.fromRef(schema.getQualifiedName(), after);
 

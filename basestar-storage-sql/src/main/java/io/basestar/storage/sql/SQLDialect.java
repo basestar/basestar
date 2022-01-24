@@ -851,4 +851,41 @@ public interface SQLDialect {
         final InferenceContext inferenceContext = InferenceContext.from(schema);
         return new SQLExpressionVisitor(this, inferenceContext, columnResolver);
     }
+
+    default int createObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final String id, final Map<Field<?>, SelectField<?>> record) {
+
+        return context.insertInto(table)
+                .columns(record.keySet())
+                .select(DSL.select(record.values().toArray(new SelectFieldOrAsterisk[0])))
+                .execute();
+    }
+
+    default int updateObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version, final Map<Field<?>, SelectField<?>> record) {
+
+        Condition condition = idField.eq(id);
+        if (version != null) {
+            condition = condition.and(versionField.eq(version));
+        }
+
+        return context.update(table).set(record)
+                .where(condition).limit(DSL.inline(1)).execute();
+    }
+
+    default int createHistoryLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Map<Field<?>, SelectField<?>> record) {
+
+        return context.insertInto(table)
+                .columns(record.keySet())
+                .select(DSL.select(record.values().toArray(new SelectFieldOrAsterisk[0])))
+                .execute();
+    }
+
+    default int deleteObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version) {
+
+        Condition condition = idField.eq(id);
+        if (version != null) {
+            condition = condition.and(versionField.eq(version));
+        }
+        return context.deleteFrom(table)
+                .where(condition).limit(DSL.inline(1)).execute();
+    }
 }

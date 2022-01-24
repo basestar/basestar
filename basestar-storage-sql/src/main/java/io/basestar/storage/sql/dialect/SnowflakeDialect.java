@@ -3,6 +3,7 @@ package io.basestar.storage.sql.dialect;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ContextIterator;
@@ -28,6 +29,7 @@ import org.jooq.impl.TableImpl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -325,5 +327,99 @@ public class SnowflakeDialect extends JSONDialect {
                 return null;
             }
         };
+    }
+
+    private void merge(final StringBuilder merge, final org.jooq.Table<?> table, final Field<String> idField) {
+
+        merge.append("MERGE INTO ");
+        merge.append(table.getQualifiedName());
+        merge.append(" AS TARGET USING (?) AS SOURCE ON SOURCE.");
+        merge.append(idField.getUnqualifiedName());
+        merge.append(" = TARGET.");
+        merge.append(idField.getUnqualifiedName());
+        merge.append(" ");
+    }
+
+    private void merge(final StringBuilder merge, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField) {
+
+        merge(merge, table, idField);
+        merge.append("AND SOURCE.");
+        merge.append(versionField.getUnqualifiedName());
+        merge.append(" = TARGET.");
+        merge.append(versionField.getUnqualifiedName());
+        merge.append(" ");
+    }
+
+    private void mergeNotMatchedInsert(final StringBuilder merge, final Map<Field<?>, SelectField<?>> record) {
+
+        merge.append("WHEN NOT MATCHED THEN INSERT (");
+        merge.append(record.keySet().stream().map(f -> f.getUnqualifiedName().toString()).collect(Collectors.joining(",")));
+        merge.append(") VALUES (");
+        merge.append(record.keySet().stream().map(f -> "SOURCE." + f.getUnqualifiedName().toString()).collect(Collectors.joining(",")));
+        merge.append(") ");
+    }
+
+    private void mergeWhenMatched(final StringBuilder merge, final Field<Long> versionField, final Long version) {
+
+        merge.append("WHEN MATCHED");
+        if (version != null) {
+            merge.append(" AND TARGET.");
+            merge.append(versionField.getUnqualifiedName());
+            merge.append(" = ");
+            merge.append(DSL.inline(version));
+        }
+        merge.append(" ");
+    }
+
+    private QueryPart mergeSelect(final Map<Field<?>, SelectField<?>> record) {
+
+        return DSL.select(record.entrySet().stream()
+                .map(e -> DSL.field(e.getValue()).as(e.getKey().getUnqualifiedName()))
+                .toArray(SelectFieldOrAsterisk[]::new));
+    }
+
+    @Override
+    public int createObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final String id, final Map<Field<?>, SelectField<?>> record) {
+
+        final StringBuilder merge = new StringBuilder();
+        merge(merge, table, idField);
+        mergeNotMatchedInsert(merge, record);
+
+        return context.execute(DSL.sql(merge.toString(), mergeSelect(record)));
+    }
+
+    @Override
+    public int updateObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version, final Map<Field<?>, SelectField<?>> record) {
+
+        final StringBuilder merge = new StringBuilder();
+        merge(merge, table, idField);
+        mergeWhenMatched(merge, versionField, version);
+        merge.append("THEN UPDATE SET ");
+        merge.append(record.keySet().stream()
+                .map(f -> "TARGET." + f.getUnqualifiedName() + " = SOURCE." + f.getUnqualifiedName())
+                .collect(Collectors.joining(",")));
+
+        return context.execute(DSL.sql(merge.toString(), mergeSelect(record)));
+    }
+
+    @Override
+    public int deleteObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version) {
+
+        final StringBuilder merge = new StringBuilder();
+        merge(merge, table, idField);
+        mergeWhenMatched(merge, versionField, version);
+        merge.append("THEN DELETE");
+
+        return context.execute(DSL.sql(merge.toString(), mergeSelect(ImmutableMap.of(idField, DSL.inline(id)))));
+    }
+
+    @Override
+    public int createHistoryLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Map<Field<?>, SelectField<?>> record) {
+
+        final StringBuilder merge = new StringBuilder();
+        merge(merge, table, idField, versionField);
+        mergeNotMatchedInsert(merge, record);
+
+        return context.execute(DSL.sql(merge.toString(), mergeSelect(record)));
     }
 }
