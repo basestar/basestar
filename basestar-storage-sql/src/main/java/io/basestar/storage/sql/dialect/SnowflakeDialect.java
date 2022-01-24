@@ -296,7 +296,9 @@ public class SnowflakeDialect extends JSONDialect {
                                 if (name.size() == 1) {
                                     return DSL.field(DSL.name(alias2, "VALUE"));
                                 } else {
-                                    return DSL.field(DSL.sql(DSL.name(alias2, "VALUE") + ":" + namingStrategy.columnName(name.withoutFirst())));
+                                    return DSL.field(DSL.sql(DSL.name(alias2, "VALUE") + ":" + name.withoutFirst()
+                                            .stream().map(v -> DSL.name(v).toString())
+                                            .collect(Collectors.joining("."))));
                                 }
                             } else {
                                 return DSL.field(DSL.name(alias1).append(namingStrategy.columnName(name)));
