@@ -1113,6 +1113,7 @@ class TestDatabaseServer {
         final RefRefreshEvent event = RefRefreshEvent.of(Ref.of(Name.parse("foo.File"), "not_exists"), Name.parse("foo.File"), "also_not_exists");
         final String b64 = Base64.getEncoder().encodeToString(EventSerialization.gzipBson().serialize(event));
         System.err.println(b64);
-
     }
+
+
 }

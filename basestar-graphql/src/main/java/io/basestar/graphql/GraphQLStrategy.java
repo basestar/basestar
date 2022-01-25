@@ -80,6 +80,8 @@ public interface GraphQLStrategy {
 
     String queryLinkMethodName(LinkableSchema type, Link link);
 
+    String queryHistoryMethodName(ReferableSchema type);
+
     String createMethodName(ObjectSchema type);
 
     String updateMethodName(ObjectSchema type);
@@ -296,6 +298,12 @@ public interface GraphQLStrategy {
         public String queryLinkMethodName(final LinkableSchema type, final Link link) {
 
             return queryMethodName(type) + Text.upperCamel(link.getName());
+        }
+
+        @Override
+        public String queryHistoryMethodName(final ReferableSchema type) {
+
+            return "history" + typeName(type);
         }
 
         @Override

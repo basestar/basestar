@@ -139,7 +139,9 @@ public class SchemaAdaptor {
         builder.name(GraphQLUtils.QUERY_TYPE);
         namespace.forEachQueryableSchema((schemaName, schema) -> {
             if (schema instanceof ReferableSchema) {
-                builder.fieldDefinition(readDefinition((ReferableSchema) schema));
+                final ReferableSchema referableSchema = (ReferableSchema) schema;
+                builder.fieldDefinition(readDefinition(referableSchema));
+                builder.fieldDefinition(queryHistoryDefinition(referableSchema));
             }
             builder.fieldDefinition(queryDefinition(schema));
             if (schema instanceof LinkableSchema) {
@@ -178,6 +180,17 @@ public class SchemaAdaptor {
                         .name(argument.getName()).type(inputType(argument.getType())).build());
             });
         }
+        addQueryArguments(builder);
+        return builder.build();
+    }
+
+    public FieldDefinition queryHistoryDefinition(final ReferableSchema schema) {
+
+        final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
+        builder.name(strategy.queryHistoryMethodName(schema));
+        builder.type(new TypeName(strategy.pageTypeName(schema)));
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.idArgumentName()).type(new NonNullType(new TypeName(GraphQLUtils.ID_TYPE))).build());
         addQueryArguments(builder);
         return builder.build();
     }

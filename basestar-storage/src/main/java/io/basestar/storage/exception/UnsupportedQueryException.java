@@ -22,6 +22,9 @@ package io.basestar.storage.exception;
 
 import io.basestar.expression.Expression;
 import io.basestar.util.Name;
+import io.basestar.util.Sort;
+
+import java.util.List;
 
 public class UnsupportedQueryException extends RuntimeException {
 
@@ -33,5 +36,10 @@ public class UnsupportedQueryException extends RuntimeException {
     public UnsupportedQueryException(final Name schema, final Expression expression, final String reason) {
 
         super("Schema " + schema + " does not support query " + expression + " (reason: " + reason + ")");
+    }
+
+    public UnsupportedQueryException(final Name schema, final Expression expression, final List<Sort> sort, final String reason) {
+
+        super("Schema " + schema + " does not support query " + expression + " with sort" + sort + " (reason: " + reason + ")");
     }
 }

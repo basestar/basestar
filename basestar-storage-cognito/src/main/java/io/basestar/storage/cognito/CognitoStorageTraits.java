@@ -59,6 +59,12 @@ public class CognitoStorageTraits implements StorageTraits {
     }
 
     @Override
+    public boolean supportsHistory() {
+
+        return false;
+    }
+
+    @Override
     public Concurrency getObjectConcurrency() {
 
         return Concurrency.NONE;

@@ -518,24 +518,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
 
         final Consistency consistency = Nullsafe.orDefault(options.getConsistency(), Consistency.EVENTUAL);
 
-        final Expression rooted;
-        if (expression != null) {
-            rooted = expression.bind(Context.init(), Renaming.addPrefix(Name.of(Reserved.THIS)));
-        } else {
-            rooted = new Constant(true);
-        }
-
-        final Expression merged;
-        if (permission != null && !caller.isSuper()) {
-            merged = new And(permission.getExpression(), rooted);
-        } else {
-            merged = rooted;
-        }
-
-        final Expression bound = merged.bind(context);
-
         final List<Sort> sort = Nullsafe.orDefault(options.getSort(), Collections.emptyList());
-        final Expression unrooted = bound.bind(Context.init(), Renaming.removeExpectedPrefix(Name.of(Reserved.THIS)));
+        final Expression bound = bind(context, expression, caller, permission);
 
         final Set<Page.Stat> stats = Nullsafe.orDefault(options.getStats());
 
@@ -553,8 +537,58 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
             }
         }
 
-        return queryImpl(context, consistency, schema, arguments, unrooted, sort, options.getExpand(), count, paging, stats)
+        return queryImpl(context, consistency, schema, arguments, bound, sort, options.getExpand(), count, paging, stats)
                 .thenCompose(results -> expandAndRestrict(consistency, consistency, caller, results, options.getExpand()));
+    }
+
+    @Override
+    public CompletableFuture<Page<Instance>> queryHistory(final Caller caller, final QueryHistoryOptions options) {
+
+        log.debug("Query history: options={}", options);
+
+        final ReferableSchema schema = namespace.requireReferableSchema(options.getSchema());
+
+        final int count = Nullsafe.orDefault(options.getCount(), QueryOptions.DEFAULT_COUNT);
+        if (count > QueryOptions.MAX_COUNT) {
+            throw new IllegalStateException("Count too high (max " + QueryLinkOptions.MAX_COUNT + ")");
+        }
+        final Page.Token paging = options.getPaging();
+        final Expression expression = options.getExpression();
+        final Permission permission = schema.getPermission(Permission.READ);
+        final String id = options.getId();
+
+        final Context context = context(caller, ImmutableMap.of());
+
+        final Consistency consistency = Nullsafe.orDefault(options.getConsistency(), Consistency.EVENTUAL);
+
+        final List<Sort> sort = Nullsafe.orDefault(options.getSort(), Collections.emptyList());
+        final Expression bound = bind(context, expression, caller, permission);
+
+        final Set<Page.Stat> stats = Nullsafe.orDefault(options.getStats());
+
+        return queryHistoryImpl(context, consistency, schema, id, bound, sort, options.getExpand(), count, paging, stats)
+                .thenCompose(results -> expandAndRestrict(consistency, consistency, caller, results, options.getExpand()));
+    }
+
+    private Expression bind(final Context context, final Expression expression, final Caller caller, final Permission permission) {
+
+        final Expression rooted;
+        if (expression != null) {
+            rooted = expression.bind(Context.init(), Renaming.addPrefix(Name.of(Reserved.THIS)));
+        } else {
+            rooted = new Constant(true);
+        }
+
+        final Expression merged;
+        if (permission != null && !caller.isSuper()) {
+            merged = new And(permission.getExpression(), rooted);
+        } else {
+            merged = rooted;
+        }
+
+        final Expression bound = merged.bind(context);
+
+        return bound.bind(Context.init(), Renaming.removeExpectedPrefix(Name.of(Reserved.THIS)));
     }
 
     protected void checkPermission(final Caller caller, final QueryableSchema schema, final Permission permission, final Map<String, Object> scope) {

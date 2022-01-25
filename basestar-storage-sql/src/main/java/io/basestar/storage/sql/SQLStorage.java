@@ -24,6 +24,10 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.expression.compare.Eq;
+import io.basestar.expression.constant.Constant;
+import io.basestar.expression.constant.NameConstant;
+import io.basestar.expression.logical.And;
 import io.basestar.expression.visitor.DisjunctionVisitor;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
@@ -170,7 +174,7 @@ public class SQLStorage implements DefaultLayerStorage {
                                                 final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());
-        return (stats, token, count) -> queryImpl(schema, null, bound, sort, expand, count, token, stats);
+        return (stats, token, count) -> queryImpl(schema, null, schemaTableName(schema), bound, sort, expand, count, token, stats);
     }
 
 
@@ -275,19 +279,34 @@ public class SQLStorage implements DefaultLayerStorage {
             }
 
             final Index index = best;
-            sources.put(conjunction.digest(), (stats, token, count) -> queryImpl(schema, index, conjunction, sort, expand, count, token, stats));
+
+            final org.jooq.Name tableName = Optional.ofNullable(index)
+                    .flatMap(index1 -> indexTableName(schema, index1))
+                    .orElseGet(() -> schemaTableName(schema));
+
+            sources.put(conjunction.digest(), (stats, token, count) -> queryImpl(schema, index, tableName, conjunction, sort, expand, count, token, stats));
         }
 
         return Pager.merge(Instance.comparator(sort), sources);
     }
 
-    private Condition condition(final DSLContext context, final LinkableSchema schema, final Index index, final Expression expression) {
+    @Override
+    public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        final Expression bound = new And(query, new Eq(new NameConstant(ReferableSchema.ID), new Constant(id))).bind(Context.init());
+        return (stats, token, count) -> {
+            final org.jooq.Name tableName = historyTableName(schema).orElse(schemaTableName(schema));
+            return queryImpl(schema, null, tableName, bound, sort, expand, count, token, stats);
+        };
+    }
+
+    private Condition condition(final Table<?> table, final LinkableSchema schema, final Index index, final Expression expression) {
 
         final Function<Name, QueryPart> columnResolver;
         if (index == null) {
-            columnResolver = objectColumnResolver(context, schema);
+            columnResolver = objectColumnResolver(table, schema);
         } else {
-            columnResolver = indexColumnResolver(context, (ReferableSchema) schema, index);
+            columnResolver = indexColumnResolver(table, (ReferableSchema) schema, index);
         }
         return strategy.expressionVisitor(schema, columnResolver).condition(expression);
     }
@@ -344,6 +363,7 @@ public class SQLStorage implements DefaultLayerStorage {
     }
 
     private CompletableFuture<Page<Map<String, Object>>> queryImpl(final LinkableSchema schema, final Index index,
+                                                                   final org.jooq.Name tableName,
                                                                    final Expression expression, final List<Sort> sort,
                                                                    final Set<Name> expand, final int count,
                                                                    final Page.Token token, final Set<Page.Stat> stats) {
@@ -353,17 +373,13 @@ public class SQLStorage implements DefaultLayerStorage {
 
         final boolean useKeysetPaging = canUseKeysetPaging(schema, sort);
 
-        final org.jooq.Name tableName = Optional.ofNullable(index)
-                .flatMap(index1 -> indexTableName((ReferableSchema) schema, index1))
-                .orElseGet(() -> schemaTableName(schema));
-
         final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
 
             final Table<?> table = resolveTable(context, tableName, schema, index);
 
             final List<OrderField<?>> orderFields = orderFields(table, sort);
 
-            final Condition condition = condition(context, schema, index, expression);
+            final Condition condition = condition(table, schema, index, expression);
 
             log.debug("SQL condition {}", condition);
 
@@ -410,7 +426,7 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 final Table<?> table = resolveTable(context, tableName, schema, index);
 
-                final Condition condition = condition(context, schema, index, expression);
+                final Condition condition = condition(table, schema, index, expression);
 
                 return context.select(DSL.count().as(COUNT_AS)).from(table.getQualifiedName()).where(condition).fetchAsync().thenApply(results -> {
 
@@ -434,11 +450,10 @@ public class SQLStorage implements DefaultLayerStorage {
         }
     }
 
-    private Function<Name, QueryPart> objectColumnResolver(final DSLContext context, final LinkableSchema schema) {
+    private Function<Name, QueryPart> objectColumnResolver(final Table<?> table, final LinkableSchema schema) {
 
         final SQLDialect dialect = strategy.dialect();
 
-        final Table<?> table = resolveTable(context, schemaTableName(schema), schema);
         return name -> {
 
             if (schema.metadataSchema().containsKey(name.first())) {
@@ -481,7 +496,7 @@ public class SQLStorage implements DefaultLayerStorage {
         };
     }
 
-    private Function<Name, QueryPart> indexColumnResolver(final DSLContext context, final ReferableSchema schema, final Index index) {
+    private Function<Name, QueryPart> indexColumnResolver(final Table<?> table, final ReferableSchema schema, final Index index) {
 
         final SQLDialect dialect = strategy.dialect();
 

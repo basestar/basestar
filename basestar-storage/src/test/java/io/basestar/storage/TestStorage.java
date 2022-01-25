@@ -48,6 +48,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -126,6 +128,11 @@ public abstract class TestStorage {
     protected boolean supportsScan() {
 
         return false;
+    }
+
+    protected boolean supportsHistoryQuery() {
+
+        return true;
     }
 
     protected void bulkLoad(final Storage storage, final Multimap<String, Map<String, Object>> data) {
@@ -380,6 +387,12 @@ public abstract class TestStorage {
             final Map<String, Object> v1 = storage.getVersion(Consistency.ATOMIC, schema, id, 1L, ImmutableSet.of()).join();
             assertNotNull(v1);
             assertEquals(1, Instance.getVersion(v1));
+
+            if (supportsHistoryQuery()) {
+                final List<Map<String, Object>> historyPage = storage.queryHistory(Consistency.ATOMIC, schema, id, Constant.TRUE, ImmutableList.of(Sort.asc(ReferableSchema.VERSION)), ImmutableSet.of())
+                        .page(10).join();
+                assertEquals(1, historyPage.size());
+            }
         }
     }
 
@@ -452,7 +465,9 @@ public abstract class TestStorage {
 
         final String id = UUID.randomUUID().toString();
 
-        final Instance init = instance(schema, id, 1L);
+        final Instance init = instance(schema, id, 1L, Immutable.map(
+                "string", "v1"
+        ));
 
         storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, init)
@@ -461,7 +476,9 @@ public abstract class TestStorage {
         final Instance before = schema.create(storage.get(Consistency.ATOMIC, schema, id, ImmutableSet.of()).join());
         assertEquals(1L, before.getVersion());
 
-        final Instance after = instance(schema, id, 2L);
+        final Instance after = instance(schema, id, 2L, Immutable.map(
+                "string", "v2"
+        ));
 
         storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .updateObject(schema, id, setVersion(before, 1L), after)
@@ -474,6 +491,12 @@ public abstract class TestStorage {
             final Map<String, Object> v2 = storage.getVersion(Consistency.ATOMIC, schema, id, 2L, ImmutableSet.of()).join();
             assertNotNull(v2);
             assertEquals(2, Instance.getVersion(v2));
+
+            if (supportsHistoryQuery()) {
+                final List<Map<String, Object>> historyPage = storage.queryHistory(Consistency.ATOMIC, schema, id, Constant.TRUE, ImmutableList.of(Sort.asc(ReferableSchema.VERSION)), ImmutableSet.of())
+                        .page(10).join();
+                assertEquals(2, historyPage.size());
+            }
         }
     }
 
@@ -638,7 +661,7 @@ public abstract class TestStorage {
 
         final String id = UUID.randomUUID().toString();
 
-        final Instance init = instance(schema, id, 1L);
+        final Instance init = instance(schema, id, 1L, Immutable.map("string", "v1"));
 
         storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, init)
@@ -646,7 +669,7 @@ public abstract class TestStorage {
 
         final Instance before = schema.create(storage.get(Consistency.ATOMIC, schema, id, ImmutableSet.of()).join());
 
-        final Instance after = instance(schema, id, 2L);
+        final Instance after = instance(schema, id, 2L, Immutable.map("string", "v2"));
 
         storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .updateObject(schema, id, setVersion(before, 1L), after)
@@ -670,7 +693,7 @@ public abstract class TestStorage {
 
         final String id = UUID.randomUUID().toString();
 
-        final Instance init = instance(schema, id, 1L);
+        final Instance init = instance(schema, id, 1L, Immutable.map("string", "v1"));
 
         storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .createObject(schema, id, init)
@@ -678,7 +701,7 @@ public abstract class TestStorage {
 
         final Instance before = schema.create(storage.get(Consistency.ATOMIC, schema, id, ImmutableSet.of()).join());
 
-        final Instance after = instance(schema, id, 2L);
+        final Instance after = instance(schema, id, 2L, Immutable.map("string", "v2"));
 
         storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .updateObject(schema, id, setVersion(before, 1L), after)
@@ -718,7 +741,7 @@ public abstract class TestStorage {
 
         final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of(ObjectSchema.ID)));
         final Expression expr = Expression.parse("p.x == 10 && p.y == 100 for any p of points");
-        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, Immutable.map(), expr, Collections.emptyList(), Collections.emptySet()).page(100).join();
+        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, Immutable.map(), expr, Collections.emptyList(), Collections.emptySet()).page(10).join();
         assertEquals(1, results.size());
     }
 
@@ -1405,5 +1428,78 @@ public abstract class TestStorage {
                 "count", 2L,
                 "state", "District of Columbia"
         )), firstPage.get(0));
+    }
+
+    @Test
+    protected void testHistory() {
+
+        assumeTrue(supportsUpdate());
+        assumeTrue(supportsHistoryQuery());
+
+        final Storage storage = storage(namespace);
+        final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
+
+        final String id = UUID.randomUUID().toString();
+
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED).createObject(schema, id, schema.create(ImmutableMap.of(
+                "id", id,
+                "integer", 0,
+                "version", 1
+        ))).write().join();
+
+        for (int i = 0; i != 10; ++i) {
+            storage.write(Consistency.ATOMIC, Versioning.CHECKED).updateObject(schema, id, schema.create(ImmutableMap.of(
+                    "id", id,
+                    "integer", i,
+                    "version", i + 1
+            )), schema.create(ImmutableMap.of(
+                    "id", id,
+                    "integer", i + 1,
+                    "version", i + 2
+            ))).write().join();
+        }
+
+        // Add another object to ensure this doesn't appear in the history
+        final String otherId = UUID.randomUUID().toString();
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED).createObject(schema, otherId, schema.create(ImmutableMap.of(
+                "id", otherId,
+                "integer", 0,
+                "version", 1
+        ))).write().join();
+
+        final Set<Name> expand = Collections.emptySet();
+
+        for (final Sort.Order order : Sort.Order.values()) {
+
+            final List<Sort> sort = Immutable.list(new Sort(Name.of("version"), order));
+
+            assertEquals(3, storage
+                    .queryHistory(Consistency.ASYNC, schema, id, Expression.parse("version > 2 && version < 6"), sort, expand).page(10).join().size());
+
+            assertEquals(5, storage
+                    .queryHistory(Consistency.ASYNC, schema, id, Expression.parse("version >= 2 && version <= 6"), sort, expand).page(10).join().size());
+
+            final Pager<Map<String, Object>> ascPager = storage
+                    .queryHistory(Consistency.ASYNC, schema, id, Expression.parse("true"), sort, expand);
+            final Page<Map<String, Object>> page1 = ascPager.page(5).join();
+            assertEquals(5, page1.size());
+            final Page<Map<String, Object>> page2 = ascPager.page(page1.getPaging(), 10).join();
+            assertEquals(6, page2.size());
+
+            final List<Map<String, Object>> mergedPages = Stream.concat(page1.stream(), page2.stream()).collect(Collectors.toList());
+
+            assertTrue(mergedPages.stream().allMatch(v -> Instance.getSchema(v).equals(Name.of(SIMPLE))));
+            assertTrue(mergedPages.stream().allMatch(v -> Instance.getId(v).equals(id)));
+
+            final List<Long> expected;
+            if (order == Sort.Order.DESC) {
+                expected = ImmutableList.of(11L, 10L, 9L, 8L, 7L, 6L, 5L, 4L, 3L, 2L, 1L);
+            } else {
+                expected = ImmutableList.of(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L, 11L);
+            }
+
+            final List<Long> versions = mergedPages.stream().map(Instance::getVersion).collect(Collectors.toList());
+            assertEquals(expected, versions);
+        }
     }
 }

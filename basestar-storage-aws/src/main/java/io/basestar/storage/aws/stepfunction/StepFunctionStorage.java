@@ -3,13 +3,12 @@ package io.basestar.storage.aws.stepfunction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.jackson.BasestarModule;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.*;
 import io.basestar.storage.*;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.util.*;
@@ -181,7 +180,26 @@ public class StepFunctionStorage implements DefaultLayerStorage {
                 .stateMachineArn(stepFunctionArn)
                 .nextToken(toRequestToken(paging))
                 .maxResults(Math.min(count * BUFFER_MULTIPLIER, BUFFER_MAX))
-            .build()).thenCompose(v -> toResponse(schema, v));
+                .build()).thenCompose(v -> toResponse(schema, v));
+    }
+
+    @Override
+    public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        final String stepFunctionArn = strategy.stateMachineArn(schema);
+        return (stats, token, count) -> client.describeExecution(DescribeExecutionRequest.builder()
+                .executionArn(executionArn(stepFunctionArn, id))
+                .build()).thenApply(v -> {
+
+            if (v.status() == ExecutionStatus.RUNNING) {
+                return Page.single(toResponse(schema, v, MIN_VERSION));
+            } else {
+                return Page.from(ImmutableList.of(
+                        toResponse(schema, v, MIN_VERSION),
+                        toResponse(schema, v, MAX_VERSION)
+                ));
+            }
+        }).thenApply(page -> page.filter(v -> query.evaluatePredicate(Context.init(v))).sorted(Instance.comparator(sort)));
     }
 
     @Override

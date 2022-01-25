@@ -280,6 +280,11 @@ public class DynamoDBUtils {
         return AttributeValue.builder().n(v).build();
     }
 
+    public static AttributeValue n(final Number value) {
+
+        return AttributeValue.builder().n(value.toString()).build();
+    }
+
     public static AttributeValue s(final String v) {
 
         return AttributeValue.builder().s(v).build();

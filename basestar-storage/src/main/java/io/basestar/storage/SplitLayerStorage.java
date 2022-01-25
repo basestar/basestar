@@ -31,6 +31,12 @@ public class SplitLayerStorage implements DefaultLayerStorage {
     }
 
     @Override
+    public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        return objectStorage.queryHistory(consistency, schema, id, query, sort, expand);
+    }
+
+    @Override
     public ReadTransaction read(final Consistency consistency) {
 
         /*

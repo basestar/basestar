@@ -231,9 +231,13 @@ public class SnowflakeDialect extends JSONDialect {
                 if (schema instanceof ViewSchema) {
                     final ViewSchema viewSchema = (ViewSchema) schema;
                     if (viewSchema.getFrom() instanceof FromSql) {
-                        return ((FromSql) viewSchema.getFrom()).getPrimaryKey().stream()
-                                .map(name -> DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(name))))
-                                .collect(Collectors.toList());
+                        final FromSql fromSql = (FromSql) viewSchema.getFrom();
+                        final List<String> primaryKey = fromSql.getPrimaryKey();
+                        if (primaryKey != null && !primaryKey.isEmpty()) {
+                            return primaryKey.stream()
+                                    .map(name -> DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(name))))
+                                    .collect(Collectors.toList());
+                        }
                     }
                 } else if (schema instanceof ReferableSchema) {
                     return ImmutableList.of(DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(ReferableSchema.ID))));

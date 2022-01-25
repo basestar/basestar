@@ -142,6 +142,12 @@ class TestCognitoUserStorage extends TestStorage {
                 .build();
     }
 
+    @Override
+    protected boolean supportsHistoryQuery() {
+
+        return false;
+    }
+
 //    @Override
 //    protected boolean supportsIndexes() {
 //

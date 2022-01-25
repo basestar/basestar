@@ -123,17 +123,31 @@ public class ReadProcessor {
                                                           final List<Sort> sort, final Set<Name> expand, final int count, final Page.Token paging, final Set<Page.Stat> stats) {
 
         final List<Sort> pageSort = schema.sort(sort);
-
         final Set<Name> queryExpand = Sets.union(Nullsafe.orDefault(expand), Nullsafe.orDefault(schema.getExpand()));
-
         if (!arguments.isEmpty()) {
             if (!(schema instanceof QuerySchema)) {
                 throw new IllegalStateException("Arguments not supported for query on " + schema.getQualifiedName());
             }
         }
-
         final Pager<Instance> pager = storage.query(consistency, schema, arguments, expression, pageSort, queryExpand)
                 .map(v -> create(v, expand));
+
+        return page(pager, context, expression, count, paging, stats);
+    }
+
+    protected CompletableFuture<Page<Instance>> queryHistoryImpl(final Context context, final Consistency consistency, final ReferableSchema schema, final String id, final Expression expression,
+                                                                 final List<Sort> sort, final Set<Name> expand, final int count, final Page.Token paging, final Set<Page.Stat> stats) {
+
+        final List<Sort> pageSort = schema.historySort(sort);
+        final Set<Name> queryExpand = Sets.union(Nullsafe.orDefault(expand), Nullsafe.orDefault(schema.getExpand()));
+        final Pager<Instance> pager = storage.queryHistory(consistency, schema, id, expression, pageSort, queryExpand)
+                .map(v -> create(v, expand));
+
+        return page(pager, context, expression, count, paging, stats);
+    }
+
+    protected CompletableFuture<Page<Instance>> page(final Pager<Instance> pager, final Context context, final Expression expression,
+                                                     final int count, final Page.Token paging, final Set<Page.Stat> stats) {
 
         return pager.page(stats, paging, count)
                 .thenApply(results -> {
