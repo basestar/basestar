@@ -33,6 +33,11 @@ public class UnsupportedQueryException extends RuntimeException {
         this(schema, expression, "unspecified");
     }
 
+    public UnsupportedQueryException(final Name schema, final String reason) {
+
+        super("Schema " + schema + " does not support query (reason: " + reason + ")");
+    }
+
     public UnsupportedQueryException(final Name schema, final Expression expression, final String reason) {
 
         super("Schema " + schema + " does not support query " + expression + " (reason: " + reason + ")");

@@ -153,7 +153,9 @@ public class GraphQLAdaptor {
             if (schema instanceof ReferableSchema) {
                 final ReferableSchema objectSchema = (ReferableSchema) schema;
                 results.put(strategy.readMethodName(objectSchema), readFetcher(objectSchema));
-                results.put(strategy.queryHistoryMethodName(objectSchema), queryHistoryFetcher(objectSchema));
+                if (objectSchema.getHistory().isEnabled()) {
+                    results.put(strategy.queryHistoryMethodName(objectSchema), queryHistoryFetcher(objectSchema));
+                }
             }
             results.put(strategy.queryMethodName(schema), queryFetcher(schema));
             if (schema instanceof LinkableSchema) {

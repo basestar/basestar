@@ -141,7 +141,9 @@ public class SchemaAdaptor {
             if (schema instanceof ReferableSchema) {
                 final ReferableSchema referableSchema = (ReferableSchema) schema;
                 builder.fieldDefinition(readDefinition(referableSchema));
-                builder.fieldDefinition(queryHistoryDefinition(referableSchema));
+                if (referableSchema.getHistory().isEnabled()) {
+                    builder.fieldDefinition(queryHistoryDefinition(referableSchema));
+                }
             }
             builder.fieldDefinition(queryDefinition(schema));
             if (schema instanceof LinkableSchema) {

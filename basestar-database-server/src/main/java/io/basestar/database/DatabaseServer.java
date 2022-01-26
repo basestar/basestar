@@ -56,6 +56,7 @@ import io.basestar.storage.ConstantStorage;
 import io.basestar.storage.Storage;
 import io.basestar.storage.Versioning;
 import io.basestar.storage.exception.ObjectMissingException;
+import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.storage.overlay.OverlayStorage;
 import io.basestar.util.*;
 import lombok.extern.slf4j.Slf4j;
@@ -547,6 +548,9 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
         log.debug("Query history: options={}", options);
 
         final ReferableSchema schema = namespace.requireReferableSchema(options.getSchema());
+        if (!schema.getHistory().isEnabled()) {
+            throw new UnsupportedQueryException(schema.getQualifiedName(), "history not enabled");
+        }
 
         final int count = Nullsafe.orDefault(options.getCount(), QueryOptions.DEFAULT_COUNT);
         if (count > QueryOptions.MAX_COUNT) {
