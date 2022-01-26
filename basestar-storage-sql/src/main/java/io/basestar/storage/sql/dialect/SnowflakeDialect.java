@@ -414,11 +414,15 @@ public class SnowflakeDialect extends JSONDialect {
     }
 
     @Override
-    public int createHistoryLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Map<Field<?>, SelectField<?>> record) {
+    public int createHistoryLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version, final Map<Field<?>, SelectField<?>> record) {
 
         final StringBuilder merge = new StringBuilder();
         merge(merge, table, idField, versionField);
         mergeNotMatchedInsert(merge, record);
+        merge.append("WHEN MATCHED THEN UPDATE SET ");
+        merge.append(record.keySet().stream()
+                .map(f -> "TARGET." + f.getUnqualifiedName() + " = SOURCE." + f.getUnqualifiedName())
+                .collect(Collectors.joining(",")));
 
         return context.execute(DSL.sql(merge.toString(), mergeSelect(record)));
     }

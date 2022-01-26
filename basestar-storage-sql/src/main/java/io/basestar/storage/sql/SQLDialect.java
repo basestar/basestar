@@ -138,7 +138,12 @@ public interface SQLDialect {
 
     default Secret secretFromSQLValue(final UseSecret type, final ValueResolver value) {
 
-        return Secret.encrypted(binaryFromSQLValue(UseBinary.DEFAULT, value).getBytes());
+        final Bytes v = binaryFromSQLValue(UseBinary.DEFAULT, value);
+        if (v == null) {
+            return null;
+        } else {
+            return Secret.encrypted(v.getBytes());
+        }
     }
 
     Object anyFromSQLValue(UseAny type, ValueResolver value);
@@ -871,7 +876,9 @@ public interface SQLDialect {
                 .where(condition).limit(DSL.inline(1)).execute();
     }
 
-    default int createHistoryLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Map<Field<?>, SelectField<?>> record) {
+    default int createHistoryLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version, final Map<Field<?>, SelectField<?>> record) {
+
+        context.deleteFrom(table).where(idField.eq(id).and(versionField.eq(version))).execute();
 
         return context.insertInto(table)
                 .columns(record.keySet())

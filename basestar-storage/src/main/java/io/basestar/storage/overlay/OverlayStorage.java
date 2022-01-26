@@ -132,8 +132,11 @@ public class OverlayStorage implements Storage {
                     final Map<BatchResponse.RefKey, Map<String, Object>> refs = new HashMap<>();
                     Stream.of(baselineResponse, overlayResponse)
                             .flatMap(v -> v.getRefs().keySet().stream()).forEach(key -> {
-                        refs.put(key, ref(baselineResponse, overlayResponse, key));
-                    });
+                                final Map<String, Object> ref = ref(baselineResponse, overlayResponse, key);
+                                if (ref != null) {
+                                    refs.put(key, ref);
+                                }
+                            });
                     return new BatchResponse(refs);
                 });
             }

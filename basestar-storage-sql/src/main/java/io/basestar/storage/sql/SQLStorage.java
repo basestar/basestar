@@ -943,8 +943,9 @@ public class SQLStorage implements DefaultLayerStorage {
 
                         final org.jooq.Table<?> table = DSL.table(historyTableName.get());
                         final Map<Field<?>, SelectField<?>> record = toRecord(context, schema, after);
+                        final Long version = Instance.getVersion(after);
 
-                        final int result = dialect.createHistoryLayer(context, table, idField(schema), versionField(schema), id, record);
+                        final int result = dialect.createHistoryLayer(context, table, idField(schema), versionField(schema), id, version, record);
                         if (result != 1) {
                             throw new ObjectExistsException(schema.getQualifiedName(), id);
                         }
