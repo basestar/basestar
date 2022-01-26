@@ -171,8 +171,6 @@ public class SchemaAdaptor {
         final FieldDefinition.Builder builder = FieldDefinition.newFieldDefinition();
         builder.name(strategy.queryMethodName(schema));
         builder.type(new TypeName(strategy.pageTypeName(schema)));
-        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
-                .name(strategy.queryArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
         if (schema instanceof QuerySchema) {
             final QuerySchema querySchema = (QuerySchema) schema;
             querySchema.getArguments().forEach(argument -> {
@@ -208,6 +206,8 @@ public class SchemaAdaptor {
 
     private void addQueryArguments(final FieldDefinition.Builder builder) {
 
+        builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
+                .name(strategy.queryArgumentName()).type(new TypeName(GraphQLUtils.STRING_TYPE)).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
                 .name(strategy.sortArgumentName()).type(new ListType(new TypeName(GraphQLUtils.STRING_TYPE))).build());
         builder.inputValueDefinition(InputValueDefinition.newInputValueDefinition()
