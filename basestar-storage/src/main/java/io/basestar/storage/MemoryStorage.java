@@ -21,6 +21,7 @@ package io.basestar.storage;
  */
 
 import com.google.common.collect.Lists;
+import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
 import io.basestar.storage.annotation.ConfigurableStorage;
@@ -37,6 +38,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 // TODO optimize, this is currently used only as a mock so not important but should be a viable implementation
 
@@ -89,6 +91,48 @@ public class MemoryStorage implements DefaultIndexStorage {
                     results = Lists.newArrayList(partition.values());
                 }
             }
+
+            return Pager.simple(results);
+        }
+    }
+
+    @Override
+    public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        synchronized (lock) {
+
+            final List<Map<String, Object>> results = state.history.entrySet().stream().filter(entry -> {
+                        final SchemaIdVersion key = entry.getKey();
+                        final Map<String, Object> value = entry.getValue();
+                        if (key.getSchema().equals(schema.getQualifiedName()) && key.getId().equals(id)) {
+                            return query.evaluatePredicate(Context.init(value));
+                        } else {
+                            return false;
+                        }
+                    }).map(Map.Entry::getValue)
+                    .sorted(Instance.comparator(sort))
+                    .collect(Collectors.toList());
+
+            return Pager.simple(results);
+        }
+    }
+
+    @Override
+    public Pager<Map<String, Object>> queryHistoryRange(final Consistency consistency, final ObjectSchema schema, final String id, final Map<Name, Range<Object>> query, final Sort.Order order, final Set<Name> expand) {
+
+        synchronized (lock) {
+
+            final List<Map<String, Object>> results = state.history.entrySet().stream().filter(entry -> {
+                        final SchemaIdVersion key = entry.getKey();
+                        final Map<String, Object> value = entry.getValue();
+                        if (key.getSchema().equals(schema.getQualifiedName()) && key.getId().equals(id)) {
+                            return query.entrySet().stream().allMatch(q -> q.getValue().test(Instance.get(value, q.getKey())));
+                        } else {
+                            return false;
+                        }
+                    }).map(Map.Entry::getValue)
+                    .sorted(Instance.comparator(new Sort(Name.of(ReferableSchema.VERSION), order)))
+                    .collect(Collectors.toList());
 
             return Pager.simple(results);
         }

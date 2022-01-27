@@ -83,6 +83,12 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
+    default Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        return storage(schema).queryHistory(consistency, schema, id, query, sort, expand);
+    }
+
+    @Override
     default CompletableFuture<Set<Event>> afterCreate(final ObjectSchema schema, final String id, final Map<String, Object> after) {
 
         return storage(schema).afterCreate(schema, id, after);

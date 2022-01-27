@@ -113,15 +113,21 @@ public class CognitoUserStorage implements DefaultLayerStorage {
         };
     }
 
+    @Override
+    public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        throw new UnsupportedOperationException();
+    }
+
     private String filter(final Expression query) {
 
         final Set<Expression> dis = query.visit(new DisjunctionVisitor());
-        if(dis.size() == 1) {
+        if (dis.size() == 1) {
             final Map<Name, Object> terms = new HashMap<>();
             final Expression sub = dis.iterator().next();
             final Map<Name, Range<Object>> ranges = sub.visit(new RangeVisitor());
             ranges.forEach((path, range) -> {
-                if(range instanceof Range.Eq) {
+                if (range instanceof Range.Eq) {
                     final Object eq = ((Range.Eq<Object>) range).getEq();
                     terms.put(path, eq);
                 }

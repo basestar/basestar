@@ -92,6 +92,12 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
         };
     }
 
+    @Override
+    public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        throw new UnsupportedOperationException();
+    }
+
     private String decodePaging(final Page.Token token) {
 
         return Nullsafe.map(token, v -> new String(v.getValue(), StandardCharsets.UTF_8));

@@ -78,6 +78,8 @@ public interface Storage {
 
     Pager<Map<String, Object>> query(Consistency consistency, QueryableSchema schema, Map<String, Object> arguments, Expression query, List<Sort> sort, Set<Name> expand);
 
+    Pager<Map<String, Object>> queryHistory(Consistency consistency, ReferableSchema schema, String id, Expression query, List<Sort> sort, Set<Name> expand);
+
     CompletableFuture<Set<Event>> afterCreate(ObjectSchema schema, String id, Map<String, Object> after);
 
     CompletableFuture<Set<Event>> afterUpdate(ObjectSchema schema, String id, long version, Map<String, Object> before, Map<String, Object> after);

@@ -176,6 +176,12 @@ public class HazelcastStorage implements DefaultLayerStorage {
     }
 
     @Override
+    public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public ReadTransaction read(final Consistency consistency) {
 
         return new ReadTransaction() {

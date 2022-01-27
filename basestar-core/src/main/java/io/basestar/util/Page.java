@@ -153,6 +153,15 @@ public class Page<T> extends AbstractList<T> implements Serializable {
         return new Page<>(results, paging, stats);
     }
 
+    public Page<T> sorted(final Comparator<? super T> fn) {
+
+        final Page<T> delegate = this;
+        final List<T> results = delegate.getItems().stream().sorted(fn)
+                .collect(Collectors.toList());
+
+        return new Page<>(results, paging, stats);
+    }
+
     @Override
     public T get(final int index) {
 
