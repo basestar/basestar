@@ -206,19 +206,20 @@ public class SQLStorage implements DefaultLayerStorage {
                     final List<SelectFieldOrAsterisk> fields = selectFields(schema, null);
                     final List<OrderField<?>> orderFields = orderFields(null, sort);
 
-                    return context.select(fields).from(sql).where(condition).orderBy(orderFields).offset(offset).fetchAsync().thenApply(results -> {
+                    return context.select(fields).from(sql).where(condition).orderBy(orderFields)
+                            .limit(DSL.inline(count)).offset(DSL.inline(offset)).fetchAsync().thenApply(results -> {
 
-                        final List<Map<String, Object>> objects = all(schema, results);
+                                final List<Map<String, Object>> objects = all(schema, results);
 
-                        final Page.Token nextToken;
-                        if (objects.size() < count) {
-                            nextToken = null;
-                        } else {
-                            nextToken = Page.Token.fromLongValue(offset + count);
-                        }
+                                final Page.Token nextToken;
+                                if (objects.size() < count) {
+                                    nextToken = null;
+                                } else {
+                                    nextToken = Page.Token.fromLongValue(offset + count);
+                                }
 
-                        return new Page<>(objects, nextToken);
-                    });
+                                return new Page<>(objects, nextToken);
+                            });
                 });
 
                 if (stats != null && (stats.contains(Page.Stat.TOTAL) || stats.contains(Page.Stat.APPROX_TOTAL))) {
