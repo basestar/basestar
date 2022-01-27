@@ -63,7 +63,7 @@
 //    @Override
 //    public io.swagger.v3.oas.models.media.Schema<?> openApi(final Set<Name> expand) {
 //
-//        return new io.swagger.v3.oas.models.media.Schema<>();
+//        return new io.swagger.v3.oas.models.media.Schema<?><>();
 //    }
 //
 //    @Override
@@ -185,7 +185,7 @@
 //    }
 //
 //    @Override
-//    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+//    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 //
 //    }
 //

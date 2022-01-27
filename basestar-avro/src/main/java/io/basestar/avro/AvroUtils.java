@@ -43,12 +43,12 @@ public class AvroUtils {
 
     }
 
-    private static String name(final io.basestar.schema.Schema<?> schema) {
+    private static String name(final io.basestar.schema.Schema schema) {
 
         return schema.getQualifiedName().toString(Reserved.PREFIX);
     }
 
-    public static Schema schema(final io.basestar.schema.Schema<?> schema) {
+    public static Schema schema(final io.basestar.schema.Schema schema) {
 
         if (schema instanceof InstanceSchema) {
             return schema(schema, ((InstanceSchema) schema).getExpand());
@@ -57,7 +57,7 @@ public class AvroUtils {
         }
     }
 
-    public static Schema schema(final io.basestar.schema.Schema<?> schema, final Map<String, Use<?>> additionalMetadata) {
+    public static Schema schema(final io.basestar.schema.Schema schema, final Map<String, Use<?>> additionalMetadata) {
 
         if (schema instanceof InstanceSchema) {
             return schema(schema, additionalMetadata, ((InstanceSchema) schema).getExpand());
@@ -66,12 +66,12 @@ public class AvroUtils {
         }
     }
 
-    public static Schema schema(final io.basestar.schema.Schema<?> schema, final Set<Name> expand) {
+    public static Schema schema(final io.basestar.schema.Schema schema, final Set<Name> expand) {
 
         return schema(schema, ImmutableMap.of(), expand);
     }
 
-    public static Schema schema(final io.basestar.schema.Schema<?> schema, final Map<String, Use<?>> additionalMetadata, final Set<Name> expand) {
+    public static Schema schema(final io.basestar.schema.Schema schema, final Map<String, Use<?>> additionalMetadata, final Set<Name> expand) {
 
         if (schema instanceof EnumSchema) {
             final EnumSchema enumSchema = (EnumSchema) schema;

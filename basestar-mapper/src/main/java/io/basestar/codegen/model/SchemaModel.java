@@ -39,9 +39,9 @@ import java.util.stream.Collectors;
 @SuppressWarnings("unused")
 public abstract class SchemaModel extends Model {
 
-    private final Schema<?> schema;
+    private final Schema schema;
 
-    public SchemaModel(final CodegenContext context, final Schema<?> schema) {
+    public SchemaModel(final CodegenContext context, final Schema schema) {
 
         super(context);
         this.schema = schema;
@@ -98,7 +98,7 @@ public abstract class SchemaModel extends Model {
 
     public List<SchemaModel> getSchemaDependencies() {
 
-        final Map<Name, Schema<?>> dependencies = schema.dependencies(ImmutableSet.of());
+        final Map<Name, Schema> dependencies = schema.dependencies(ImmutableSet.of());
         return dependencies.entrySet().stream()
                 .filter(e -> !e.getKey().equals(schema.getQualifiedName()))
                 .sorted(Map.Entry.comparingByKey())
@@ -106,12 +106,12 @@ public abstract class SchemaModel extends Model {
                 .collect(Collectors.toList());
     }
 
-    public static SchemaModel from(final CodegenContext context, final Schema<?> schema) {
+    public static SchemaModel from(final CodegenContext context, final Schema schema) {
 
-        if(schema instanceof EnumSchema) {
+        if (schema instanceof EnumSchema) {
             return new EnumSchemaModel(context, (EnumSchema) schema);
-        } else if(schema instanceof InstanceSchema) {
-            return InstanceSchemaModel.from(context, (InstanceSchema)schema);
+        } else if (schema instanceof InstanceSchema) {
+            return InstanceSchemaModel.from(context, (InstanceSchema) schema);
         } else {
             throw new IllegalStateException("Cannot process schema " + schema.getClass());
         }

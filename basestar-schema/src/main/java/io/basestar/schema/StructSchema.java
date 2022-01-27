@@ -241,9 +241,9 @@ public class StructSchema implements InstanceSchema {
     }
 
     @Override
-    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
-        if(!out.containsKey(qualifiedName)) {
+        if (!out.containsKey(qualifiedName)) {
             out.put(qualifiedName, this);
             declaredProperties.forEach((k, v) -> v.collectDependencies(expand, out));
         }

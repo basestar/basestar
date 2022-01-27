@@ -102,19 +102,25 @@ public class DatabaseClient implements Database {
     @Override
     public CompletableFuture<Page<Instance>> query(final Caller caller, final QueryOptions options) {
 
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public CompletableFuture<Page<Instance>> queryLink(final Caller caller, final QueryLinkOptions options) {
 
-        return null;
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public CompletableFuture<Page<Instance>> queryHistory(final Caller caller, final QueryHistoryOptions options) {
+
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public CompletableFuture<Map<String, Instance>> batch(final Caller caller, final BatchOptions options) {
 
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     private void addVersion(final Multimap<String, String> query, final Long version) {
@@ -140,23 +146,22 @@ public class DatabaseClient implements Database {
 
     private String schemaUrl(final Name schema) {
 
-
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     private String objectUrl(final Name schema, final String id) {
 
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     private Transport.BodyReader<Instance> instanceReader() {
 
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     private Multimap<String, String> headers(final Caller caller) {
 
-        return null;
+        throw new UnsupportedOperationException();
     }
 
 }

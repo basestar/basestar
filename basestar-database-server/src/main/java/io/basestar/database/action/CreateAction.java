@@ -28,6 +28,7 @@ import io.basestar.expression.Context;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.util.ValueContext;
+import io.basestar.storage.Storage;
 import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
@@ -36,6 +37,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -64,7 +66,7 @@ public class CreateAction implements Action {
     }
 
     @Override
-    public Result after(final ValueContext valueContext, final Context expressionContext, final Instance before) {
+    public CompletableFuture<Result> after(final Storage storage, final ValueContext valueContext, final Context expressionContext, final Instance before) {
 
         if (before != null) {
             throw new ObjectExistsException(schema.getQualifiedName(), Instance.getId(before));
@@ -88,29 +90,35 @@ public class CreateAction implements Action {
         // Id in path overrides id specified in body
         final String requestedId = options.getId() == null ? Instance.getId(initial) : options.getId();
 
-        final String actualId;
-        if (schema.getId() != null) {
-            actualId = schema.getId().evaluate(requestedId, expressionContext.with(CommonVars.VAR_THIS, initial));
+        final CompletableFuture<String> actualIdFuture;
+        if (schema.getSequence() != null) {
+            final SequenceSchema sequenceSchema = schema.getSequence();
+            actualIdFuture = storage.increment(sequenceSchema).thenApply(sequenceSchema::format);
+        } else if (schema.getId() != null) {
+            actualIdFuture = CompletableFuture.completedFuture(schema.getId().evaluate(requestedId, expressionContext.with(CommonVars.VAR_THIS, initial)));
         } else if (requestedId != null) {
-            actualId = requestedId;
+            actualIdFuture = CompletableFuture.completedFuture(requestedId);
         } else {
-            actualId = UUID.randomUUID().toString();
+            actualIdFuture = CompletableFuture.completedFuture(UUID.randomUUID().toString());
         }
 
-        Instance.setId(initial, actualId);
-        Instance.setVersion(initial, 1L);
-        Instance.setCreated(initial, now);
-        Instance.setUpdated(initial, now);
-        Instance.setHash(initial, schema.hash(initial));
+        return actualIdFuture.thenApply(actualId -> {
 
-        final Instance evaluated = schema.evaluateProperties(expressionContext.with(CommonVars.VAR_THIS, initial), new Instance(initial), Collections.emptySet());
+            Instance.setId(initial, actualId);
+            Instance.setVersion(initial, 1L);
+            Instance.setCreated(initial, now);
+            Instance.setUpdated(initial, now);
+            Instance.setHash(initial, schema.hash(initial));
 
-        final Set<Constraint.Violation> violations = schema.validate(expressionContext.with(CommonVars.VAR_THIS, evaluated), evaluated, evaluated);
-        if (!violations.isEmpty()) {
-            throw new ConstraintViolationException(violations);
-        }
+            final Instance evaluated = schema.evaluateProperties(expressionContext.with(CommonVars.VAR_THIS, initial), new Instance(initial), Collections.emptySet());
 
-        return new Result(Result.Type.CREATE, evaluated);
+            final Set<Constraint.Violation> violations = schema.validate(expressionContext.with(CommonVars.VAR_THIS, evaluated), evaluated, evaluated);
+            if (!violations.isEmpty()) {
+                throw new ConstraintViolationException(violations);
+            }
+
+            return new Result(Result.Type.CREATE, evaluated);
+        });
     }
 
     @Override

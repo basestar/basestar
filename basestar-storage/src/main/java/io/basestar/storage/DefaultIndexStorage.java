@@ -77,11 +77,7 @@ public interface DefaultIndexStorage extends IndexStorage, DefaultLayerStorage {
     @Override
     default Pager<Map<String, Object>> queryIndex(final ObjectSchema schema, final Index index, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
-        final Map<Name, Range<Object>> ranges = new HashMap<>();
-        for(final Map.Entry<Name, Range<Object>> entry : query.visit(new RangeVisitor()).entrySet()) {
-            final Name name = entry.getKey();
-            ranges.put(name, entry.getValue());
-        }
+        final Map<Name, Range<Object>> ranges = query.visit(new RangeVisitor());
         final Optional<SatisfyResult> optSatisfy = satisfy(index, ranges, sort);
         if (optSatisfy.isPresent()) {
             final SatisfyResult satisfy = optSatisfy.get();
@@ -90,6 +86,28 @@ public interface DefaultIndexStorage extends IndexStorage, DefaultLayerStorage {
             throw new UnsupportedQueryException(schema.getQualifiedName(), query, "index does not support this query");
         }
     }
+
+    @Override
+    default Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        if (!(schema instanceof ObjectSchema)) {
+            throw new UnsupportedQueryException(schema.getQualifiedName(), query, "schema type not supported");
+        }
+        final Map<Name, Range<Object>> ranges = query.visit(new RangeVisitor());
+
+        final Sort.Order order;
+        if (sort.size() == 0) {
+            order = Sort.Order.ASC;
+        } else if (sort.size() == 1 && sort.get(0).getName().equals(Name.of(ReferableSchema.VERSION))) {
+            order = sort.get(0).getOrder();
+        } else {
+            throw new UnsupportedQueryException(schema.getQualifiedName(), query, sort, "sort not supported");
+        }
+
+        return queryHistoryRange(consistency, (ObjectSchema) schema, id, ranges, order, expand);
+    }
+
+    Pager<Map<String, Object>> queryHistoryRange(Consistency consistency, ObjectSchema schema, String id, Map<Name, Range<Object>> query, Sort.Order order, Set<Name> expand);
 
     @Override
     default Pager<Map<String, Object>> queryObject(final Consistency consistency, final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {

@@ -92,6 +92,12 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
         };
     }
 
+    @Override
+    public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        throw new UnsupportedOperationException();
+    }
+
     private String decodePaging(final Page.Token token) {
 
         return Nullsafe.map(token, v -> new String(v.getValue(), StandardCharsets.UTF_8));
@@ -266,14 +272,20 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return CognitoStorageTraits.INSTANCE;
     }
 
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        throw new UnsupportedOperationException();
+    }
+
     public String getDescription(final Map<String, Object> data) {
 
-        return (String)data.get(DESCRIPTION_KEY);
+        return (String) data.get(DESCRIPTION_KEY);
     }
 
     private Map<String, Object> fromGroup(final GroupType group) {

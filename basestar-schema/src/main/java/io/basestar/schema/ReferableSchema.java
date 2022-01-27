@@ -122,6 +122,22 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
         return Immutable.list(Sort.asc(Name.of(id())));
     }
 
+    default List<Sort> historySort() {
+
+        return Immutable.list(Sort.asc(Name.of(ReferableSchema.VERSION)));
+    }
+
+    default List<Sort> historySort(final List<Sort> sort) {
+
+        final List<Sort> result = new ArrayList<>(sort);
+        historySort().forEach(s -> {
+            if (sort.stream().noneMatch(s2 -> s2.getName().equals(s.getName()))) {
+                result.add(s);
+            }
+        });
+        return result;
+    }
+
     @Override
     Descriptor<? extends ReferableSchema> descriptor();
 
@@ -396,7 +412,7 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     }
 
     @Override
-    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         final Name qualifiedName = getQualifiedName();
         final List<? extends ReferableSchema> extend = getExtend();

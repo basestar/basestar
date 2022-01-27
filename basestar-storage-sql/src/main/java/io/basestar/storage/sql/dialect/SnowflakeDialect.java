@@ -3,6 +3,7 @@ package io.basestar.storage.sql.dialect;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ContextIterator;
@@ -18,6 +19,7 @@ import io.basestar.schema.use.UseMap;
 import io.basestar.schema.use.UseSet;
 import io.basestar.storage.sql.SQLExpressionVisitor;
 import io.basestar.storage.sql.strategy.NamingStrategy;
+import io.basestar.util.Pair;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
@@ -28,6 +30,7 @@ import org.jooq.impl.TableImpl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -86,6 +89,18 @@ public class SnowflakeDialect extends JSONDialect {
     }
 
     @Override
+    public boolean supportsUDFs() {
+
+        return true;
+    }
+
+    @Override
+    public boolean supportsSequences() {
+
+        return true;
+    }
+
+    @Override
     public boolean supportsConstraints() {
 
         return false;
@@ -134,6 +149,23 @@ public class SnowflakeDialect extends JSONDialect {
         } else {
             return super.createFunctionDDLLanguage(language);
         }
+    }
+
+    @Override
+    public String createSequenceDDL(final DSLContext context, final Name name, final Long start, final Long increment) {
+
+        final StringBuilder str = new StringBuilder();
+        str.append("CREATE SEQUENCE IF NOT EXISTS ");
+        str.append(name);
+        if (start != null) {
+            str.append(" WITH START = ");
+            str.append(DSL.inline(start));
+        }
+        if (increment != null) {
+            str.append(" INCREMENT = ");
+            str.append(DSL.inline(increment));
+        }
+        return str.toString();
     }
 
     @Override
@@ -231,9 +263,13 @@ public class SnowflakeDialect extends JSONDialect {
                 if (schema instanceof ViewSchema) {
                     final ViewSchema viewSchema = (ViewSchema) schema;
                     if (viewSchema.getFrom() instanceof FromSql) {
-                        return ((FromSql) viewSchema.getFrom()).getPrimaryKey().stream()
-                                .map(name -> DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(name))))
-                                .collect(Collectors.toList());
+                        final FromSql fromSql = (FromSql) viewSchema.getFrom();
+                        final List<String> primaryKey = fromSql.getPrimaryKey();
+                        if (primaryKey != null && !primaryKey.isEmpty()) {
+                            return primaryKey.stream()
+                                    .map(name -> DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(name))))
+                                    .collect(Collectors.toList());
+                        }
                     }
                 } else if (schema instanceof ReferableSchema) {
                     return ImmutableList.of(DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(ReferableSchema.ID))));
@@ -296,7 +332,9 @@ public class SnowflakeDialect extends JSONDialect {
                                 if (name.size() == 1) {
                                     return DSL.field(DSL.name(alias2, "VALUE"));
                                 } else {
-                                    return DSL.field(DSL.sql(DSL.name(alias2, "VALUE") + ":" + namingStrategy.columnName(name.withoutFirst())));
+                                    return DSL.field(DSL.sql(DSL.name(alias2, "VALUE") + ":" + name.withoutFirst()
+                                            .stream().map(v -> DSL.name(v).toString())
+                                            .collect(Collectors.joining("."))));
                                 }
                             } else {
                                 return DSL.field(DSL.name(alias1).append(namingStrategy.columnName(name)));
@@ -325,5 +363,115 @@ public class SnowflakeDialect extends JSONDialect {
                 return null;
             }
         };
+    }
+
+    @Override
+    public ResultQuery<Record1<Long>> incrementSequence(final DSLContext context, final Name sequenceName) {
+
+        return context.select(DSL.field(DSL.sql(sequenceName + ".nextval")).cast(Long.class));
+    }
+
+    private void merge(final StringBuilder merge, final org.jooq.Table<?> table, final Field<String> idField) {
+
+        merge.append("MERGE INTO ");
+        merge.append(table.getQualifiedName());
+        merge.append(" AS TARGET USING (?) AS SOURCE ON SOURCE.");
+        merge.append(idField.getUnqualifiedName());
+        merge.append(" = TARGET.");
+        merge.append(idField.getUnqualifiedName());
+        merge.append(" ");
+    }
+
+    private void merge(final StringBuilder merge, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField) {
+
+        merge(merge, table, idField);
+        merge.append("AND SOURCE.");
+        merge.append(versionField.getUnqualifiedName());
+        merge.append(" = TARGET.");
+        merge.append(versionField.getUnqualifiedName());
+        merge.append(" ");
+    }
+
+    private void mergeNotMatchedInsert(final StringBuilder merge, final List<Pair<Field<?>, SelectField<?>>> record) {
+
+        merge.append("WHEN NOT MATCHED THEN INSERT (");
+        merge.append(record.stream().map(Pair::getFirst).map(f -> f.getUnqualifiedName().toString()).collect(Collectors.joining(",")));
+        merge.append(") VALUES (");
+        merge.append(record.stream().map(Pair::getFirst).map(f -> "SOURCE." + f.getUnqualifiedName().toString()).collect(Collectors.joining(",")));
+        merge.append(") ");
+    }
+
+    private void mergeWhenMatched(final StringBuilder merge, final Field<Long> versionField, final Long version) {
+
+        merge.append("WHEN MATCHED");
+        if (version != null) {
+            merge.append(" AND TARGET.");
+            merge.append(versionField.getUnqualifiedName());
+            merge.append(" = ");
+            merge.append(DSL.inline(version));
+        }
+        merge.append(" ");
+    }
+
+    private QueryPart mergeSelect(final List<Pair<Field<?>, SelectField<?>>> record) {
+
+        return DSL.select(record.stream()
+                .map(e -> DSL.field(e.getSecond()).as(e.getFirst().getUnqualifiedName()))
+                .toArray(SelectFieldOrAsterisk[]::new));
+    }
+
+    @Override
+    public int createObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final String id, final Map<Field<?>, SelectField<?>> record) {
+
+        final List<Pair<Field<?>, SelectField<?>>> orderedRecord = orderedRecord(record);
+
+        final StringBuilder merge = new StringBuilder();
+        merge(merge, table, idField);
+        mergeNotMatchedInsert(merge, orderedRecord);
+
+        return context.execute(DSL.sql(merge.toString(), mergeSelect(orderedRecord)));
+    }
+
+    @Override
+    public int updateObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version, final Map<Field<?>, SelectField<?>> record) {
+
+        final List<Pair<Field<?>, SelectField<?>>> orderedRecord = orderedRecord(record);
+
+        final StringBuilder merge = new StringBuilder();
+        merge(merge, table, idField);
+        mergeWhenMatched(merge, versionField, version);
+        merge.append("THEN UPDATE SET ");
+        merge.append(record.keySet().stream()
+                .map(f -> "TARGET." + f.getUnqualifiedName() + " = SOURCE." + f.getUnqualifiedName())
+                .collect(Collectors.joining(",")));
+
+        return context.execute(DSL.sql(merge.toString(), mergeSelect(orderedRecord)));
+    }
+
+    @Override
+    public int deleteObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version) {
+
+        final StringBuilder merge = new StringBuilder();
+        merge(merge, table, idField);
+        mergeWhenMatched(merge, versionField, version);
+        merge.append("THEN DELETE");
+
+        return context.execute(DSL.sql(merge.toString(), mergeSelect(orderedRecord(ImmutableMap.of(idField, DSL.inline(id))))));
+    }
+
+    @Override
+    public int createHistoryLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version, final Map<Field<?>, SelectField<?>> record) {
+
+        final List<Pair<Field<?>, SelectField<?>>> orderedRecord = orderedRecord(record);
+
+        final StringBuilder merge = new StringBuilder();
+        merge(merge, table, idField, versionField);
+        mergeNotMatchedInsert(merge, orderedRecord);
+        merge.append("WHEN MATCHED THEN UPDATE SET ");
+        merge.append(record.keySet().stream()
+                .map(f -> "TARGET." + f.getUnqualifiedName() + " = SOURCE." + f.getUnqualifiedName())
+                .collect(Collectors.joining(",")));
+
+        return context.execute(DSL.sql(merge.toString(), mergeSelect(orderedRecord)));
     }
 }

@@ -20,13 +20,9 @@ package io.basestar.database.util;
  * #L%
  */
 
-import io.basestar.schema.Instance;
 import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-
-import java.util.Map;
 
 @Data
 @RequiredArgsConstructor
@@ -37,22 +33,4 @@ public class RefKey implements LinkableKey {
     private final String id;
 
     private final Long version;
-
-    public static RefKey versioned(final Map<String, Object> item) {
-
-        final Name schema = Instance.getSchema(item);
-        final String id = Instance.getId(item);
-        final Long version = Instance.getVersion(item);
-        assert schema != null && id != null && version != null;
-        return new RefKey(schema, id, version);
-    }
-
-    public static RefKey versioned(final Name defaultSchema, final Map<String, Object> item) {
-
-        final Name schema = Instance.getSchema(item);
-        final String id = Instance.getId(item);
-        final Long version = Instance.getVersion(item);
-        assert id != null && version != null;
-        return new RefKey(Nullsafe.orDefault(schema, defaultSchema), id, version);
-    }
 }

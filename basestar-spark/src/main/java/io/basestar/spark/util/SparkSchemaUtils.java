@@ -124,7 +124,7 @@ public class SparkSchemaUtils {
         return SparkRowUtils.field(name, type(type, expand));
     }
 
-    public static DataType type(final Schema<?> schema, final Set<Name> expand) {
+    public static DataType type(final Schema schema, final Set<Name> expand) {
 
         if (schema instanceof ObjectSchema) {
             return structType((ObjectSchema) schema, expand);

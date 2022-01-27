@@ -42,7 +42,7 @@ public class SchemaConverter {
         final Namespace.Builder builder = Namespace.builder();
         tdr.types().forEach((name, def) -> {
             if(!SKIP_TYPE_NAMES.contains(name)) {
-                final Schema.Builder<?, ?, ?> schema = schema(def);
+                final Schema.Builder<?, ?> schema = schema(def);
                 if (schema != null) {
                     builder.setSchema(name, schema);
                 }
@@ -51,14 +51,14 @@ public class SchemaConverter {
         return builder;
     }
 
-    private Schema.Builder<?, ?, ?> schema(final Node<?> def) {
+    private Schema.Builder<?, ?> schema(final Node<?> def) {
 
-        if(def instanceof ObjectTypeDefinition) {
+        if (def instanceof ObjectTypeDefinition) {
             return instanceSchema((ObjectTypeDefinition) def);
-        } else if(def instanceof InterfaceTypeDefinition) {
+        } else if (def instanceof InterfaceTypeDefinition) {
             return interfaceSchema((InterfaceTypeDefinition) def);
-        } else if(def instanceof EnumTypeDefinition) {
-            return enumSchema((EnumTypeDefinition)def);
+        } else if (def instanceof EnumTypeDefinition) {
+            return enumSchema((EnumTypeDefinition) def);
         } else {
             log.info("Skipping definition of type {}", def.getClass().getName());
             return null;

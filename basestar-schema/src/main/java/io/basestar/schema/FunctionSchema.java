@@ -6,11 +6,9 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.basestar.expression.Context;
-import io.basestar.expression.call.Callable;
 import io.basestar.schema.from.From;
 import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.use.Use;
-import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
@@ -21,7 +19,6 @@ import lombok.experimental.Accessors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
-import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,7 +30,7 @@ import java.util.stream.Stream;
 
 @Getter
 @Accessors(chain = true)
-public class FunctionSchema implements Schema<Callable> {
+public class FunctionSchema implements Schema {
 
     public static final Pattern DEFINITION_REPLACEMENT_REGEX = Pattern.compile("\"@\\{(.*?)}\"|@\\{(.*?)}");
 
@@ -89,7 +86,7 @@ public class FunctionSchema implements Schema<Callable> {
     }
 
     @JsonDeserialize(as = Builder.class)
-    public interface Descriptor extends Schema.Descriptor<FunctionSchema, Callable> {
+    public interface Descriptor extends Schema.Descriptor<FunctionSchema> {
 
         String TYPE = "function";
 
@@ -112,7 +109,7 @@ public class FunctionSchema implements Schema<Callable> {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         Map<String, From.Descriptor> getUsing();
 
-        interface Self extends Schema.Descriptor.Self<FunctionSchema, Callable>, FunctionSchema.Descriptor {
+        interface Self extends Schema.Descriptor.Self<FunctionSchema>, FunctionSchema.Descriptor {
 
             @Override
             default String getLanguage() {
@@ -154,7 +151,7 @@ public class FunctionSchema implements Schema<Callable> {
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonPropertyOrder({"type", "description", "version", "language", "arguments", "returns", "definition", "extensions"})
-    public static class Builder implements Schema.Builder<Builder, FunctionSchema, Callable>, FunctionSchema.Descriptor {
+    public static class Builder implements Schema.Builder<Builder, FunctionSchema>, FunctionSchema.Descriptor {
 
         @Nullable
         private Long version;
@@ -183,49 +180,13 @@ public class FunctionSchema implements Schema<Callable> {
     }
 
     @Override
-    public Callable create(final ValueContext context, final Object value, final Set<Name> expand) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Set<Constraint.Violation> validate(final Context context, final Name name, final Callable after) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Type javaType(final Name name) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public io.swagger.v3.oas.models.media.Schema<?> openApi() {
-
-        return null;
-    }
-
-    @Override
     public FunctionSchema.Descriptor descriptor() {
 
         return (Descriptor.Self) () -> FunctionSchema.this;
     }
 
     @Override
-    public Use<Callable> typeOf() {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public String toString(final Callable value) {
-
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         if (!out.containsKey(qualifiedName)) {
             out.put(qualifiedName, this);
@@ -234,7 +195,7 @@ public class FunctionSchema implements Schema<Callable> {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         if (!out.containsKey(qualifiedName)) {
             out.put(qualifiedName, this);
@@ -242,13 +203,13 @@ public class FunctionSchema implements Schema<Callable> {
         }
     }
 
-    public String getReplacedDefinition(final Function<Schema<?>, String> replacer) {
+    public String getReplacedDefinition(final Function<Schema, String> replacer) {
 
         return getReplacedDefinition(definition, using, replacer);
     }
 
     public static String replaceConcrete(final String definition, final Map<String, From> using,
-                                         final Function<Schema<?>, String> replacer) {
+                                         final Function<Schema, String> replacer) {
 
         final Matcher matcher = DEFINITION_REPLACEMENT_REGEX.matcher(definition);
         final StringBuffer buffer = new StringBuffer();
@@ -267,7 +228,7 @@ public class FunctionSchema implements Schema<Callable> {
 
 
     public static String getReplacedDefinition(final String definition, final Map<String, From> using,
-                                               final Function<Schema<?>, String> replacer) {
+                                               final Function<Schema, String> replacer) {
 
         if (using.keySet().size() == 0) {
             return definition;
@@ -286,7 +247,7 @@ public class FunctionSchema implements Schema<Callable> {
     }
 
     private static String replace(final String definition, final Map<String, From> using,
-                                  final Function<Schema<?>, String> replacer,
+                                  final Function<Schema, String> replacer,
                                   final int groupToReplace, Pattern pattern) {
 
         final StringBuilder stringBuilder = new StringBuilder(definition);

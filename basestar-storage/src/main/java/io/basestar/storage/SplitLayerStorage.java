@@ -1,10 +1,7 @@
 package io.basestar.storage;
 
 import io.basestar.expression.Expression;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.LinkableSchema;
-import io.basestar.schema.ObjectSchema;
-import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.*;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import io.basestar.util.Pager;
@@ -28,6 +25,12 @@ public class SplitLayerStorage implements DefaultLayerStorage {
     public Pager<Map<String, Object>> queryObject(final Consistency consistency, final ObjectSchema schema, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return objectStorage.query(consistency, schema, Immutable.map(), query, sort, expand);
+    }
+
+    @Override
+    public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        return objectStorage.queryHistory(consistency, schema, id, query, sort, expand);
     }
 
     @Override
@@ -134,7 +137,7 @@ public class SplitLayerStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return objectStorage.storageTraits(schema);
     }
@@ -143,5 +146,11 @@ public class SplitLayerStorage implements DefaultLayerStorage {
     public Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
 
         return objectStorage.supportedExpand(schema, expand);
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        return objectStorage.increment(schema);
     }
 }

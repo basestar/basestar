@@ -12,13 +12,15 @@ public interface NamingStrategy {
 
     org.jooq.Name functionName(FunctionSchema schema);
 
+    org.jooq.Name sequenceName(SequenceSchema schema);
+
     org.jooq.Name viewName(ViewSchema schema);
 
     String columnName(String name);
 
     org.jooq.Name columnName(io.basestar.util.Name name);
 
-    default org.jooq.Name entityName(final Schema<?> schema) {
+    default org.jooq.Name entityName(final Schema schema) {
         if (schema instanceof ReferableSchema) {
             return objectTableName((ReferableSchema) schema);
         } else if (schema instanceof ViewSchema) {
@@ -30,7 +32,7 @@ public interface NamingStrategy {
         }
     }
 
-    default org.jooq.Name reference(final Schema<?> schema) {
+    default org.jooq.Name reference(final Schema schema) {
         return entityName(schema);
     }
 
@@ -44,7 +46,7 @@ public interface NamingStrategy {
 
     Optional<Name> indexTableName(ReferableSchema schema, Index index);
 
-    Optional<Name> getSchema(Schema<?> schema);
+    Optional<Name> getSchema(Schema schema);
 
-    Optional<Name> getCatalog(Schema<?> schema);
+    Optional<Name> getCatalog(Schema schema);
 }

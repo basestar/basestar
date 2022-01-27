@@ -38,19 +38,19 @@ public interface GraphQLStrategy {
 
     String typeName(Name name);
 
-    default String typeName(final Schema<?> type) {
+    default String typeName(final Schema type) {
 
         return typeName(type.getQualifiedName());
     }
 
-    default String missingInterfaceRefTypeName(final Schema<?> type) {
+    default String missingInterfaceRefTypeName(final Schema type) {
 
         return "Unresolved" + typeName(type);
     }
 
     String inputRefTypeName(boolean versioned);
 
-    String inputTypeName(Schema<?> type);
+    String inputTypeName(Schema type);
 
     String createInputTypeName(ObjectSchema type);
 
@@ -58,9 +58,9 @@ public interface GraphQLStrategy {
 
     String patchInputTypeName(ObjectSchema type);
 
-    String inputExpressionsTypeName(Schema<?> type);
+    String inputExpressionsTypeName(Schema type);
 
-    String pageTypeName(Schema<?> type);
+    String pageTypeName(Schema type);
 
     String inputMapEntryTypeName(Use<?> type);
 
@@ -79,6 +79,8 @@ public interface GraphQLStrategy {
     String queryMethodName(QueryableSchema type);
 
     String queryLinkMethodName(LinkableSchema type, Link link);
+
+    String queryHistoryMethodName(ReferableSchema type);
 
     String createMethodName(ObjectSchema type);
 
@@ -209,7 +211,7 @@ public interface GraphQLStrategy {
         }
 
         @Override
-        public String inputTypeName(final Schema<?> type) {
+        public String inputTypeName(final Schema type) {
 
             return inputPrefix() + typeName(type);
         }
@@ -233,13 +235,13 @@ public interface GraphQLStrategy {
         }
 
         @Override
-        public String inputExpressionsTypeName(final Schema<?> type) {
+        public String inputExpressionsTypeName(final Schema type) {
 
             return inputPrefix() + "Expr" + typeName(type);
         }
 
         @Override
-        public String pageTypeName(final Schema<?> type) {
+        public String pageTypeName(final Schema type) {
 
             return typeName(type) + "Page";
         }
@@ -296,6 +298,12 @@ public interface GraphQLStrategy {
         public String queryLinkMethodName(final LinkableSchema type, final Link link) {
 
             return queryMethodName(type) + Text.upperCamel(link.getName());
+        }
+
+        @Override
+        public String queryHistoryMethodName(final ReferableSchema type) {
+
+            return "history" + typeName(type);
         }
 
         @Override

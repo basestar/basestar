@@ -26,6 +26,21 @@ import java.util.Comparator;
 
 public interface Range<T> {
 
+    default boolean test(final T o) {
+
+        final Bound<T> lo = lo();
+        final Bound<T> hi = hi();
+        if (lo != null) {
+            @SuppressWarnings("unchecked") final int cmp = ((Comparable<T>) o).compareTo(lo.getValue());
+            return lo.isInclusive() ? cmp >= 0 : cmp > 0;
+        }
+        if (hi != null) {
+            @SuppressWarnings("unchecked") final int cmp = ((Comparable<T>) o).compareTo(hi.getValue());
+            return hi.isInclusive() ? cmp <= 0 : cmp < 0;
+        }
+        return true;
+    }
+
     @Data
     class Bound<T> {
 
@@ -393,7 +408,7 @@ public interface Range<T> {
         @Override
         public Bound<T> lo() {
 
-            return Bound.inclusive(lte);
+            return Bound.inclusive(gte);
         }
 
         @Override

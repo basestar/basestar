@@ -29,6 +29,7 @@ import io.basestar.expression.Context;
 import io.basestar.schema.*;
 import io.basestar.schema.exception.ConstraintViolationException;
 import io.basestar.schema.util.ValueContext;
+import io.basestar.storage.Storage;
 import io.basestar.storage.exception.ObjectMissingException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.util.ISO8601;
@@ -41,6 +42,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -73,7 +75,7 @@ public class UpdateAction implements Action {
     }
 
     @Override
-    public Result after(final ValueContext valueContext, final Context expressionContext, final Instance before) {
+    public CompletableFuture<Result> after(final Storage storage, final ValueContext valueContext, final Context expressionContext, final Instance before) {
 
         final String id = options.getId();
 
@@ -144,7 +146,7 @@ public class UpdateAction implements Action {
             throw new ConstraintViolationException(violations);
         }
         Result.Type resultType = getResultType(evaluated.getVersion(), before);
-        return new Result(resultType, evaluated);
+        return CompletableFuture.completedFuture(new Result(resultType, evaluated));
     }
 
     private Result.Type getResultType(Long newVersion, Instance before) {
