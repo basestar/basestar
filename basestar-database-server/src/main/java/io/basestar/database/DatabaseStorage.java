@@ -154,7 +154,7 @@ public class DatabaseStorage implements Storage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         // FIXME: expose properly
         return database.storage.storageTraits(schema);
@@ -222,5 +222,12 @@ public class DatabaseStorage implements Storage {
 
         return CompletableFuture.completedFuture(Immutable.set());
 //        return database.storage.afterDelete(schema, id, version, before);
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        // FIXME: expose properly
+        return database.storage.increment(schema);
     }
 }
