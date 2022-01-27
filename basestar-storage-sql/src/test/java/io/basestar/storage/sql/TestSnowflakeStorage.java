@@ -20,8 +20,8 @@ import org.apache.commons.dbcp2.BasicDataSource;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import javax.sql.DataSource;
 import java.io.IOException;
@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 // Cannot run without a real configured snowflake environment
 
-@Disabled
+@EnabledIfEnvironmentVariable(named = "SNOWFLAKE_ACCOUNT", matches = ".+")
 public class TestSnowflakeStorage extends TestSQLStorage {
 
     static {
@@ -78,33 +78,10 @@ public class TestSnowflakeStorage extends TestSQLStorage {
     }
 
     @Test
+    @Override
     protected void testRefDeepExpandQuery() {
 
         // Skip, concurrency controls not supported
-    }
-
-    @Override
-    protected boolean supportsDelete() {
-
-        return false;
-    }
-
-    @Override
-    protected boolean supportsUpdate() {
-
-        return false;
-    }
-
-    @Override
-    public void testCreateConflict() {
-
-        // Skip, constraints not supported
-    }
-
-    @Override
-    public void testPolymorphicCreate() {
-
-        // Skip, constraints not supported
     }
 
     @Override

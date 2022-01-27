@@ -23,6 +23,9 @@ package io.basestar.util;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public interface Pair<T1, T2> extends Serializable {
@@ -36,6 +39,11 @@ public interface Pair<T1, T2> extends Serializable {
     static <T1, T2> Simple<T1, T2> of(final T1 first, final T2 second) {
 
         return new Simple<>(first, second);
+    }
+
+    static <T1, T2> Simple<T1, T2> of(final Map.Entry<T1, T2> entry) {
+
+        return of(entry.getKey(), entry.getValue());
     }
 
     @SuppressWarnings("UnstableApiUsage")
@@ -52,6 +60,16 @@ public interface Pair<T1, T2> extends Serializable {
     default <T3> Pair<T1, T3> withSecond(final T3 second) {
 
         return of(getFirst(), second);
+    }
+
+    static <T1> List<T1> mapToFirst(final List<? extends Pair<T1, ?>> list) {
+
+        return list.stream().map(Pair::getFirst).collect(Collectors.toList());
+    }
+
+    static <T2> List<T2> mapToSecond(final List<? extends Pair<?, T2>> list) {
+
+        return list.stream().map(Pair::getSecond).collect(Collectors.toList());
     }
 
     @Data

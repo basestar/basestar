@@ -536,11 +536,38 @@ public abstract class TestStorage {
 
         final Map<String, Object> current = storage.get(Consistency.ATOMIC, schema, id, ImmutableSet.of()).join();
         assertNull(current);
-        // FIXME
-//        if(storage.storageTraits(schema).getHistoryConsistency().isStronger(Consistency.EVENTUAL)) {
-//            final Map<String, Object> v1 = storage.readObjectVersion(schema, id, 1L).join();
-//            assertNull(v1);
-//        }
+    }
+
+    @Test
+    protected void testDeleteRecreate() {
+
+        assumeTrue(supportsDelete());
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
+
+        final String id = UUID.randomUUID().toString();
+
+        final Instance init = instance(schema, id, 1L);
+
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+                .createObject(schema, id, init)
+                .write().join();
+
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+                .deleteObject(schema, id, init)
+                .write().join();
+
+        //Test same object can be created again
+
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+                .createObject(schema, id, init)
+                .write().join();
+
+        final Instance again = schema.create(storage.get(Consistency.ATOMIC, schema, id, ImmutableSet.of()).join());
+        assertNotNull(again);
+        assertEquals(1L, Instance.getVersion(again));
     }
 
     @Test
@@ -642,6 +669,7 @@ public abstract class TestStorage {
                 .write().join();
 
         final Instance before = schema.create(storage.get(Consistency.ATOMIC, schema, id, ImmutableSet.of()).join());
+        assertNotNull(before);
 
         storage.write(Consistency.ATOMIC, Versioning.CHECKED)
                 .deleteObject(schema, id, setVersion(before, 1L))

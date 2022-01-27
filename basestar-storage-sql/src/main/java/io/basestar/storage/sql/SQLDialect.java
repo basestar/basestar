@@ -23,6 +23,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -138,7 +139,12 @@ public interface SQLDialect {
 
     default Secret secretFromSQLValue(final UseSecret type, final ValueResolver value) {
 
-        return Secret.encrypted(binaryFromSQLValue(UseBinary.DEFAULT, value).getBytes());
+        final Bytes v = binaryFromSQLValue(UseBinary.DEFAULT, value);
+        if (v == null) {
+            return null;
+        } else {
+            return Secret.encrypted(v.getBytes());
+        }
     }
 
     Object anyFromSQLValue(UseAny type, ValueResolver value);
@@ -865,5 +871,55 @@ public interface SQLDialect {
     default ResultQuery<Record1<Long>> incrementSequence(final DSLContext context, final org.jooq.Name sequenceName) {
 
         throw new UnsupportedOperationException();
+    }
+
+    default List<Pair<Field<?>, SelectField<?>>> orderedRecord(final Map<Field<?>, SelectField<?>> record) {
+
+        return record.entrySet().stream().map(Pair::of)
+                .sorted(Comparator.comparing(e -> e.getFirst().getUnqualifiedName()))
+                .collect(Collectors.toList());
+    }
+
+    default int createObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final String id, final Map<Field<?>, SelectField<?>> record) {
+
+        final List<Pair<Field<?>, SelectField<?>>> orderedRecord = orderedRecord(record);
+
+        return context.insertInto(table)
+                .columns(Pair.mapToFirst(orderedRecord))
+                .select(DSL.select(Pair.mapToSecond(orderedRecord).toArray(new SelectFieldOrAsterisk[0])))
+                .execute();
+    }
+
+    default int updateObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version, final Map<Field<?>, SelectField<?>> record) {
+
+        Condition condition = idField.eq(id);
+        if (version != null) {
+            condition = condition.and(versionField.eq(version));
+        }
+
+        return context.update(table).set(record)
+                .where(condition).limit(DSL.inline(1)).execute();
+    }
+
+    default int createHistoryLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version, final Map<Field<?>, SelectField<?>> record) {
+
+        final List<Pair<Field<?>, SelectField<?>>> orderedRecord = orderedRecord(record);
+
+        context.deleteFrom(table).where(idField.eq(id).and(versionField.eq(version))).execute();
+
+        return context.insertInto(table)
+                .columns(Pair.mapToFirst(orderedRecord))
+                .select(DSL.select(Pair.mapToSecond(orderedRecord).toArray(new SelectFieldOrAsterisk[0])))
+                .execute();
+    }
+
+    default int deleteObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version) {
+
+        Condition condition = idField.eq(id);
+        if (version != null) {
+            condition = condition.and(versionField.eq(version));
+        }
+        return context.deleteFrom(table)
+                .where(condition).limit(DSL.inline(1)).execute();
     }
 }

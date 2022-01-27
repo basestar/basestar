@@ -276,7 +276,6 @@ public class LevelDBStorage implements DefaultIndexStorage {
 
             final long version = Instance.getVersion(after);
             final byte[] key = key(schema, id, version);
-            checkExisting(schema, id, 0L, key);
             writes.add(batch -> {
                 final byte[] data = toBytes(schema, version, after);
                 batch.put(key, data);
