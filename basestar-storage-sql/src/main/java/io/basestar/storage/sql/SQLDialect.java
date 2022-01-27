@@ -23,6 +23,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -857,11 +858,20 @@ public interface SQLDialect {
         return new SQLExpressionVisitor(this, inferenceContext, columnResolver);
     }
 
+    default List<Pair<Field<?>, SelectField<?>>> orderedRecord(final Map<Field<?>, SelectField<?>> record) {
+
+        return record.entrySet().stream().map(Pair::of)
+                .sorted(Comparator.comparing(e -> e.getFirst().getUnqualifiedName()))
+                .collect(Collectors.toList());
+    }
+
     default int createObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final String id, final Map<Field<?>, SelectField<?>> record) {
 
+        final List<Pair<Field<?>, SelectField<?>>> orderedRecord = orderedRecord(record);
+
         return context.insertInto(table)
-                .columns(record.keySet())
-                .select(DSL.select(record.values().toArray(new SelectFieldOrAsterisk[0])))
+                .columns(Pair.mapToFirst(orderedRecord))
+                .select(DSL.select(Pair.mapToSecond(orderedRecord).toArray(new SelectFieldOrAsterisk[0])))
                 .execute();
     }
 
@@ -878,11 +888,13 @@ public interface SQLDialect {
 
     default int createHistoryLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version, final Map<Field<?>, SelectField<?>> record) {
 
+        final List<Pair<Field<?>, SelectField<?>>> orderedRecord = orderedRecord(record);
+
         context.deleteFrom(table).where(idField.eq(id).and(versionField.eq(version))).execute();
 
         return context.insertInto(table)
-                .columns(record.keySet())
-                .select(DSL.select(record.values().toArray(new SelectFieldOrAsterisk[0])))
+                .columns(Pair.mapToFirst(orderedRecord))
+                .select(DSL.select(Pair.mapToSecond(orderedRecord).toArray(new SelectFieldOrAsterisk[0])))
                 .execute();
     }
 

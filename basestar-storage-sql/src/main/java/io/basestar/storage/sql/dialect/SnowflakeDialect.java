@@ -19,6 +19,7 @@ import io.basestar.schema.use.UseMap;
 import io.basestar.schema.use.UseSet;
 import io.basestar.storage.sql.SQLExpressionVisitor;
 import io.basestar.storage.sql.strategy.NamingStrategy;
+import io.basestar.util.Pair;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.*;
@@ -350,12 +351,12 @@ public class SnowflakeDialect extends JSONDialect {
         merge.append(" ");
     }
 
-    private void mergeNotMatchedInsert(final StringBuilder merge, final Map<Field<?>, SelectField<?>> record) {
+    private void mergeNotMatchedInsert(final StringBuilder merge, final List<Pair<Field<?>, SelectField<?>>> record) {
 
         merge.append("WHEN NOT MATCHED THEN INSERT (");
-        merge.append(record.keySet().stream().map(f -> f.getUnqualifiedName().toString()).collect(Collectors.joining(",")));
+        merge.append(record.stream().map(Pair::getFirst).map(f -> f.getUnqualifiedName().toString()).collect(Collectors.joining(",")));
         merge.append(") VALUES (");
-        merge.append(record.keySet().stream().map(f -> "SOURCE." + f.getUnqualifiedName().toString()).collect(Collectors.joining(",")));
+        merge.append(record.stream().map(Pair::getFirst).map(f -> "SOURCE." + f.getUnqualifiedName().toString()).collect(Collectors.joining(",")));
         merge.append(") ");
     }
 
@@ -371,25 +372,29 @@ public class SnowflakeDialect extends JSONDialect {
         merge.append(" ");
     }
 
-    private QueryPart mergeSelect(final Map<Field<?>, SelectField<?>> record) {
+    private QueryPart mergeSelect(final List<Pair<Field<?>, SelectField<?>>> record) {
 
-        return DSL.select(record.entrySet().stream()
-                .map(e -> DSL.field(e.getValue()).as(e.getKey().getUnqualifiedName()))
+        return DSL.select(record.stream()
+                .map(e -> DSL.field(e.getSecond()).as(e.getFirst().getUnqualifiedName()))
                 .toArray(SelectFieldOrAsterisk[]::new));
     }
 
     @Override
     public int createObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final String id, final Map<Field<?>, SelectField<?>> record) {
 
+        final List<Pair<Field<?>, SelectField<?>>> orderedRecord = orderedRecord(record);
+
         final StringBuilder merge = new StringBuilder();
         merge(merge, table, idField);
-        mergeNotMatchedInsert(merge, record);
+        mergeNotMatchedInsert(merge, orderedRecord);
 
-        return context.execute(DSL.sql(merge.toString(), mergeSelect(record)));
+        return context.execute(DSL.sql(merge.toString(), mergeSelect(orderedRecord)));
     }
 
     @Override
     public int updateObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version, final Map<Field<?>, SelectField<?>> record) {
+
+        final List<Pair<Field<?>, SelectField<?>>> orderedRecord = orderedRecord(record);
 
         final StringBuilder merge = new StringBuilder();
         merge(merge, table, idField);
@@ -399,7 +404,7 @@ public class SnowflakeDialect extends JSONDialect {
                 .map(f -> "TARGET." + f.getUnqualifiedName() + " = SOURCE." + f.getUnqualifiedName())
                 .collect(Collectors.joining(",")));
 
-        return context.execute(DSL.sql(merge.toString(), mergeSelect(record)));
+        return context.execute(DSL.sql(merge.toString(), mergeSelect(orderedRecord)));
     }
 
     @Override
@@ -410,20 +415,22 @@ public class SnowflakeDialect extends JSONDialect {
         mergeWhenMatched(merge, versionField, version);
         merge.append("THEN DELETE");
 
-        return context.execute(DSL.sql(merge.toString(), mergeSelect(ImmutableMap.of(idField, DSL.inline(id)))));
+        return context.execute(DSL.sql(merge.toString(), mergeSelect(orderedRecord(ImmutableMap.of(idField, DSL.inline(id))))));
     }
 
     @Override
     public int createHistoryLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version, final Map<Field<?>, SelectField<?>> record) {
 
+        final List<Pair<Field<?>, SelectField<?>>> orderedRecord = orderedRecord(record);
+
         final StringBuilder merge = new StringBuilder();
         merge(merge, table, idField, versionField);
-        mergeNotMatchedInsert(merge, record);
+        mergeNotMatchedInsert(merge, orderedRecord);
         merge.append("WHEN MATCHED THEN UPDATE SET ");
         merge.append(record.keySet().stream()
                 .map(f -> "TARGET." + f.getUnqualifiedName() + " = SOURCE." + f.getUnqualifiedName())
                 .collect(Collectors.joining(",")));
 
-        return context.execute(DSL.sql(merge.toString(), mergeSelect(record)));
+        return context.execute(DSL.sql(merge.toString(), mergeSelect(orderedRecord)));
     }
 }
