@@ -477,7 +477,7 @@ public class DatabaseAPI implements API {
         }
     }
 
-    private String name(final io.basestar.schema.Schema<?> schema) {
+    private String name(final io.basestar.schema.Schema schema) {
 
         return schema.getQualifiedName().toString(Reserved.PREFIX);
     }
@@ -494,7 +494,7 @@ public class DatabaseAPI implements API {
 
         final Paths paths = new Paths();
         final Components components = new Components();
-        namespace.getSchemas().forEach((qualifiedName, schema) -> {
+        namespace.forEachValueSchema((qualifiedName, schema) -> {
             final String name = name(schema);
             components.addSchemas(name, schema.openApi());
             if (schema instanceof ObjectSchema) {

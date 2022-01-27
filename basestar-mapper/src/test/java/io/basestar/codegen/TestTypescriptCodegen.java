@@ -131,7 +131,7 @@ class TestTypescriptCodegen {
                 io.basestar.schema.use.UseOptional.class
         };
 
-        final Map<Name, Schema.Descriptor<?, ?>> schemas = Arrays.stream(classes)
+        final Map<Name, Schema.Descriptor<?>> schemas = Arrays.stream(classes)
                 .map(mappingContext::schemaMapper).collect(Collectors.toMap(
                         SchemaMapper::qualifiedName,
                         SchemaMapper::schemaBuilder

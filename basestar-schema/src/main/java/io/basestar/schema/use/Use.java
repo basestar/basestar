@@ -178,9 +178,9 @@ public interface Use<T> extends Serializable, UseValidated<T> {
 
     Map<Ref, Long> refVersions(T value);
 
-    void collectDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
+    void collectDependencies(Set<Name> expand, Map<Name, Schema> out);
 
-    void collectMaterializationDependencies(Set<Name> expand, Map<Name, Schema<?>> out);
+    void collectMaterializationDependencies(Set<Name> expand, Map<Name, Schema> out);
 
     boolean isCompatibleBucketing(List<Bucketing> other, Name name);
 

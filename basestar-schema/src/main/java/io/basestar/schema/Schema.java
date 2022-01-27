@@ -22,29 +22,23 @@ package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.basestar.expression.Context;
 import io.basestar.schema.exception.MissingSchemaException;
-import io.basestar.schema.use.Use;
-import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
 import io.basestar.util.Warnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
-import java.lang.reflect.Type;
 import java.util.*;
 
 /**
  * Schema
- *
+ * <p>
  * Base type for schema definitions
- *
- * @param <T>
  */
 
 @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
-public interface Schema<T> extends Named, Described, Serializable, Extendable {
+public interface Schema extends Named, Described, Serializable, Extendable {
 
     Name ANONYMOUS_NAME = Name.of(Reserved.PREFIX + "anon");
 
@@ -58,9 +52,10 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
             @JsonSubTypes.Type(name = InterfaceSchema.Descriptor.TYPE, value = InterfaceSchema.Builder.class),
             @JsonSubTypes.Type(name = ViewSchema.Descriptor.TYPE, value = ViewSchema.Builder.class),
             @JsonSubTypes.Type(name = FunctionSchema.Descriptor.TYPE, value = FunctionSchema.Builder.class),
-            @JsonSubTypes.Type(name = QuerySchema.Descriptor.TYPE, value = QuerySchema.Builder.class)
+            @JsonSubTypes.Type(name = QuerySchema.Descriptor.TYPE, value = QuerySchema.Builder.class),
+            @JsonSubTypes.Type(name = SequenceSchema.Descriptor.TYPE, value = SequenceSchema.Builder.class)
     })
-    interface Descriptor<S extends Schema<V>, V> extends Described, Extendable {
+    interface Descriptor<S extends Schema> extends Described, Extendable {
 
         String getType();
 
@@ -78,7 +73,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
             return build(Schema.anonymousQualifiedName());
         }
 
-        interface Self<S extends Schema<V>, V> extends Descriptor<S, V> {
+        interface Self<S extends Schema> extends Descriptor<S> {
 
             S self();
 
@@ -102,7 +97,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         }
     }
 
-    interface Builder<B extends Builder<B, S, V>, S extends Schema<V>, V> extends Descriptor<S, V>, Described.Builder<B>, Extendable.Builder<B> {
+    interface Builder<B extends Builder<B, S>, S extends Schema> extends Descriptor<S>, Described.Builder<B>, Extendable.Builder<B> {
 
     }
 
@@ -121,18 +116,6 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         final Name qualifiedName = getQualifiedPackageName();
         return qualifiedName.isEmpty() ? null : qualifiedName.toString(delimiter);
     }
-
-    default T create(final Object value) {
-
-        return create(value, Collections.emptySet(), false);
-    }
-
-    default T create(final Object value, final Set<Name> expand, final boolean suppress) {
-
-        return create(ValueContext.standardOrSuppressing(suppress), value, expand);
-    }
-
-    T create(ValueContext context, Object value, Set<Name> expand);
 
     int getSlot();
 
@@ -153,45 +136,30 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         return getSlot() == anonymousSlot();
     }
 
-    default Set<Constraint.Violation> validate(final Context context, final T after) {
+    Descriptor<? extends Schema> descriptor();
 
-        return validate(context, Name.empty(), after);
-    }
-
-    Set<Constraint.Violation> validate(Context context, Name name, T after);
-
-    Type javaType(Name name);
-
-    io.swagger.v3.oas.models.media.Schema<?> openApi();
-
-    Descriptor<? extends Schema<T>, ? extends T> descriptor();
-
-    Use<T> typeOf();
-
-    String toString(T value);
-
-    default Map<Name, Schema<?>> dependencies() {
+    default Map<Name, Schema> dependencies() {
 
         return dependencies(Collections.emptySet());
     }
 
-    default Map<Name, Schema<?>> dependencies(final Set<Name> expand) {
+    default Map<Name, Schema> dependencies(final Set<Name> expand) {
 
-        final Map<Name, Schema<?>> dependencies = new HashMap<>();
+        final Map<Name, Schema> dependencies = new HashMap<>();
         collectDependencies(expand, dependencies);
         return dependencies;
     }
 
-    void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out);
+    void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out);
 
-    default Map<Name, Schema<?>> materializationDependencies(final Set<Name> expand) {
+    default Map<Name, Schema> materializationDependencies(final Set<Name> expand) {
 
-        final Map<Name, Schema<?>> dependencies = new HashMap<>();
+        final Map<Name, Schema> dependencies = new HashMap<>();
         collectMaterializationDependencies(expand, dependencies);
         return dependencies;
     }
 
-    void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out);
+    void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out);
 
     interface Resolver {
 
@@ -200,20 +168,20 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
             // 'Magic' method to handle cycles in namespace builder, instance under construction
             // must call resolver.constructing(this); as first constructor line.
 
-            void constructing(final Name name, final Schema<?> schema);
+            void constructing(final Name name, final Schema schema);
 
             // Convenience for anonymous construction
 
             Constructing ANONYMOUS = new Constructing() {
 
                 @Override
-                public void constructing(final Name name, final Schema<?> schema) {
+                public void constructing(final Name name, final Schema schema) {
 
                 }
 
                 @Nullable
                 @Override
-                public Schema<?> getSchema(final Name qualifiedName) {
+                public Schema getSchema(final Name qualifiedName) {
 
                     return null;
                 }
@@ -224,27 +192,27 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
 
             @Nullable
             @Override
-            public Schema<?> getSchema(final Name qualifiedName) {
+            public Schema getSchema(final Name qualifiedName) {
 
                 return null;
             }
         };
 
         @Nullable
-        Schema<?> getSchema(Name qualifiedName);
+        Schema getSchema(Name qualifiedName);
 
         @Nonnull
-        default Schema<?> requireSchema(final Name qualifiedName) {
+        default Schema requireSchema(final Name qualifiedName) {
 
-            final Schema<?> result = getSchema(qualifiedName);
-            if(result == null) {
+            final Schema result = getSchema(qualifiedName);
+            if (result == null) {
                 throw new MissingSchemaException(qualifiedName);
             } else {
                 return result;
             }
         }
 
-        default Schema<?> requireSchema(final String name) {
+        default Schema requireSchema(final String name) {
 
             return requireSchema(Name.parse(name));
         }
@@ -252,7 +220,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         @Nonnull
         default InstanceSchema requireInstanceSchema(final Name qualifiedName) {
 
-            final Schema<?> schema = requireSchema(qualifiedName);
+            final Schema schema = requireSchema(qualifiedName);
             if(schema instanceof InstanceSchema) {
                 return (InstanceSchema)schema;
             } else {
@@ -268,7 +236,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         @Nonnull
         default ObjectSchema requireObjectSchema(final Name qualifiedName) {
 
-            final Schema<?> schema = requireSchema(qualifiedName);
+            final Schema schema = requireSchema(qualifiedName);
             if (schema instanceof ObjectSchema) {
                 return (ObjectSchema) schema;
             } else {
@@ -284,7 +252,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         @Nonnull
         default StructSchema requireStructSchema(final Name qualifiedName) {
 
-            final Schema<?> schema = requireSchema(qualifiedName);
+            final Schema schema = requireSchema(qualifiedName);
             if(schema instanceof StructSchema) {
                 return (StructSchema)schema;
             } else {
@@ -300,7 +268,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         @Nonnull
         default EnumSchema requireEnumSchema(final Name qualifiedName) {
 
-            final Schema<?> schema = requireSchema(qualifiedName);
+            final Schema schema = requireSchema(qualifiedName);
             if(schema instanceof EnumSchema) {
                 return (EnumSchema)schema;
             } else {
@@ -316,7 +284,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         @Nonnull
         default ViewSchema requireViewSchema(final Name qualifiedName) {
 
-            final Schema<?> schema = requireSchema(qualifiedName);
+            final Schema schema = requireSchema(qualifiedName);
             if (schema instanceof ViewSchema) {
                 return (ViewSchema) schema;
             } else {
@@ -332,7 +300,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         @Nonnull
         default QuerySchema requireQuerySchema(final Name qualifiedName) {
 
-            final Schema<?> schema = requireSchema(qualifiedName);
+            final Schema schema = requireSchema(qualifiedName);
             if (schema instanceof QuerySchema) {
                 return (QuerySchema) schema;
             } else {
@@ -348,7 +316,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         @Nonnull
         default LinkableSchema requireLinkableSchema(final Name qualifiedName) {
 
-            final Schema<?> schema = requireSchema(qualifiedName);
+            final Schema schema = requireSchema(qualifiedName);
             if (schema instanceof LinkableSchema) {
                 return (LinkableSchema) schema;
             } else {
@@ -364,7 +332,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         @Nonnull
         default QueryableSchema requireQueryableSchema(final Name qualifiedName) {
 
-            final Schema<?> schema = requireSchema(qualifiedName);
+            final Schema schema = requireSchema(qualifiedName);
             if (schema instanceof QueryableSchema) {
                 return (QueryableSchema) schema;
             } else {
@@ -380,7 +348,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         @Nonnull
         default InterfaceSchema requireInterfaceSchema(final Name qualifiedName) {
 
-            final Schema<?> schema = requireSchema(qualifiedName);
+            final Schema schema = requireSchema(qualifiedName);
             if (schema instanceof InterfaceSchema) {
                 return (InterfaceSchema) schema;
             } else {
@@ -396,7 +364,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         @Nonnull
         default ReferableSchema requireReferableSchema(final Name qualifiedName) {
 
-            final Schema<?> schema = requireSchema(qualifiedName);
+            final Schema schema = requireSchema(qualifiedName);
             if (schema instanceof ReferableSchema) {
                 return (ReferableSchema) schema;
             } else {
@@ -407,6 +375,38 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         default ReferableSchema requireReferableSchema(final String name) {
 
             return requireReferableSchema(Name.parse(name));
+        }
+
+        @Nonnull
+        default ValueSchema<?> requireValueSchema(final Name qualifiedName) {
+
+            final Schema schema = requireSchema(qualifiedName);
+            if (schema instanceof ValueSchema<?>) {
+                return (ValueSchema<?>) schema;
+            } else {
+                throw new IllegalStateException(qualifiedName + " is not a value schema");
+            }
+        }
+
+        default ValueSchema<?> requireValueSchema(final String name) {
+
+            return requireValueSchema(Name.parse(name));
+        }
+
+        @Nonnull
+        default SequenceSchema requireSequenceSchema(final Name qualifiedName) {
+
+            final Schema schema = requireSchema(qualifiedName);
+            if (schema instanceof SequenceSchema) {
+                return (SequenceSchema) schema;
+            } else {
+                throw new IllegalStateException(qualifiedName + " is not a sequence schema");
+            }
+        }
+
+        default SequenceSchema requireSequenceSchema(final String name) {
+
+            return requireSequenceSchema(Name.parse(name));
         }
     }
 }

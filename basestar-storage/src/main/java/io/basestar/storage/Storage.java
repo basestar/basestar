@@ -51,7 +51,7 @@ public interface Storage {
 
     EventStrategy eventStrategy(ReferableSchema schema);
 
-    StorageTraits storageTraits(ReferableSchema schema);
+    StorageTraits storageTraits(Schema schema);
 
     Set<Name> supportedExpand(LinkableSchema schema, Set<Name> expand);
 
@@ -78,11 +78,15 @@ public interface Storage {
 
     Pager<Map<String, Object>> query(Consistency consistency, QueryableSchema schema, Map<String, Object> arguments, Expression query, List<Sort> sort, Set<Name> expand);
 
+    Pager<Map<String, Object>> queryHistory(Consistency consistency, ReferableSchema schema, String id, Expression query, List<Sort> sort, Set<Name> expand);
+
     CompletableFuture<Set<Event>> afterCreate(ObjectSchema schema, String id, Map<String, Object> after);
 
     CompletableFuture<Set<Event>> afterUpdate(ObjectSchema schema, String id, long version, Map<String, Object> before, Map<String, Object> after);
 
     CompletableFuture<Set<Event>> afterDelete(ObjectSchema schema, String id, long version, Map<String, Object> before);
+
+    CompletableFuture<Long> increment(SequenceSchema schema);
 
     default Scan scan(final ReferableSchema schema, final Expression query, final int segments) {
 

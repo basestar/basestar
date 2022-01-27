@@ -156,4 +156,10 @@ class TestCognitoGroupStorage extends TestStorage {
 
         // skip (custom attributes not supported)
     }
+
+    @Override
+    protected boolean supportsHistoryQuery() {
+
+        return false;
+    }
 }

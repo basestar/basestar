@@ -89,6 +89,18 @@ public class SnowflakeDialect extends JSONDialect {
     }
 
     @Override
+    public boolean supportsUDFs() {
+
+        return true;
+    }
+
+    @Override
+    public boolean supportsSequences() {
+
+        return true;
+    }
+
+    @Override
     public boolean supportsConstraints() {
 
         return false;
@@ -137,6 +149,23 @@ public class SnowflakeDialect extends JSONDialect {
         } else {
             return super.createFunctionDDLLanguage(language);
         }
+    }
+
+    @Override
+    public String createSequenceDDL(final DSLContext context, final Name name, final Long start, final Long increment) {
+
+        final StringBuilder str = new StringBuilder();
+        str.append("CREATE SEQUENCE IF NOT EXISTS ");
+        str.append(name);
+        if (start != null) {
+            str.append(" WITH START = ");
+            str.append(DSL.inline(start));
+        }
+        if (increment != null) {
+            str.append(" INCREMENT = ");
+            str.append(DSL.inline(increment));
+        }
+        return str.toString();
     }
 
     @Override
@@ -234,9 +263,13 @@ public class SnowflakeDialect extends JSONDialect {
                 if (schema instanceof ViewSchema) {
                     final ViewSchema viewSchema = (ViewSchema) schema;
                     if (viewSchema.getFrom() instanceof FromSql) {
-                        return ((FromSql) viewSchema.getFrom()).getPrimaryKey().stream()
-                                .map(name -> DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(name))))
-                                .collect(Collectors.toList());
+                        final FromSql fromSql = (FromSql) viewSchema.getFrom();
+                        final List<String> primaryKey = fromSql.getPrimaryKey();
+                        if (primaryKey != null && !primaryKey.isEmpty()) {
+                            return primaryKey.stream()
+                                    .map(name -> DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(name))))
+                                    .collect(Collectors.toList());
+                        }
                     }
                 } else if (schema instanceof ReferableSchema) {
                     return ImmutableList.of(DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(ReferableSchema.ID))));
@@ -299,7 +332,9 @@ public class SnowflakeDialect extends JSONDialect {
                                 if (name.size() == 1) {
                                     return DSL.field(DSL.name(alias2, "VALUE"));
                                 } else {
-                                    return DSL.field(DSL.sql(DSL.name(alias2, "VALUE") + ":" + namingStrategy.columnName(name.withoutFirst())));
+                                    return DSL.field(DSL.sql(DSL.name(alias2, "VALUE") + ":" + name.withoutFirst()
+                                            .stream().map(v -> DSL.name(v).toString())
+                                            .collect(Collectors.joining("."))));
                                 }
                             } else {
                                 return DSL.field(DSL.name(alias1).append(namingStrategy.columnName(name)));
@@ -328,6 +363,12 @@ public class SnowflakeDialect extends JSONDialect {
                 return null;
             }
         };
+    }
+
+    @Override
+    public ResultQuery<Record1<Long>> incrementSequence(final DSLContext context, final Name sequenceName) {
+
+        return context.select(DSL.field(DSL.sql(sequenceName + ".nextval")).cast(Long.class));
     }
 
     private void merge(final StringBuilder merge, final org.jooq.Table<?> table, final Field<String> idField) {

@@ -63,4 +63,10 @@ public class DynamoDBStorageTraits implements StorageTraits {
 
         return Concurrency.OPTIMISTIC;
     }
+
+    @Override
+    public boolean supportsSequence() {
+
+        return true;
+    }
 }

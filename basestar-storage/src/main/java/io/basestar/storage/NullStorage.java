@@ -45,6 +45,12 @@ public class NullStorage implements DefaultLayerStorage {
     }
 
     @Override
+    public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        return Pager.empty();
+    }
+
+    @Override
     public ReadTransaction read(final Consistency consistency) {
 
         return new ReadTransaction() {
@@ -125,9 +131,15 @@ public class NullStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return TRAITS;
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        throw new UnsupportedOperationException();
     }
 
     public static final StorageTraits TRAITS = new StorageTraits() {
@@ -166,6 +178,12 @@ public class NullStorage implements DefaultLayerStorage {
         public Concurrency getObjectConcurrency() {
 
             return Concurrency.NONE;
+        }
+
+        @Override
+        public boolean supportsSequence() {
+
+            return false;
         }
     };
 }

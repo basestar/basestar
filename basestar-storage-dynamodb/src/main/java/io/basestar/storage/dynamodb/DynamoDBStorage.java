@@ -22,6 +22,7 @@ package io.basestar.storage.dynamodb;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
@@ -58,6 +59,8 @@ public class DynamoDBStorage implements DefaultIndexStorage {
     private static final long DEFAULT_EMPTY_SCAN_DELAY_MILLIS = 1000L;
 
     private static final String OVERSIZE_KEY = Reserved.PREFIX + "oversize";
+
+    private static final String SEQUENCE_VALUE_NAME = "value";
 
     private final DynamoDbAsyncClient client;
 
@@ -203,16 +206,15 @@ public class DynamoDBStorage implements DefaultIndexStorage {
 
         return (stats, paging, count) -> {
 
+            final List<String> keyTerms = new ArrayList<>();
+            final Map<String, String> names = new HashMap<>();
+            final Map<String, AttributeValue> values = new HashMap<>();
+
             final List<Object> mergePartitions = new ArrayList<>();
             mergePartitions.add(strategy.indexPartitionPrefix(schema, index));
             mergePartitions.addAll(satisfy.getPartition());
 
             final SdkBytes partitionValue = SdkBytes.fromByteArray(BinaryKey.from(mergePartitions).getBytes());
-
-            final Map<String, String> names = new HashMap<>();
-            final Map<String, AttributeValue> values = new HashMap<>();
-
-            final List<String> keyTerms = new ArrayList<>();
 
             keyTerms.add("#__partition = :__partition");
             names.put("#__partition", strategy.indexPartitionName(schema, index));
@@ -252,7 +254,6 @@ public class DynamoDBStorage implements DefaultIndexStorage {
                     .limit(count);
 
             if (paging != null) {
-
                 queryBuilder = queryBuilder.exclusiveStartKey(decodeIndexPagingWithPartition(schema, index, partitionValue.asByteArray(), paging));
             }
 
@@ -274,6 +275,95 @@ public class DynamoDBStorage implements DefaultIndexStorage {
                             nextPaging = null;
                         } else {
                             nextPaging = encodeIndexPagingWithoutPartition(schema, index, result.lastEvaluatedKey());
+                        }
+
+                        return new Page<>(results, nextPaging);
+                    });
+        };
+    }
+
+    @Override
+    public Pager<Map<String, Object>> queryHistoryRange(final Consistency consistency, final ObjectSchema schema, final String id, final Map<Name, Range<Object>> query, final Sort.Order order, final Set<Name> expand) {
+
+        return (stats, paging, count) -> {
+
+            final List<String> keyTerms = new ArrayList<>();
+            final Map<String, String> names = new HashMap<>();
+            final Map<String, AttributeValue> values = new HashMap<>();
+
+            final String prefix = strategy.historyPartitionPrefix(schema);
+            final String partitionValue = DynamoDBUtils.concat(prefix, id);
+
+            keyTerms.add("#__partition = :__partition");
+            names.put("#__partition", strategy.historyPartitionName(schema));
+            values.put(":__partition", DynamoDBUtils.s(partitionValue));
+
+            final Range<Object> versionRange = query.get(Name.of(ReferableSchema.VERSION));
+            if (versionRange != null) {
+                final Range.Bound<Object> lo = versionRange.lo();
+                final Range.Bound<Object> hi = versionRange.hi();
+
+                if (lo != null && hi != null) {
+                    keyTerms.add("#__sort BETWEEN :__sortLo AND :__sortHi");
+                    names.put("#__sort", strategy.historySortName(schema));
+                    values.put(":__sortLo", DynamoDBUtils.n(((Number) lo.getValue()).longValue() + (lo.isInclusive() ? 0 : 1)));
+                    values.put(":__sortHi", DynamoDBUtils.n(((Number) hi.getValue()).longValue() - (hi.isInclusive() ? 0 : 1)));
+                } else if (lo != null) {
+                    keyTerms.add("#__sort " + (lo.isInclusive() ? ">=" : ">") + " :__sortLo");
+                    names.put("#__sort", strategy.historySortName(schema));
+                    values.put(":__sortLo", DynamoDBUtils.n((Number) lo.getValue()));
+                } else if (hi != null) {
+                    keyTerms.add("#__sort " + (hi.isInclusive() ? "<=" : "<") + " :__sortHi");
+                    names.put("#__sort", strategy.historySortName(schema));
+                    values.put(":__sortHi", DynamoDBUtils.n((Number) hi.getValue()));
+                }
+            }
+
+            final String keyExpression = Joiner.on(" AND ").join(keyTerms);
+
+            final Map<Name, Range<Object>> adjustedQuery = new HashMap<>(query);
+            adjustedQuery.remove(Name.of(ReferableSchema.VERSION));
+
+            final DynamoDBExpressionBuilder builder = new DynamoDBExpressionBuilder(ImmutableSet.of());
+            adjustedQuery.forEach(builder::and);
+
+            final String filterExpression = builder.getExpression();
+            names.putAll(builder.getNames());
+            values.putAll(builder.getValues());
+
+            log.debug("Query key=\"{}\", filter=\"{}\", names={}, values={}", keyExpression, filterExpression, names, values);
+
+            QueryRequest.Builder queryBuilder = QueryRequest.builder()
+                    .tableName(strategy.historyTableName(schema))
+                    .keyConditionExpression(keyExpression)
+                    .filterExpression(filterExpression)
+                    .expressionAttributeNames(names)
+                    .expressionAttributeValues(values)
+                    .scanIndexForward(order == Sort.Order.ASC)
+                    .limit(count);
+
+            if (paging != null) {
+                queryBuilder = queryBuilder.exclusiveStartKey(decodeHistoryPagingWithPartition(schema, partitionValue, paging));
+            }
+
+            final QueryRequest request = queryBuilder.build();
+
+            return client.query(request)
+                    .thenApply(result -> {
+
+                        final List<Map<String, AttributeValue>> items = result.items();
+
+                        // Do not need to apply oversize handler (index records can never be oversize)
+
+                        final List<Map<String, Object>> results = items.stream()
+                                .map(DynamoDBUtils::fromItem)
+                                .collect(Collectors.toList());
+
+                        final Page.Token nextPaging;
+                        if (result.lastEvaluatedKey().isEmpty()) {
+                            nextPaging = null;
+                        } else {
+                            nextPaging = encodeHistoryPagingWithoutPartition(schema, result.lastEvaluatedKey());
                         }
 
                         return new Page<>(results, nextPaging);
@@ -364,7 +454,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         final String partition = DynamoDBUtils.concat(prefix, id);
         return ImmutableMap.of(
                 strategy.historyPartitionName(schema), DynamoDBUtils.s(partition),
-                strategy.historySortName(schema), DynamoDBUtils.n(Long.toString(version))
+                strategy.historySortName(schema), DynamoDBUtils.n(version)
         );
     }
 
@@ -461,7 +551,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
                                 "#version", ObjectSchema.VERSION
                         ))
                         .expressionAttributeValues(ImmutableMap.of(
-                                ":version", DynamoDBUtils.n(Long.toString(version))
+                                ":version", DynamoDBUtils.n(version)
                         ));
             } else {
                 return Put.builder();
@@ -476,7 +566,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
                                 "#version", ObjectSchema.VERSION
                         ))
                         .expressionAttributeValues(ImmutableMap.of(
-                                ":version", DynamoDBUtils.n(Long.toString(version))
+                                ":version", DynamoDBUtils.n(version)
                         ));
             } else {
                 return Delete.builder();
@@ -737,9 +827,41 @@ public class DynamoDBStorage implements DefaultIndexStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return DynamoDBStorageTraits.INSTANCE;
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        final Map<String, AttributeValue> key = ImmutableMap.of(
+                strategy.sequencePartitionName(schema), DynamoDBUtils.s(schema.getQualifiedName().toString())
+
+        );
+        final long start = schema.getEffectiveStart();
+        final long increment = schema.getEffectiveIncrement();
+        return client.updateItem(UpdateItemRequest.builder()
+                .tableName(strategy.sequenceTableName(schema))
+                .key(key)
+                .updateExpression("SET #value = if_not_exists(#value, :start) + :increment")
+                .expressionAttributeNames(ImmutableMap.of(
+                        "#value", SEQUENCE_VALUE_NAME
+                ))
+                .expressionAttributeValues(ImmutableMap.of(
+                        ":start", DynamoDBUtils.n(start - increment),
+                        ":increment", DynamoDBUtils.n(increment)
+                ))
+                .returnValues(ReturnValue.ALL_NEW)
+                .build()).thenApply(result -> {
+
+            final AttributeValue value = result.attributes().get(SEQUENCE_VALUE_NAME);
+            if (value != null) {
+                return ((Number) DynamoDBUtils.fromAttributeValue(value)).longValue();
+            } else {
+                throw new IllegalStateException("Sequence increment did not yield a value");
+            }
+        });
     }
 
     private class ScanSegment implements Scan.Segment {
@@ -923,12 +1045,32 @@ public class DynamoDBStorage implements DefaultIndexStorage {
 
     private Map<String, AttributeValue> decodeIndexPagingWithPartition(final ObjectSchema schema, final Index index, final byte[] indexPartition, final Page.Token paging) {
 
-        try(final ByteArrayInputStream bais = new ByteArrayInputStream(paging.getValue());
-            final DataInputStream dis = new DataInputStream(bais)) {
+        try (final ByteArrayInputStream bais = new ByteArrayInputStream(paging.getValue());
+             final DataInputStream dis = new DataInputStream(bais)) {
             final byte[] indexSort = readWithLength(dis);
             return decodeIndexPaging(schema, index, indexPartition, indexSort);
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private Map<String, AttributeValue> decodeHistoryPaging(final ObjectSchema schema, final String partition, final long sort) {
+
+        return ImmutableMap.of(
+                strategy.historyPartitionName(schema), DynamoDBUtils.s(partition),
+                strategy.historySortName(schema), DynamoDBUtils.n(sort)
+        );
+    }
+
+    private Page.Token encodeHistoryPagingWithoutPartition(final ObjectSchema schema, final Map<String, AttributeValue> key) {
+
+        final long sort = Long.parseLong(key.get(strategy.historySortName(schema)).n());
+        return Page.Token.fromLongValue(sort);
+    }
+
+    private Map<String, AttributeValue> decodeHistoryPagingWithPartition(final ObjectSchema schema, final String partition, final Page.Token paging) {
+
+        final long sort = paging.getLongValue();
+        return decodeHistoryPaging(schema, partition, sort);
     }
 }

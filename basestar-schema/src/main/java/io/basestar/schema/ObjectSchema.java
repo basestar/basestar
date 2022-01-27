@@ -219,6 +219,9 @@ public class ObjectSchema implements ReferableSchema {
 
     private final boolean readonly;
 
+    @Nullable
+    private final SequenceSchema sequence;
+
     @Nonnull
     private final SortedMap<String, Serializable> extensions;
 
@@ -239,13 +242,15 @@ public class ObjectSchema implements ReferableSchema {
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         Boolean getReadonly();
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        Name getSequence();
+
         interface Self extends ReferableSchema.Descriptor.Self<ObjectSchema>, Descriptor {
 
             @Override
             default Id.Descriptor getId() {
 
-                final Id id = self().getId();
-                return id == null ? null : id.descriptor();
+                return Nullsafe.map(self().getId(), Id::descriptor);
             }
 
             @Override
@@ -258,6 +263,12 @@ public class ObjectSchema implements ReferableSchema {
             default History getHistory() {
 
                 return self().getHistory();
+            }
+
+            @Override
+            default Name getSequence() {
+
+                return Nullsafe.map(self().getSequence(), Schema::getQualifiedName);
             }
         }
 
@@ -333,6 +344,9 @@ public class ObjectSchema implements ReferableSchema {
         private List<Bucketing> bucket;
 
         @Nullable
+        private Name sequence;
+
+        @Nullable
         private Map<String, Serializable> extensions;
     }
 
@@ -371,6 +385,7 @@ public class ObjectSchema implements ReferableSchema {
         this.declaredBucketing = Immutable.list(descriptor.getBucket());
         this.readonly = Nullsafe.orDefault(descriptor.getReadonly());
         this.extensions = Immutable.sortedMap(descriptor.getExtensions());
+        this.sequence = Nullsafe.map(descriptor.getSequence(), resolver::requireSequenceSchema);
         if (Reserved.isReserved(qualifiedName.last())) {
             throw new ReservedNameException(qualifiedName);
         }
@@ -426,7 +441,7 @@ public class ObjectSchema implements ReferableSchema {
         return qualifiedNameHashCode();
     }
 
-    public boolean requiresMigration(final Schema<?> schema, final Widening widening) {
+    public boolean requiresMigration(final Schema schema, final Widening widening) {
 
         if (!(schema instanceof ObjectSchema)) {
             return true;

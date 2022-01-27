@@ -154,7 +154,7 @@ class TestObjectSchema {
 
         final ObjectSchema schema = namespace.requireObjectSchema("Comment");
 
-        final Map<Name, Schema<?>> deps = schema.dependencies();
+        final Map<Name, Schema> deps = schema.dependencies();
 
         assertEquals(2, deps.size());
     }

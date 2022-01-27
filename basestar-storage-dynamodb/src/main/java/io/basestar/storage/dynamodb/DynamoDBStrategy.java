@@ -38,6 +38,8 @@ public interface DynamoDBStrategy extends Serializable {
 
     String historyTableName(ReferableSchema schema);
 
+    String sequenceTableName(SequenceSchema schema);
+
     String indexTableName(ReferableSchema schema, Index index);
 
     String objectPartitionPrefix(ReferableSchema schema);
@@ -45,6 +47,8 @@ public interface DynamoDBStrategy extends Serializable {
     String historyPartitionPrefix(ReferableSchema schema);
 
     String indexPartitionPrefix(ReferableSchema schema, Index index);
+
+    String sequencePartitionPrefix(SequenceSchema schema);
 
     String objectPartitionName(ReferableSchema schema);
 
@@ -54,9 +58,12 @@ public interface DynamoDBStrategy extends Serializable {
 
     String indexPartitionName(ReferableSchema schema, Index index);
 
+    String sequencePartitionName(SequenceSchema schema);
+
     String indexSortName(ReferableSchema schema, Index index);
 
     IndexType indexType(ReferableSchema schema, Index index);
+
 
     Map<String, TableDescription> tables(List<? extends ReferableSchema> schemas);
 
@@ -79,12 +86,14 @@ public interface DynamoDBStrategy extends Serializable {
 
         public static final String INDEX_SORT_KEY = Reserved.PREFIX + "sort";
 
+        public static final String SEQUENCE_PARTITION_KEY = OBJECT_PARTITION_KEY;
+
         private final String tablePrefix;
 
         private final String dataPrefix;
 
         @lombok.Builder(builderClassName = "Builder")
-        SingleTable(final String tablePrefix, final String dataPrefix) {
+        protected SingleTable(final String tablePrefix, final String dataPrefix) {
 
             this.tablePrefix = Nullsafe.orDefault(tablePrefix);
             this.dataPrefix = Nullsafe.orDefault(dataPrefix);
@@ -140,6 +149,18 @@ public interface DynamoDBStrategy extends Serializable {
         }
 
         @Override
+        public String sequencePartitionPrefix(final SequenceSchema schema) {
+
+            return dataPrefix + schema.getQualifiedName() + Reserved.DELIMITER + schema.getVersion();
+        }
+
+        @Override
+        public String sequencePartitionName(final SequenceSchema schema) {
+
+            return SEQUENCE_PARTITION_KEY;
+        }
+
+        @Override
         public IndexType indexType(final ReferableSchema schema, final Index index) {
 
             return IndexType.EXT;
@@ -148,19 +169,45 @@ public interface DynamoDBStrategy extends Serializable {
         @Override
         public String objectTableName(final ReferableSchema schema) {
 
-            return tablePrefix + "Object";
+            return tablePrefix + objectTableName();
         }
 
         @Override
         public String historyTableName(final ReferableSchema schema) {
 
-            return tablePrefix + "History";
+            return tablePrefix + historyTableName();
         }
 
         @Override
         public String indexTableName(final ReferableSchema schema, final Index index) {
 
-            return tablePrefix + "Index";
+            return tablePrefix + indexTableName();
+        }
+
+        @Override
+        public String sequenceTableName(final SequenceSchema schema) {
+
+            return tablePrefix + sequenceTableName();
+        }
+
+        public String objectTableName() {
+
+            return "Object";
+        }
+
+        public String historyTableName() {
+
+            return "History";
+        }
+
+        public String indexTableName() {
+
+            return "Index";
+        }
+
+        public String sequenceTableName() {
+
+            return "Sequence";
         }
 
         @Override
@@ -193,6 +240,15 @@ public interface DynamoDBStrategy extends Serializable {
                                     DynamoDBUtils.attributeDefinition(INDEX_PARTITION_KEY, ScalarAttributeType.B),
                                     DynamoDBUtils.attributeDefinition(INDEX_SORT_KEY, ScalarAttributeType.B)
                             )
+                            .build(),
+                    "Sequence", TableDescription.builder()
+                            .tableName(sequenceTableName(null))
+                            .keySchema(
+                                    DynamoDBUtils.keySchemaElement(SEQUENCE_PARTITION_KEY, KeyType.HASH)
+                            )
+                            .attributeDefinitions(
+                                    DynamoDBUtils.attributeDefinition(SEQUENCE_PARTITION_KEY, ScalarAttributeType.S)
+                            )
                             .build()
             );
         }
@@ -212,6 +268,8 @@ public interface DynamoDBStrategy extends Serializable {
         public static final String EXT_INDEX_PARTITION_KEY = Reserved.PREFIX + "partition";
 
         public static final String EXT_INDEX_SORT_KEY = Reserved.PREFIX + "sort";
+
+        public static final String SEQUENCE_PARTITION_KEY = ReferableSchema.SCHEMA;
 
         private final String tablePrefix;
 
@@ -240,6 +298,12 @@ public interface DynamoDBStrategy extends Serializable {
         }
 
         @Override
+        public String sequencePartitionPrefix(final SequenceSchema schema) {
+
+            return null;
+        }
+
+        @Override
         public String objectPartitionName(final ReferableSchema schema) {
 
             return OBJECT_PARTITION_KEY;
@@ -260,7 +324,7 @@ public interface DynamoDBStrategy extends Serializable {
         @Override
         public String indexPartitionName(final ReferableSchema schema, final Index index) {
 
-            switch(indexType(schema, index)) {
+            switch (indexType(schema, index)) {
                 case EXT:
                     return EXT_INDEX_PARTITION_KEY;
                 case GSI:
@@ -271,9 +335,15 @@ public interface DynamoDBStrategy extends Serializable {
         }
 
         @Override
+        public String sequencePartitionName(final SequenceSchema schema) {
+
+            return SEQUENCE_PARTITION_KEY;
+        }
+
+        @Override
         public String indexSortName(final ReferableSchema schema, final Index index) {
 
-            switch(indexType(schema, index)) {
+            switch (indexType(schema, index)) {
                 case EXT:
                     return EXT_INDEX_SORT_KEY;
                 case GSI:
@@ -300,6 +370,12 @@ public interface DynamoDBStrategy extends Serializable {
         }
 
         @Override
+        public String sequenceTableName(final SequenceSchema schema) {
+
+            return tablePrefix + schema.getQualifiedName() + NAME_DELIMITER + schema.getVersion();
+        }
+
+        @Override
         public String historyTableName(final ReferableSchema schema) {
 
             return tablePrefix + schema.getQualifiedName() + NAME_DELIMITER + schema.getVersion()
@@ -309,7 +385,7 @@ public interface DynamoDBStrategy extends Serializable {
         @Override
         public String indexTableName(final ReferableSchema schema, final Index index) {
 
-            switch(indexType(schema, index)) {
+            switch (indexType(schema, index)) {
                 case EXT:
                     return tablePrefix + schema.getQualifiedName() + NAME_DELIMITER + schema.getVersion()
                             + NAME_DELIMITER + index.getName() + NAME_DELIMITER + index.getVersion();

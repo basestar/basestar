@@ -25,7 +25,7 @@ import io.basestar.schema.use.Use;
 
 public class UnexpectedTypeException extends RuntimeException {
 
-    public UnexpectedTypeException(final Schema<?> expected, final Object actual) {
+    public UnexpectedTypeException(final Schema expected, final Object actual) {
 
         this(expected.getQualifiedName().toString(), actual);
     }

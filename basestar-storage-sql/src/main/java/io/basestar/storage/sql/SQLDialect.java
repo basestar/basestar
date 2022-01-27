@@ -722,6 +722,11 @@ public interface SQLDialect {
         return createFunctionDDLHeader(context, name, returns, arguments, language) + " " + createFunctionDDLBody(context, definition);
     }
 
+    default String createSequenceDDL(final DSLContext context, final org.jooq.Name name, final Long start, final Long increment) {
+
+        throw new UnsupportedOperationException();
+    }
+
     default String createFunctionDDLHeader(final DSLContext context, final org.jooq.Name name, final Use<?> returns, final List<Argument> arguments, final String language) {
 
         final Configuration configuration = context.configuration();
@@ -759,7 +764,12 @@ public interface SQLDialect {
 
     default boolean supportsUDFs() {
 
-        return true;
+        return false;
+    }
+
+    default boolean supportsSequences() {
+
+        return false;
     }
 
     default boolean supportsMaterializedView(final ViewSchema schema) {
@@ -856,6 +866,11 @@ public interface SQLDialect {
 
         final InferenceContext inferenceContext = InferenceContext.from(schema);
         return new SQLExpressionVisitor(this, inferenceContext, columnResolver);
+    }
+
+    default ResultQuery<Record1<Long>> incrementSequence(final DSLContext context, final org.jooq.Name sequenceName) {
+
+        throw new UnsupportedOperationException();
     }
 
     default List<Pair<Field<?>, SelectField<?>>> orderedRecord(final Map<Field<?>, SelectField<?>> record) {

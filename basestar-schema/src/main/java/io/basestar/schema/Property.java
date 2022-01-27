@@ -105,6 +105,7 @@ public class Property implements Member {
         Boolean getImmutable();
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
+        @JsonSerialize(using = ToStringSerializer.class)
         Expression getExpression();
 
         @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -181,7 +182,6 @@ public class Property implements Member {
         @Setter(AccessLevel.NONE)
         private Serializable defaultValue;
 
-        @JsonSerialize(using = ToStringSerializer.class)
         @JsonDeserialize(using = ExpressionDeserializer.class)
         private Expression expression;
 

@@ -113,15 +113,21 @@ public class CognitoUserStorage implements DefaultLayerStorage {
         };
     }
 
+    @Override
+    public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        throw new UnsupportedOperationException();
+    }
+
     private String filter(final Expression query) {
 
         final Set<Expression> dis = query.visit(new DisjunctionVisitor());
-        if(dis.size() == 1) {
+        if (dis.size() == 1) {
             final Map<Name, Object> terms = new HashMap<>();
             final Expression sub = dis.iterator().next();
             final Map<Name, Range<Object>> ranges = sub.visit(new RangeVisitor());
             ranges.forEach((path, range) -> {
-                if(range instanceof Range.Eq) {
+                if (range instanceof Range.Eq) {
                     final Object eq = ((Range.Eq<Object>) range).getEq();
                     terms.put(path, eq);
                 }
@@ -308,19 +314,25 @@ public class CognitoUserStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return CognitoStorageTraits.INSTANCE;
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        throw new UnsupportedOperationException();
     }
 
     private List<AttributeType> attributes(final ReferableSchema schema, final Map<String, Object> after) {
 
         final List<AttributeType> result = new ArrayList<>();
         final Long version = Instance.getVersion(after);
-        if(version != null) {
+        if (version != null) {
             result.add(AttributeType.builder().name(CUSTOM_ATTR_PREFIX + ObjectSchema.VERSION).value(Long.toString(version)).build());
         }
-        for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
+        for (final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
             final String name = entry.getKey();
             attributes(Name.of(name), entry.getValue().typeOf(), after.get(name)).forEach((k, v) -> {
                 final String attrName = k.toString();
