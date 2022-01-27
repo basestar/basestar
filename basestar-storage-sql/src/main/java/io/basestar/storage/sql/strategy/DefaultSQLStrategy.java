@@ -3,6 +3,7 @@ package io.basestar.storage.sql.strategy;
 import io.basestar.schema.FunctionSchema;
 import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.Schema;
+import io.basestar.schema.SequenceSchema;
 import io.basestar.storage.sql.util.DDLStep;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
@@ -27,7 +28,7 @@ public class DefaultSQLStrategy extends BaseSQLStrategy {
     private final String historySchemaName;
 
     @Override
-    public List<DDLStep> createEntityDDL(final DSLContext context, final Collection<? extends Schema<?>> schemas) {
+    public List<DDLStep> createEntityDDL(final DSLContext context, final Collection<? extends Schema> schemas) {
 
         final List<DDLStep> queries = new ArrayList<>();
 
@@ -36,12 +37,14 @@ public class DefaultSQLStrategy extends BaseSQLStrategy {
             queries.add(DDLStep.from(context.createSchemaIfNotExists(DSL.name(getHistorySchemaName()))));
         }
 
-        for (final Schema<?> schema : schemas) {
+        for (final Schema schema : schemas) {
 
             if (schema instanceof LinkableSchema) {
                 queries.addAll(createEntityDDL(context, (LinkableSchema) schema));
             } else if (schema instanceof FunctionSchema) {
                 queries.addAll(createFunctionDDL(context, (FunctionSchema) schema));
+            } else if (schema instanceof SequenceSchema) {
+                queries.addAll(createSequenceDDL(context, (SequenceSchema) schema));
             }
         }
 

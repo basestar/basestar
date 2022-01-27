@@ -70,13 +70,13 @@ public class FromJoin implements From {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Map<Name, Schema<?>> out) {
+    public void collectMaterializationDependencies(final Map<Name, Schema> out) {
 
         join.collectMaterializationDependencies(out);
     }
 
     @Override
-    public void collectDependencies(final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Map<Name, Schema> out) {
 
         join.collectDependencies(out);
     }

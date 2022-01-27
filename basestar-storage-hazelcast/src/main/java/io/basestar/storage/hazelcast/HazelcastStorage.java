@@ -377,8 +377,15 @@ public class HazelcastStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return HazelcastStorageTraits.INSTANCE;
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        // FIXME: could implement trivially
+        throw new UnsupportedOperationException();
     }
 }

@@ -140,9 +140,15 @@ public class ConstantStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return TRAITS;
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -193,6 +199,12 @@ public class ConstantStorage implements DefaultLayerStorage {
         public Concurrency getObjectConcurrency() {
 
             return Concurrency.OPTIMISTIC;
+        }
+
+        @Override
+        public boolean supportsSequence() {
+
+            return false;
         }
     };
 }

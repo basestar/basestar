@@ -51,7 +51,7 @@ public interface Storage {
 
     EventStrategy eventStrategy(ReferableSchema schema);
 
-    StorageTraits storageTraits(ReferableSchema schema);
+    StorageTraits storageTraits(Schema schema);
 
     Set<Name> supportedExpand(LinkableSchema schema, Set<Name> expand);
 
@@ -85,6 +85,8 @@ public interface Storage {
     CompletableFuture<Set<Event>> afterUpdate(ObjectSchema schema, String id, long version, Map<String, Object> before, Map<String, Object> after);
 
     CompletableFuture<Set<Event>> afterDelete(ObjectSchema schema, String id, long version, Map<String, Object> before);
+
+    CompletableFuture<Long> increment(SequenceSchema schema);
 
     default Scan scan(final ReferableSchema schema, final Expression query, final int segments) {
 

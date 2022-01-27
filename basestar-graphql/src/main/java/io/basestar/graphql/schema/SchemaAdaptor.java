@@ -446,7 +446,7 @@ public class SchemaAdaptor {
         return builder.build();
     }
 
-    public Optional<TypeDefinition<?>> typeDefinition(final Schema<?> schema) {
+    public Optional<TypeDefinition<?>> typeDefinition(final Schema schema) {
 
         if (schema instanceof InstanceSchema) {
             return Optional.of(typeDefinition((InstanceSchema) schema));

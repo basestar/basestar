@@ -272,14 +272,20 @@ public class CognitoGroupStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return CognitoStorageTraits.INSTANCE;
     }
 
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        throw new UnsupportedOperationException();
+    }
+
     public String getDescription(final Map<String, Object> data) {
 
-        return (String)data.get(DESCRIPTION_KEY);
+        return (String) data.get(DESCRIPTION_KEY);
     }
 
     private Map<String, Object> fromGroup(final GroupType group) {

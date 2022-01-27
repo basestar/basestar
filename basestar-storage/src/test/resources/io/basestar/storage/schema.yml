@@ -337,3 +337,12 @@ SqlQuery:
       type: string
     count:
       type: integer
+
+DefaultSequence:
+  type: sequence
+
+CustomSequence:
+  type: sequence
+  start: 10
+  increment: 5
+  format: "'ID-' + value"

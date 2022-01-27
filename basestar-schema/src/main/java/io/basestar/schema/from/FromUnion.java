@@ -85,13 +85,13 @@ public class FromUnion implements From {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Map<Name, Schema<?>> out) {
+    public void collectMaterializationDependencies(final Map<Name, Schema> out) {
 
         union.forEach(v -> v.collectMaterializationDependencies(out));
     }
 
     @Override
-    public void collectDependencies(final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Map<Name, Schema> out) {
 
         union.forEach(v -> v.collectDependencies(out));
     }

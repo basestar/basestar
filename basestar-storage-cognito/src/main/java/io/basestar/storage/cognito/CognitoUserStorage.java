@@ -314,19 +314,25 @@ public class CognitoUserStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return CognitoStorageTraits.INSTANCE;
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        throw new UnsupportedOperationException();
     }
 
     private List<AttributeType> attributes(final ReferableSchema schema, final Map<String, Object> after) {
 
         final List<AttributeType> result = new ArrayList<>();
         final Long version = Instance.getVersion(after);
-        if(version != null) {
+        if (version != null) {
             result.add(AttributeType.builder().name(CUSTOM_ATTR_PREFIX + ObjectSchema.VERSION).value(Long.toString(version)).build());
         }
-        for(final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
+        for (final Map.Entry<String, Property> entry : schema.getProperties().entrySet()) {
             final String name = entry.getKey();
             attributes(Name.of(name), entry.getValue().typeOf(), after.get(name)).forEach((k, v) -> {
                 final String attrName = k.toString();

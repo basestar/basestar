@@ -227,7 +227,8 @@ public class DatabaseServer extends ReadProcessor implements Database, Handler<E
                         beforeKey = null;
                         before = null;
                     }
-                    final Action.Result actionResult = action.after(valueContext, beforeContext.with(VAR_BATCH, overlay), before);
+                    // FIXME: should do proper future composing here
+                    final Action.Result actionResult = action.after(storage, valueContext, beforeContext.with(VAR_BATCH, overlay), before).join();
                     actionTypes.put(name, actionResult.getType());
                     if (actionResult.getAfter() != null) {
                         final RefKey afterKey = latestRefKey(actionResult.getAfter());

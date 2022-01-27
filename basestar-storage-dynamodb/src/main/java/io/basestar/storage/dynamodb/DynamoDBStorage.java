@@ -60,6 +60,8 @@ public class DynamoDBStorage implements DefaultIndexStorage {
 
     private static final String OVERSIZE_KEY = Reserved.PREFIX + "oversize";
 
+    private static final String SEQUENCE_VALUE_NAME = "value";
+
     private final DynamoDbAsyncClient client;
 
     private final DynamoDBStrategy strategy;
@@ -452,7 +454,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
         final String partition = DynamoDBUtils.concat(prefix, id);
         return ImmutableMap.of(
                 strategy.historyPartitionName(schema), DynamoDBUtils.s(partition),
-                strategy.historySortName(schema), DynamoDBUtils.n(Long.toString(version))
+                strategy.historySortName(schema), DynamoDBUtils.n(version)
         );
     }
 
@@ -549,7 +551,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
                                 "#version", ObjectSchema.VERSION
                         ))
                         .expressionAttributeValues(ImmutableMap.of(
-                                ":version", DynamoDBUtils.n(Long.toString(version))
+                                ":version", DynamoDBUtils.n(version)
                         ));
             } else {
                 return Put.builder();
@@ -564,7 +566,7 @@ public class DynamoDBStorage implements DefaultIndexStorage {
                                 "#version", ObjectSchema.VERSION
                         ))
                         .expressionAttributeValues(ImmutableMap.of(
-                                ":version", DynamoDBUtils.n(Long.toString(version))
+                                ":version", DynamoDBUtils.n(version)
                         ));
             } else {
                 return Delete.builder();
@@ -825,9 +827,41 @@ public class DynamoDBStorage implements DefaultIndexStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return DynamoDBStorageTraits.INSTANCE;
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        final Map<String, AttributeValue> key = ImmutableMap.of(
+                strategy.sequencePartitionName(schema), DynamoDBUtils.s(schema.getQualifiedName().toString())
+
+        );
+        final long start = schema.getEffectiveStart();
+        final long increment = schema.getEffectiveIncrement();
+        return client.updateItem(UpdateItemRequest.builder()
+                .tableName(strategy.sequenceTableName(schema))
+                .key(key)
+                .updateExpression("SET #value = if_not_exists(#value, :start) + :increment")
+                .expressionAttributeNames(ImmutableMap.of(
+                        "#value", SEQUENCE_VALUE_NAME
+                ))
+                .expressionAttributeValues(ImmutableMap.of(
+                        ":start", DynamoDBUtils.n(start - increment),
+                        ":increment", DynamoDBUtils.n(increment)
+                ))
+                .returnValues(ReturnValue.ALL_NEW)
+                .build()).thenApply(result -> {
+
+            final AttributeValue value = result.attributes().get(SEQUENCE_VALUE_NAME);
+            if (value != null) {
+                return ((Number) DynamoDBUtils.fromAttributeValue(value)).longValue();
+            } else {
+                throw new IllegalStateException("Sequence increment did not yield a value");
+            }
+        });
     }
 
     private class ScanSegment implements Scan.Segment {
