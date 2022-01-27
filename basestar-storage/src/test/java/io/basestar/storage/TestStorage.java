@@ -1401,7 +1401,7 @@ public abstract class TestStorage {
         final QuerySchema schema = namespace.requireQuerySchema(SQL_QUERY);
 
         final Page<Map<String, Object>> firstPage = storage.query(Consistency.ATOMIC, schema, Immutable.map("city", "Washington"), Constant.TRUE, Immutable.list(), ImmutableSet.of())
-                .page(10).get();
+                .page(20).get();
 
         assertEquals(1, firstPage.size());
         assertEquals(schema.create(ImmutableMap.of(
@@ -1423,7 +1423,7 @@ public abstract class TestStorage {
         final QuerySchema schema = namespace.requireQuerySchema(SQL_QUERY);
 
         final Page<Map<String, Object>> firstPage = storage.query(Consistency.ATOMIC, schema, Immutable.map("city", null), Constant.TRUE, Immutable.list(), ImmutableSet.of())
-                .page(10).get();
+                .page(20).get();
 
         assertEquals(13, firstPage.size());
     }

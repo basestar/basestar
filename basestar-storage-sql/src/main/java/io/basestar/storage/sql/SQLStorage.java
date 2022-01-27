@@ -670,7 +670,7 @@ public class SQLStorage implements DefaultLayerStorage {
                 if (iterator.hasNext()) {
                     return iterator.next().value1();
                 } else {
-                    throw new IllegalStateException("Sequence yielded no value");
+                    throw new IllegalStateException("Sequence " + schema.getQualifiedName() + " yielded no value");
                 }
             });
         });
