@@ -19,9 +19,9 @@ public interface SchemaClasspath {
 
     SchemaClasspath DEFAULT = new SchemaClasspath.Default();
 
-    Class<? extends Schema.Builder<?, ?, ?>> classForId(String id);
+    Class<? extends Schema.Builder<?, ?>> classForId(String id);
 
-    String idForClass(Class<? extends Schema.Builder<?, ?, ?>> cls);
+    String idForClass(Class<? extends Schema.Builder<?, ?>> cls);
 
     class Default implements SchemaClasspath {
 
@@ -35,7 +35,7 @@ public interface SchemaClasspath {
                 "io.basestar.schema"
         );
 
-        private final Map<String, Class<? extends Schema.Builder<?, ?, ?>>> classes = new ConcurrentHashMap<>();
+        private final Map<String, Class<? extends Schema.Builder<?, ?>>> classes = new ConcurrentHashMap<>();
 
         private Stream<String> searchPackages() {
 
@@ -47,7 +47,7 @@ public interface SchemaClasspath {
             );
         }
 
-        private Class<? extends Schema.Builder<?, ?, ?>> loadClassForId(final String id) {
+        private Class<? extends Schema.Builder<?, ?>> loadClassForId(final String id) {
 
             final List<Class<?>> matched;
             if (INPUT_NAME_REGEX.matcher(id).matches()) {
@@ -68,7 +68,7 @@ public interface SchemaClasspath {
                 matched = ImmutableList.of();
             }
             if (matched.size() == 1) {
-                @SuppressWarnings("unchecked") final Class<? extends Schema.Builder<?, ?, ?>> cls = (Class<? extends Schema.Builder<?, ?, ?>>) matched.get(0);
+                @SuppressWarnings("unchecked") final Class<? extends Schema.Builder<?, ?>> cls = (Class<? extends Schema.Builder<?, ?>>) matched.get(0);
                 return cls;
             } else if (matched.size() == 0) {
                 throw new SchemaValidationException("Schema implementation for " + id + " not found");
@@ -78,13 +78,13 @@ public interface SchemaClasspath {
         }
 
         @Override
-        public Class<? extends Schema.Builder<?, ?, ?>> classForId(final String id) {
+        public Class<? extends Schema.Builder<?, ?>> classForId(final String id) {
 
             return classes.computeIfAbsent(id, this::loadClassForId);
         }
 
         @Override
-        public String idForClass(final Class<? extends Schema.Builder<?, ?, ?>> cls) {
+        public String idForClass(final Class<? extends Schema.Builder<?, ?>> cls) {
 
             final String name = cls.getName();
             final Matcher matcher = OUTPUT_NAME_REGEX.matcher(name);
