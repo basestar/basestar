@@ -86,6 +86,18 @@ public class SnowflakeDialect extends JSONDialect {
     }
 
     @Override
+    public boolean supportsUDFs() {
+
+        return true;
+    }
+
+    @Override
+    public boolean supportsSequences() {
+
+        return true;
+    }
+
+    @Override
     public boolean supportsConstraints() {
 
         return false;
@@ -134,6 +146,23 @@ public class SnowflakeDialect extends JSONDialect {
         } else {
             return super.createFunctionDDLLanguage(language);
         }
+    }
+
+    @Override
+    public String createSequenceDDL(final DSLContext context, final Name name, final Long start, final Long increment) {
+
+        final StringBuilder str = new StringBuilder();
+        str.append("CREATE SEQUENCE IF NOT EXISTS ");
+        str.append(name);
+        if (start != null) {
+            str.append(" WITH START = ");
+            str.append(DSL.inline(start));
+        }
+        if (increment != null) {
+            str.append(" INCREMENT = ");
+            str.append(DSL.inline(increment));
+        }
+        return str.toString();
     }
 
     @Override
@@ -327,5 +356,11 @@ public class SnowflakeDialect extends JSONDialect {
                 return null;
             }
         };
+    }
+
+    @Override
+    public ResultQuery<Record1<Long>> incrementSequence(final DSLContext context, final Name sequenceName) {
+
+        return context.select(DSL.field(DSL.sql(sequenceName + ".nextval")).cast(Long.class));
     }
 }

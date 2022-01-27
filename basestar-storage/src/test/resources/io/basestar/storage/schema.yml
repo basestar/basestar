@@ -324,10 +324,10 @@ ExternalView:
 
 SqlQuery:
   type: query
-  sql: SELECT * FROM @{sqlView} WHERE "city" = ${city}
+  sql: SELECT * FROM @{sqlView} WHERE CASE WHEN ${city} IS NULL THEN TRUE ELSE "city" = ${city} END
   arguments:
     - name: city
-      type: string
+      type: string?
   using:
     sqlView: SqlView
   properties:
@@ -337,3 +337,12 @@ SqlQuery:
       type: string
     count:
       type: integer
+
+DefaultSequence:
+  type: sequence
+
+CustomSequence:
+  type: sequence
+  start: 10
+  increment: 5
+  format: "'ID-' + value"

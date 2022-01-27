@@ -49,10 +49,10 @@ public class PortableSchemaFactory implements PortableFactory {
 
         slots.put(REF_SLOT, refAttributes(false));
         slots.put(VERSIONED_REF_SLOT, refAttributes(true));
-        for(final Schema<?> schema : namespace.getSchemas().values()) {
-            if(schema instanceof InstanceSchema) {
+        for (final Schema schema : namespace.getSchemas().values()) {
+            if (schema instanceof InstanceSchema) {
                 final int slot = schema.getSlot() + SLOT_OFFSET;
-                final SortedMap<String, AttributeType<?>> attributes = attributes((InstanceSchema)schema);
+                final SortedMap<String, AttributeType<?>> attributes = attributes((InstanceSchema) schema);
                 slots.put(slot, attributes);
             }
         }
@@ -109,7 +109,7 @@ public class PortableSchemaFactory implements PortableFactory {
         return new CustomPortable(this, i, this.slots.get(i));
     }
 
-    public CustomPortable create(final Schema<?> schema) {
+    public CustomPortable create(final Schema schema) {
 
         return create(schema.getSlot() + SLOT_OFFSET);
     }
@@ -129,7 +129,7 @@ public class PortableSchemaFactory implements PortableFactory {
         return def(versioned ? VERSIONED_REF_SLOT : REF_SLOT);
     }
 
-    public ClassDefinition def(final Schema<?> schema) {
+    public ClassDefinition def(final Schema schema) {
 
         return def(schema.getSlot() + SLOT_OFFSET);
     }

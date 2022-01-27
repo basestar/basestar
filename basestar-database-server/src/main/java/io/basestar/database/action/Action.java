@@ -27,11 +27,13 @@ import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.Permission;
 import io.basestar.schema.util.ValueContext;
+import io.basestar.storage.Storage;
 import io.basestar.storage.exception.UnsupportedWriteException;
 import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 public interface Action {
 
@@ -41,7 +43,7 @@ public interface Action {
 
     Permission permission(Instance before);
 
-    Result after(ValueContext valueContext, Context expressionContext, Instance before);
+    CompletableFuture<Result> after(Storage storage, ValueContext valueContext, Context expressionContext, Instance before);
 
     Set<Name> afterExpand();
 

@@ -94,10 +94,10 @@ public interface UseInstance extends UseNamed<Instance> {
     }
 
     @Override
-    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
-        final Schema<?> schema = getSchema();
-        if(expand == null || expand.isEmpty()) {
+        final Schema schema = getSchema();
+        if (expand == null || expand.isEmpty()) {
             out.put(schema.getQualifiedName(), schema);
         } else {
             schema.collectDependencies(expand, out);
@@ -105,9 +105,9 @@ public interface UseInstance extends UseNamed<Instance> {
     }
 
     @Override
-    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
-        final Schema<?> schema = getSchema();
+        final Schema schema = getSchema();
         schema.collectMaterializationDependencies(expand, out);
     }
 

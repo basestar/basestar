@@ -56,6 +56,12 @@ public class SplitIndexStorage implements IndexStorage {
     }
 
     @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        return objectStorage.increment(schema);
+    }
+
+    @Override
     public ReadTransaction read(final Consistency consistency) {
 
         return objectStorage.read(consistency);
@@ -139,7 +145,7 @@ public class SplitIndexStorage implements IndexStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return objectStorage.storageTraits(schema);
     }

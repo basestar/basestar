@@ -310,9 +310,16 @@ public class LevelDBStorage implements DefaultIndexStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return LevelDBStorageTraits.INSTANCE;
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        // FIXME: could implement trivially
+        throw new UnsupportedOperationException();
     }
 
     private byte[] key(final ReferableSchema schema, final BatchResponse.RefKey refKey) {

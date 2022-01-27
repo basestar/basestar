@@ -331,9 +331,30 @@ public class MemoryStorage implements DefaultIndexStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return TRAITS;
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        return CompletableFuture.supplyAsync(() -> {
+
+            final Long result;
+            synchronized (lock) {
+                final State copy = state.copy();
+                result = copy.sequences.compute(schema.getQualifiedName(), (k, v) -> {
+                    if (v == null) {
+                        return schema.getEffectiveStart();
+                    } else {
+                        return v + schema.getEffectiveIncrement();
+                    }
+                });
+                state = copy;
+            }
+            return result;
+        });
     }
 
     @Data
@@ -401,12 +422,15 @@ public class MemoryStorage implements DefaultIndexStorage {
 
         private final Map<IndexPartition, NavigableMap<IndexSort, Map<String, Object>>> index = new HashMap<>();
 
+        private final Map<Name, Long> sequences = new HashMap<>();
+
         public State copy() {
 
             final State result = new State();
             result.objects.putAll(objects);
             result.history.putAll(history);
             result.index.putAll(index);
+            result.sequences.putAll(sequences);
             return result;
         }
     }
@@ -447,6 +471,12 @@ public class MemoryStorage implements DefaultIndexStorage {
         public Concurrency getObjectConcurrency() {
 
             return Concurrency.OPTIMISTIC;
+        }
+
+        @Override
+        public boolean supportsSequence() {
+
+            return true;
         }
     };
 }

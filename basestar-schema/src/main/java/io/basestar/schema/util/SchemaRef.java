@@ -18,7 +18,7 @@ public class SchemaRef {
 
     private Name name;
 
-    private Schema.Descriptor<?, ?> inline;
+    private Schema.Descriptor<?> inline;
 
     public static SchemaRef withName(final Name name) {
 
@@ -34,7 +34,7 @@ public class SchemaRef {
 
     @JsonCreator
     @SuppressWarnings("unused")
-    public static SchemaRef withInline(final Schema.Descriptor<?, ?> inline) {
+    public static SchemaRef withInline(final Schema.Descriptor<?> inline) {
 
         return new SchemaRef(null, inline);
     }
@@ -49,20 +49,20 @@ public class SchemaRef {
         }
     }
 
-    public Schema<?> resolve(final Schema.Resolver.Constructing resolver) {
+    public Schema resolve(final Schema.Resolver.Constructing resolver) {
 
         if (inline != null) {
             return inline.build(null, new Schema.Resolver.Constructing() {
 
                 @Override
-                public void constructing(final Name qualifiedName, final Schema<?> schema) {
+                public void constructing(final Name qualifiedName, final Schema schema) {
 
                     // no action (anonymous schema construction)
                 }
 
                 @Nullable
                 @Override
-                public Schema<?> getSchema(final Name qualifiedName) {
+                public Schema getSchema(final Name qualifiedName) {
 
                     return resolver.getSchema(qualifiedName);
                 }

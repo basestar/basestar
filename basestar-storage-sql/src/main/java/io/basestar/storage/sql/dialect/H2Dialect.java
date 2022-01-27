@@ -32,10 +32,4 @@ public class H2Dialect extends JSONDialect {
 
         return true;
     }
-
-    @Override
-    public boolean supportsUDFs() {
-
-        return false;
-    }
 }

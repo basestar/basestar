@@ -97,24 +97,24 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
     @Nullable
     private final Emitter emitter;
 
-    private final Function<QueryableSchema, Storage> primary;
+    private final Function<Schema, Storage> primary;
 
-    private final Function<QueryableSchema, Optional<Storage>> replica;
+    private final Function<Schema, Optional<Storage>> replica;
 
     private final UnaryOperator<Consistency> readConsistency;
 
     private final UnaryOperator<Consistency> writeConsistency;
 
-    private final BiFunction<QueryableSchema, Consistency, Consistency> primaryConsistency;
+    private final BiFunction<Schema, Consistency, Consistency> primaryConsistency;
 
-    private final BiFunction<QueryableSchema, Versioning, Versioning> primaryVersioning;
+    private final BiFunction<Schema, Versioning, Versioning> primaryVersioning;
 
-    private final BiFunction<QueryableSchema, Consistency, Consistency> replicaConsistency;
+    private final BiFunction<Schema, Consistency, Consistency> replicaConsistency;
 
-    private final BiFunction<QueryableSchema, Versioning, Versioning> replicaVersioning;
+    private final BiFunction<Schema, Versioning, Versioning> replicaVersioning;
 
     @Override
-    public Storage storage(final QueryableSchema schema) {
+    public Storage storage(final Schema schema) {
 
         return primary.apply(schema);
     }
@@ -355,6 +355,12 @@ public class ReplicaStorage implements DelegatingStorage, Handler<Event> {
                 }
             };
         }
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        return primary.apply(schema).increment(schema);
     }
 
     private CompletableFuture<?> onSync(final ReplicaSyncEvent event, final Map<String, String> meta) {

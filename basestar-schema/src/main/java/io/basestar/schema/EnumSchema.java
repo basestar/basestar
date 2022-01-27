@@ -61,7 +61,7 @@ import java.util.*;
  */
 
 @Getter
-public class EnumSchema implements Schema<String> {
+public class EnumSchema implements ValueSchema<String> {
 
     @Nonnull
     private final Name qualifiedName;
@@ -88,7 +88,7 @@ public class EnumSchema implements Schema<String> {
     private final Map<String, Serializable> extensions;
 
     @JsonDeserialize(as = Builder.class)
-    public interface Descriptor extends Schema.Descriptor<EnumSchema, String> {
+    public interface Descriptor extends ValueSchema.Descriptor<EnumSchema, String> {
 
         String TYPE = "enum";
 
@@ -100,7 +100,7 @@ public class EnumSchema implements Schema<String> {
 
         List<String> getValues();
 
-        interface Self extends Schema.Descriptor.Self<EnumSchema, String>, Descriptor {
+        interface Self extends ValueSchema.Descriptor.Self<EnumSchema, String>, Descriptor {
 
             @Override
             default List<String> getValues() {
@@ -119,7 +119,7 @@ public class EnumSchema implements Schema<String> {
     @Data
     @Accessors(chain = true)
     @JsonPropertyOrder({"type", "description", "version", "values", "extensions"})
-    public static class Builder implements Schema.Builder<Builder, EnumSchema, String>, Descriptor {
+    public static class Builder implements ValueSchema.Builder<Builder, EnumSchema, String>, Descriptor {
 
         private Long version;
 
@@ -187,12 +187,12 @@ public class EnumSchema implements Schema<String> {
     }
 
     @Override
-    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
     }
 
     @Override
-    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
     }
 

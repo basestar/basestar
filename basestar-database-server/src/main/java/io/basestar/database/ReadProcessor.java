@@ -407,7 +407,7 @@ public class ReadProcessor {
             } else {
 
                 if(caller.getSchema() != null) {
-                    final Schema<?> schema = namespace.getSchema(caller.getSchema());
+                    final Schema schema = namespace.getSchema(caller.getSchema());
                     if(schema instanceof ObjectSchema) {
                         return readImpl((ObjectSchema)schema, caller.getId(), null, expand)
                                 .thenCompose(unexpanded -> expand(consistency, linkConsistency, context, unexpanded, expand))

@@ -96,6 +96,12 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        return baseline.increment(schema);
+    }
+
+    @Override
     public ReadTransaction read(final Consistency consistency) {
 
         return new ReadTransaction() {
@@ -239,7 +245,7 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return overlay.storageTraits(schema);
     }

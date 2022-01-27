@@ -178,12 +178,12 @@ public class UseAny implements Use<Object> {
     }
 
     @Override
-    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
     }
 
     @Override
-    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
     }
 

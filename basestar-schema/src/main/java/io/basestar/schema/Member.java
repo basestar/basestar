@@ -152,12 +152,12 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
     Set<Name> refExpand(Name otherSchemaName, Set<Name> expand);
 
-    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         typeOf().collectDependencies(expand, out);
     }
 
-    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         typeOf().collectMaterializationDependencies(expand, out);
     }

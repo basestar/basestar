@@ -1,10 +1,7 @@
 package io.basestar.storage;
 
 import io.basestar.expression.Expression;
-import io.basestar.schema.Consistency;
-import io.basestar.schema.Instance;
-import io.basestar.schema.QueryableSchema;
-import io.basestar.schema.Reserved;
+import io.basestar.schema.*;
 import io.basestar.storage.exception.UnsupportedQueryException;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
@@ -28,7 +25,7 @@ public class QueryDelegatingStorage implements DelegatingStorage {
     }
 
     @Override
-    public Storage storage(final QueryableSchema schema) {
+    public Storage storage(final Schema schema) {
 
         return storage.get(0);
     }
