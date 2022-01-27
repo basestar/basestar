@@ -20,8 +20,11 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.DatabindContext;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
+import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 import io.basestar.expression.Context;
 import io.basestar.schema.exception.MissingSchemaException;
 import io.basestar.schema.use.Use;
@@ -51,15 +54,7 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
     String VAR_THIS = "this";
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = ObjectSchema.Builder.class)
-    @JsonSubTypes({
-            @JsonSubTypes.Type(name = EnumSchema.Descriptor.TYPE, value = EnumSchema.Builder.class),
-            @JsonSubTypes.Type(name = StructSchema.Descriptor.TYPE, value = StructSchema.Builder.class),
-            @JsonSubTypes.Type(name = ObjectSchema.Descriptor.TYPE, value = ObjectSchema.Builder.class),
-            @JsonSubTypes.Type(name = InterfaceSchema.Descriptor.TYPE, value = InterfaceSchema.Builder.class),
-            @JsonSubTypes.Type(name = ViewSchema.Descriptor.TYPE, value = ViewSchema.Builder.class),
-            @JsonSubTypes.Type(name = FunctionSchema.Descriptor.TYPE, value = FunctionSchema.Builder.class),
-            @JsonSubTypes.Type(name = QuerySchema.Descriptor.TYPE, value = QuerySchema.Builder.class)
-    })
+    @JsonTypeIdResolver(TypeIdResolver.class)
     interface Descriptor<S extends Schema<V>, V> extends Described, Extendable {
 
         String getType();
@@ -407,6 +402,50 @@ public interface Schema<T> extends Named, Described, Serializable, Extendable {
         default ReferableSchema requireReferableSchema(final String name) {
 
             return requireReferableSchema(Name.parse(name));
+        }
+    }
+
+    class TypeIdResolver extends TypeIdResolverBase {
+
+        private static final SchemaClasspath CLASSPATH = SchemaClasspath.DEFAULT;
+
+        private JavaType baseType;
+
+        @Override
+        public void init(final JavaType javaType) {
+
+            this.baseType = javaType;
+        }
+
+        @Override
+        public String idFromValue(final Object value) {
+
+            return idFromValueAndType(value, value.getClass());
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public String idFromValueAndType(final Object value, final Class<?> type) {
+
+            return CLASSPATH.idForClass((Class<Schema.Builder<?, ?, ?>>) type);
+        }
+
+        @Override
+        public JavaType typeFromId(final DatabindContext databindContext, final String id) {
+
+            final Class<?> cls;
+            if (id == null) {
+                cls = CLASSPATH.classForId(ObjectSchema.Builder.TYPE);
+            } else {
+                cls = CLASSPATH.classForId(id);
+            }
+            return databindContext.constructSpecializedType(baseType, cls);
+        }
+
+        @Override
+        public JsonTypeInfo.Id getMechanism() {
+
+            return JsonTypeInfo.Id.NAME;
         }
     }
 }
