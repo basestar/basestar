@@ -95,10 +95,6 @@ public interface DefaultIndexStorage extends IndexStorage, DefaultLayerStorage {
         }
         final Map<Name, Range<Object>> ranges = query.visit(new RangeVisitor());
 
-        for (final Map.Entry<Name, Range<Object>> entry : query.visit(new RangeVisitor()).entrySet()) {
-            final Name name = entry.getKey();
-            ranges.put(name, entry.getValue());
-        }
         final Sort.Order order;
         if (sort.size() == 0) {
             order = Sort.Order.ASC;

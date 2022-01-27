@@ -1473,6 +1473,9 @@ public abstract class TestStorage {
 
             final List<Sort> sort = Immutable.list(new Sort(Name.of("version"), order));
 
+            assertEquals(7, storage
+                    .queryHistory(Consistency.ASYNC, schema, id, Expression.parse("version >= 5"), sort, expand).page(10).join().size());
+
             assertEquals(3, storage
                     .queryHistory(Consistency.ASYNC, schema, id, Expression.parse("version > 2 && version < 6"), sort, expand).page(10).join().size());
 
