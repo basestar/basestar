@@ -11,6 +11,12 @@ public class MySQLDialect extends JSONDialect {
     }
 
     @Override
+    public boolean supportsUDFs() {
+
+        return true;
+    }
+
+    @Override
     public boolean supportsConstraints() {
 
         return true;

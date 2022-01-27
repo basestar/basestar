@@ -302,7 +302,7 @@ public class QuerySchema implements QueryableSchema {
     }
 
     @Override
-    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         if (!out.containsKey(qualifiedName)) {
             out.put(qualifiedName, this);
@@ -348,7 +348,7 @@ public class QuerySchema implements QueryableSchema {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         QueryableSchema.super.collectMaterializationDependencies(expand, out);
         this.from.collectMaterializationDependencies(out);

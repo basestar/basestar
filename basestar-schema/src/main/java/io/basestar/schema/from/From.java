@@ -119,9 +119,9 @@ public interface From extends Serializable {
 
     InferenceContext inferenceContext();
 
-    void collectMaterializationDependencies(Map<Name, Schema<?>> out);
+    void collectMaterializationDependencies(Map<Name, Schema> out);
 
-    void collectDependencies(Map<Name, Schema<?>> out);
+    void collectDependencies(Map<Name, Schema> out);
 
     Expression id();
 

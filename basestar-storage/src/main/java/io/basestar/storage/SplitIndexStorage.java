@@ -29,6 +29,12 @@ public class SplitIndexStorage implements IndexStorage {
     }
 
     @Override
+    public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        return objectStorage.queryHistory(consistency, schema, id, query, sort, expand);
+    }
+
+    @Override
     public Pager<Map<String, Object>> queryIndex(final ObjectSchema schema, final Index index, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         return indexStorage.queryIndex(schema, index, query, sort, expand);
@@ -53,6 +59,12 @@ public class SplitIndexStorage implements IndexStorage {
 
         return objectStorage.afterDelete(schema, id, version, before)
                 .thenCombine(indexStorage.afterDelete(schema, id, version, before), Immutable::addAll);
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        return objectStorage.increment(schema);
     }
 
     @Override
@@ -139,7 +151,7 @@ public class SplitIndexStorage implements IndexStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return objectStorage.storageTraits(schema);
     }

@@ -153,6 +153,9 @@ public class GraphQLAdaptor {
             if (schema instanceof ReferableSchema) {
                 final ReferableSchema objectSchema = (ReferableSchema) schema;
                 results.put(strategy.readMethodName(objectSchema), readFetcher(objectSchema));
+                if (objectSchema.getHistory().isEnabled()) {
+                    results.put(strategy.queryHistoryMethodName(objectSchema), queryHistoryFetcher(objectSchema));
+                }
             }
             results.put(strategy.queryMethodName(schema), queryFetcher(schema));
             if (schema instanceof LinkableSchema) {
@@ -224,6 +227,36 @@ public class GraphQLAdaptor {
         };
     }
 
+    private DataFetcher<CompletableFuture<?>> queryHistoryFetcher(final ReferableSchema schema) {
+
+        return (env) -> {
+
+            final Caller caller = GraphQLUtils.caller(env.getContext());
+            final Set<Name> expand = expand(schema, env, strategy.pageItemsFieldName());
+            final String query = env.getArgument(strategy.queryArgumentName());
+            final Expression expression = query == null ? Constant.TRUE : Expression.parse(query);
+            final String id = env.getArgument(strategy.idArgumentName());
+            final Page.Token paging = paging(env);
+            final Integer count = count(env);
+            final List<Sort> sort = sort(env);
+            final Set<Page.Stat> stats = stats(env);
+            final Consistency consistency = consistency(env);
+            final QueryHistoryOptions options = QueryHistoryOptions.builder()
+                    .setSchema(schema.getQualifiedName())
+                    .setId(id)
+                    .setExpand(expand)
+                    .setExpression(expression)
+                    .setPaging(paging)
+                    .setCount(count)
+                    .setStats(stats)
+                    .setSort(sort)
+                    .setConsistency(consistency)
+                    .build();
+            return database.queryHistory(caller, options)
+                    .thenApply(result -> responseTransform.toResponsePage(schema, result));
+        };
+    }
+
     private DataFetcher<CompletableFuture<?>> queryLinkFetcher(final LinkableSchema schema, final Link link) {
 
         return (env) -> {
@@ -231,6 +264,8 @@ public class GraphQLAdaptor {
             final Caller caller = GraphQLUtils.caller(env.getContext());
             final InstanceSchema linkSchema = link.getSchema();
             final Set<Name> expand = expand(linkSchema, env, strategy.pageItemsFieldName());
+            final String query = env.getArgument(strategy.queryArgumentName());
+            final Expression expression = query == null ? Constant.TRUE : Expression.parse(query);
             final String id = env.getArgument(strategy.idArgumentName());
             final Page.Token paging = paging(env);
             final Integer count = count(env);
@@ -242,6 +277,7 @@ public class GraphQLAdaptor {
                     .setLink(link.getName())
                     .setId(id)
                     .setExpand(expand)
+                    .setExpression(expression)
                     .setPaging(paging)
                     .setCount(count)
                     .setStats(stats)

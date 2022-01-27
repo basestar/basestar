@@ -27,4 +27,11 @@ class TestOverlayStorage extends TestStorage {
     protected void testNullBeforeDelete() {
 
     }
+
+    @Test
+    @Disabled
+    @Override
+    protected void testDeleteRecreate() {
+
+    }
 }

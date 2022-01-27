@@ -23,16 +23,24 @@ package io.basestar.storage.exception;
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.exception.HasExceptionMetadata;
 import io.basestar.util.Name;
+import lombok.Getter;
 
+@Getter
 public class ObjectMissingException extends RuntimeException implements HasExceptionMetadata {
 
     public static final int STATUS = 404;
 
     public static final String CODE = "ObjectMissing";
 
+    private final Name schema;
+
+    private final String id;
+
     public ObjectMissingException(final Name schema, final String id) {
 
-        super(schema + " with id \"" + id  + "\" does not exist");
+        super(schema + " with id \"" + id + "\" does not exist");
+        this.schema = schema;
+        this.id = id;
     }
 
     @Override

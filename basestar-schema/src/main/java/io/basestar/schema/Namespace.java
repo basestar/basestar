@@ -66,11 +66,11 @@ public class Namespace implements Loadable, Schema.Resolver {
 
     public interface Descriptor extends Loadable.Descriptor {
 
-        Map<Name, Schema.Descriptor<?, ?>> getSchemas();
+        Map<Name, Schema.Descriptor<?>> getSchemas();
 
         @JsonValue
         @Override
-        default Map<String, Schema.Descriptor<?, ?>> jsonValue() {
+        default Map<String, Schema.Descriptor<?>> jsonValue() {
 
             return getSchemas().entrySet().stream().collect(Collectors.toMap(
                     e -> e.getKey().toString(),
@@ -81,7 +81,7 @@ public class Namespace implements Loadable, Schema.Resolver {
 
     private final Version version;
 
-    private final SortedMap<Name, Schema<?>> schemas;
+    private final SortedMap<Name, Schema> schemas;
 
     @Data
     @Accessors(chain = true)
@@ -90,16 +90,16 @@ public class Namespace implements Loadable, Schema.Resolver {
         @JsonProperty("$version")
         private Version version;
 
-        private Map<Name, Schema.Descriptor<?, ?>> schemas;
+        private Map<Name, Schema.Descriptor<?>> schemas;
 
-        public Builder setSchema(final Name name, final Schema.Descriptor<?, ?> schema) {
+        public Builder setSchema(final Name name, final Schema.Descriptor<?> schema) {
 
             schemas = Immutable.put(schemas, name, schema);
             return this;
         }
 
         @JsonAnySetter
-        public Builder setSchema(final String name, final Schema.Descriptor<?, ?> schema) {
+        public Builder setSchema(final String name, final Schema.Descriptor<?> schema) {
 
             return setSchema(Name.parseNonEmpty(name), schema);
         }
@@ -126,7 +126,7 @@ public class Namespace implements Loadable, Schema.Resolver {
 
         public static Builder load(final URL... urls) throws IOException {
 
-            final Map<Name, Schema.Descriptor<?, ?>> builders = new HashMap<>();
+            final Map<Name, Schema.Descriptor<?>> builders = new HashMap<>();
             Version version = null;
             for(final URL url : URLs.all(urls)) {
                 final Builder schemas = YAML_MAPPER.readValue(url, Builder.class);
@@ -140,7 +140,7 @@ public class Namespace implements Loadable, Schema.Resolver {
 
         public static Builder load(final InputStream... iss) throws IOException {
 
-            final Map<Name, Schema.Descriptor<?, ?>> builders = new HashMap<>();
+            final Map<Name, Schema.Descriptor<?>> builders = new HashMap<>();
             Version version = null;
             for(final InputStream is : iss) {
                 final Builder schemas = YAML_MAPPER.readValue(is, Builder.class);
@@ -163,57 +163,57 @@ public class Namespace implements Loadable, Schema.Resolver {
         this(Nullsafe.orDefault(builder.getSchemas()), version, resolver, renaming);
     }
 
-    private Namespace(final Map<Name, Schema.Descriptor<?, ?>> schemas, final Version version, final Schema.Resolver resolver, final Renaming renaming) {
+    private Namespace(final Map<Name, Schema.Descriptor<?>> schemas, final Version version, final Schema.Resolver resolver, final Renaming renaming) {
 
         this.version = version;
-        final NavigableMap<Name, Schema.Descriptor<?, ?>> descriptors = ImmutableSortedMap.copyOf(schemas);
+        final NavigableMap<Name, Schema.Descriptor<?>> descriptors = ImmutableSortedMap.copyOf(schemas);
         final Set<Name> seen = new HashSet<>();
         descriptors.keySet().forEach(name -> {
             final Name rename = renaming.apply(name);
-            if(!seen.add(rename)) {
+            if (!seen.add(rename)) {
                 throw new SchemaValidationException(rename, "Cannot apply renaming, it will duplicate the name: " + rename);
             }
         });
-        final ConcurrentMap<Name, Schema<?>> out = new ConcurrentHashMap<>();
-        for(final Map.Entry<Name, Schema.Descriptor<?, ?>> entry : descriptors.entrySet()) {
+        final ConcurrentMap<Name, Schema> out = new ConcurrentHashMap<>();
+        for (final Map.Entry<Name, Schema.Descriptor<?>> entry : descriptors.entrySet()) {
             resolveCyclic(resolver, version, entry.getKey(), entry.getValue(), descriptors, renaming, out);
         }
         this.schemas = ImmutableSortedMap.copyOf(out);
     }
 
-    private Namespace(final Map<Name, Schema<?>> schemas, final Version version) {
+    private Namespace(final Map<Name, Schema> schemas, final Version version) {
 
         this.schemas = ImmutableSortedMap.copyOf(schemas);
         this.version = version;
     }
 
-    private Schema<?> resolveCyclic(final Schema.Resolver resolver, final Version version, final Name inputName,
-                                           final Schema.Descriptor<?, ?> descriptor, final NavigableMap<Name, Schema.Descriptor<?, ?>> descriptors,
-                                           final Renaming naming, final Map<Name, Schema<?>> out) {
+    private Schema resolveCyclic(final Schema.Resolver resolver, final Version version, final Name inputName,
+                                 final Schema.Descriptor<?> descriptor, final NavigableMap<Name, Schema.Descriptor<?>> descriptors,
+                                 final Renaming naming, final Map<Name, Schema> out) {
 
         final Name outputName = naming.apply(inputName);
-        if(out.containsKey(outputName)) {
+        if (out.containsKey(outputName)) {
             return out.get(outputName);
         } else {
             final int slot = descriptors.headMap(inputName).size();
             return descriptor.build(this, new Schema.Resolver.Constructing() {
                 @Override
-                public void constructing(final Name qualifiedName, final Schema<?> schema) {
+                public void constructing(final Name qualifiedName, final Schema schema) {
 
-                    if(qualifiedName.equals(outputName)) {
+                    if (qualifiedName.equals(outputName)) {
                         assert !out.containsKey(qualifiedName);
                         out.put(qualifiedName, schema);
                     }
-                    if(resolver instanceof Schema.Resolver.Constructing) {
+                    if (resolver instanceof Schema.Resolver.Constructing) {
                         ((Constructing) resolver).constructing(qualifiedName, schema);
                     }
                 }
 
                 @Nullable
                 @Override
-                public Schema<?> getSchema(final Name qualifiedName) {
+                public Schema getSchema(final Name qualifiedName) {
 
-                    final Schema.Descriptor<?, ?> builder = descriptors.get(qualifiedName);
+                    final Schema.Descriptor<?> builder = descriptors.get(qualifiedName);
                     if (builder == null) {
                         return resolver.getSchema(qualifiedName);
                     } else {
@@ -226,12 +226,12 @@ public class Namespace implements Loadable, Schema.Resolver {
     }
 
     @Override
-    public Schema<?> getSchema(final Name qualifiedName) {
+    public Schema getSchema(final Name qualifiedName) {
 
         return schemas.get(qualifiedName);
     }
 
-    public Collection<Schema<?>> getExtendedSchemas(final Name qualifiedName) {
+    public Collection<Schema> getExtendedSchemas(final Name qualifiedName) {
 
         return schemas.values().stream().filter(schema -> {
             final List<Name> extend;
@@ -244,12 +244,12 @@ public class Namespace implements Loadable, Schema.Resolver {
         }).collect(Collectors.toList());
     }
 
-    public static Namespace from(final Map<Name, Schema<?>> schemas) {
+    public static Namespace from(final Map<Name, Schema> schemas) {
 
         return from(schemas, Version.CURRENT);
     }
 
-    public static Namespace from(final Map<Name, Schema<?>> schemas, final Version version) {
+    public static Namespace from(final Map<Name, Schema> schemas, final Version version) {
 
         return new Namespace(schemas, version);
     }
@@ -283,16 +283,37 @@ public class Namespace implements Loadable, Schema.Resolver {
 
     public static Namespace deserialize(final InputStream is) throws IOException, ClassNotFoundException {
 
-        try(final ObjectInputStream ois = new ObjectInputStream(is)) {
-            return (Namespace)ois.readObject();
+        try (final ObjectInputStream ois = new ObjectInputStream(is)) {
+            return (Namespace) ois.readObject();
         }
+    }
+
+    public Descriptor descriptor() {
+
+        return () -> schemas.entrySet().stream().collect(Collectors.toMap(
+                Map.Entry::getKey,
+                e -> e.getValue().descriptor()));
+    }
+
+    public boolean hasObjectSchemas() {
+
+        return schemas.values().stream().anyMatch(v -> v instanceof ObjectSchema);
+    }
+
+    public void forEachValueSchema(final BiConsumer<? super Name, ? super ValueSchema<?>> fn) {
+
+        schemas.forEach((k, v) -> {
+            if (v instanceof ValueSchema) {
+                fn.accept(k, (ValueSchema<?>) v);
+            }
+        });
     }
 
     public void forEachEnumSchema(final BiConsumer<? super Name, ? super EnumSchema> fn) {
 
         schemas.forEach((k, v) -> {
-            if(v instanceof EnumSchema) {
-                fn.accept(k, (EnumSchema)v);
+            if (v instanceof EnumSchema) {
+                fn.accept(k, (EnumSchema) v);
             }
         });
     }
@@ -349,17 +370,5 @@ public class Namespace implements Loadable, Schema.Resolver {
                 fn.accept(k, (QueryableSchema) v);
             }
         });
-    }
-
-    public Descriptor descriptor() {
-
-        return () -> schemas.entrySet().stream().collect(Collectors.toMap(
-                Map.Entry::getKey,
-                e -> e.getValue().descriptor()));
-    }
-
-    public boolean hasObjectSchemas() {
-
-        return schemas.values().stream().anyMatch(v -> v instanceof ObjectSchema);
     }
 }

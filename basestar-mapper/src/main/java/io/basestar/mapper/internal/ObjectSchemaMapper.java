@@ -50,7 +50,7 @@ public class ObjectSchemaMapper<T> extends LinkableSchemaMapper<ObjectSchema.Bui
     }
 
     @Override
-    public Schema.Builder<?, ?, Instance> schemaBuilder() {
+    public Schema.Builder<?, ?> schemaBuilder() {
 
         return addMembers(ObjectSchema.builder()
                 .setConcrete(concrete ? null : false)

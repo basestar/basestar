@@ -327,7 +327,7 @@ SqlQuery:
   sql: SELECT * FROM @{sqlView} WHERE ${city} IS NULL OR "city" = ${city}
   arguments:
     - name: city
-      type: string
+      type: string?
   using:
     sqlView: SqlView
   properties:
@@ -337,3 +337,12 @@ SqlQuery:
       type: string
     count:
       type: integer
+
+DefaultSequence:
+  type: sequence
+
+CustomSequence:
+  type: sequence
+  start: 10
+  increment: 5
+  format: "'ID-' + value"

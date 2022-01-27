@@ -116,12 +116,12 @@ public interface UseScalar<T> extends Use<T> {
     }
 
     @Override
-    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
     }
 
     @Override
-    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
     }
 

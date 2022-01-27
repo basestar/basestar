@@ -159,9 +159,9 @@ public class UseEnum implements UseStringLike<String>, UseNamed<String> {
     }
 
     @Override
-    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
-        final Schema<?> schema = getSchema();
+        final Schema schema = getSchema();
         out.put(schema.getQualifiedName(), schema);
     }
 
