@@ -57,6 +57,7 @@ import org.mockito.Mockito;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -1115,5 +1116,48 @@ class TestDatabaseServer {
         System.err.println(b64);
     }
 
+
+    @Test
+    void testHistoryRefs() throws Exception {
+
+        database.create(caller, REF_TARGET, "target1", ImmutableMap.of(
+                "value", "a"
+        )).get();
+        database.create(caller, REF_TARGET, "target2", ImmutableMap.of(
+                "value", "b"
+        )).get();
+        database.create(caller, REF_TARGET, "target3", ImmutableMap.of(
+                "value", "c"
+        )).get();
+
+        final String id = UUID.randomUUID().toString();
+
+        database.create(caller, REF_SOURCE, id, ImmutableMap.of(
+                "target", ReferableSchema.ref("target1")
+        )).get();
+        database.update(caller, REF_SOURCE, id, ImmutableMap.of(
+                "target", ReferableSchema.ref("target2")
+        )).get();
+        database.update(caller, REF_SOURCE, id, ImmutableMap.of(
+                "target", ReferableSchema.ref("target3")
+        )).get();
+
+        final Page<Instance> page = database.queryHistory(Caller.SUPER, QueryHistoryOptions.builder()
+                .setSchema(REF_SOURCE)
+                .setId(id)
+                .setExpand(Immutable.set(Name.of("target")))
+                .build()).join();
+
+        assertEquals(3, page.size());
+        assertTrue(page.stream().allMatch(a -> a.getId().equals(id)));
+        assertEquals(
+                ImmutableList.of(1L, 2L, 3L),
+                page.stream().map(v -> v.getVersion()).collect(Collectors.toList())
+        );
+        assertEquals(
+                ImmutableList.of("a", "b", "c"),
+                page.stream().map(v -> v.get("target", Instance.class).get("value")).collect(Collectors.toList())
+        );
+    }
 
 }

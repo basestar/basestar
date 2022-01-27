@@ -1502,4 +1502,24 @@ public abstract class TestStorage {
             assertEquals(expected, versions);
         }
     }
+
+    @Test
+    public void testSqlQueryPaging() throws Exception {
+
+        assumeTrue(supportsSql());
+
+        final Storage storage = storage(namespace);
+
+        bulkLoad(storage, loadAddresses());
+
+        final QuerySchema schema = namespace.requireQuerySchema(SQL_QUERY);
+
+        final Page<Map<String, Object>> firstPage = storage.query(Consistency.ATOMIC, schema, Immutable.map(), Constant.TRUE, Immutable.list(), ImmutableSet.of())
+                .page(5).get();
+
+        final Page<Map<String, Object>> secondPage = storage.query(Consistency.ATOMIC, schema, Immutable.map(), Constant.TRUE, Immutable.list(), ImmutableSet.of())
+                .page(firstPage.getPaging(), 10).get();
+
+        assertEquals(13, firstPage.size() + secondPage.size());
+    }
 }

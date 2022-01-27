@@ -177,7 +177,22 @@ public class ReadProcessor {
         assert schema != null;
         final String id = schema.forceId(instance);
         return new RefKey(schema.getQualifiedName(), id, null);
+    }
 
+    public RefKey versionedRefKey(final Instance instance) {
+
+        return versionedRefKey(null, instance);
+    }
+
+    protected RefKey versionedRefKey(final Name defaultSchema, final Instance instance) {
+
+        assert instance != null;
+        final Name schemaName = Nullsafe.orDefault(instance.getSchema(), defaultSchema);
+        final LinkableSchema schema = linkableSchema(schemaName);
+        assert schema != null;
+        final String id = schema.forceId(instance);
+        final Long version = Instance.getVersion(instance);
+        return new RefKey(schema.getQualifiedName(), id, version);
     }
 
     protected CompletableFuture<Instance> expand(final Consistency consistency, final Consistency linkConsistency, final Context context, final Instance item, final Set<Name> expand) {
@@ -187,7 +202,7 @@ public class ReadProcessor {
         } else if (expand == null || expand.isEmpty()) {
             return CompletableFuture.completedFuture(item);
         } else {
-            final ExpandKey<RefKey> expandKey = ExpandKey.from(latestRefKey(item), expand);
+            final ExpandKey<RefKey> expandKey = ExpandKey.from(versionedRefKey(item), expand);
             return expand(consistency, linkConsistency, context, Collections.singletonMap(expandKey, item))
                     .thenApply(results -> results.get(expandKey));
         }
@@ -203,13 +218,13 @@ public class ReadProcessor {
         } else {
             final Map<ExpandKey<RefKey>, Instance> expandKeys = items.stream()
                     .collect(Collectors.toMap(
-                            item -> ExpandKey.from(latestRefKey(item), expand),
+                            item -> ExpandKey.from(versionedRefKey(item), expand),
                             item -> item
                     ));
             return expand(consistency, linkConsistency, context, expandKeys)
                     .thenApply(expanded -> items.withItems(
                             items.stream()
-                                    .map(v -> expanded.get(ExpandKey.from(latestRefKey(v), expand)))
+                                    .map(v -> expanded.get(ExpandKey.from(versionedRefKey(v), expand)))
                                     .collect(Collectors.toList())
                     ));
         }
@@ -257,7 +272,7 @@ public class ReadProcessor {
                         if(ref == null) {
                             return null;
                         } else {
-                            refs.add(ExpandKey.from(RefKey.versioned(schema.getQualifiedName(), ref), expand));
+                            refs.add(ExpandKey.from(versionedRefKey(schema.getQualifiedName(), ref), expand));
                             return ref;
                         }
                     }
@@ -353,7 +368,7 @@ public class ReadProcessor {
                                 @Override
                                 public Instance expandVersionedRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
 
-                                    final ExpandKey<RefKey> expandKey = ExpandKey.from(RefKey.versioned(schema.getQualifiedName(), ref), expand);
+                                    final ExpandKey<RefKey> expandKey = ExpandKey.from(versionedRefKey(schema.getQualifiedName(), ref), expand);
                                     Instance result = expanded.get(expandKey);
                                     if (result == null) {
                                         result = ReferableSchema.versionedRef(Instance.getId(ref), Instance.getVersion(ref));
