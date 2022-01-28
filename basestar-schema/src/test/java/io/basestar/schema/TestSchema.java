@@ -67,4 +67,12 @@ public class TestSchema {
             }
         });
     }
+
+    @Test
+    void testSchemaTypeName() {
+
+        assertEquals("object", Schema.schemaTypeName(ObjectSchema.class));
+        assertEquals("linkable", Schema.schemaTypeName(LinkableSchema.class));
+        assertEquals("value", Schema.schemaTypeName(ValueSchema.class));
+    }
 }
