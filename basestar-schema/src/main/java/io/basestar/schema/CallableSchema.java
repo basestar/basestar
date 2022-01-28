@@ -1,6 +1,8 @@
 package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import io.basestar.schema.from.From;
 import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.use.Use;
@@ -83,16 +85,19 @@ public interface CallableSchema extends Schema {
         }
     }
 
+    @SuppressWarnings("unused")
     interface Builder<B extends Schema.Builder<B, S>, S extends CallableSchema> extends Schema.Builder<B, S>, Descriptor<S> {
 
         B setLanguage(String language);
 
+        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         B setArguments(List<Argument.Descriptor> arguments);
 
         B setReturns(Use<?> returns);
 
         B setDefinition(String definition);
 
+        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         B setUsing(Map<String, From.Descriptor> using);
     }
 
