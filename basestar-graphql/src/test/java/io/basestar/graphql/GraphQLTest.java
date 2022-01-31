@@ -9,9 +9,9 @@ package io.basestar.graphql;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -86,7 +86,7 @@ class GraphQLTest {
                                 "id", "test1"
                         ),
                         "test2", ImmutableMap.of(
-                                "id","test1"
+                                "id", "test1"
                         )
                 ))
                 .build()).get();
@@ -424,7 +424,7 @@ class GraphQLTest {
                 ))
                 .build());
 
-        System.err.println((Object)result.getData());
+        System.err.println((Object) result.getData());
         System.err.println(result.getErrors());
     }
 
@@ -616,10 +616,10 @@ class GraphQLTest {
         final RuntimeWiring.Builder builder = GraphQLAdaptor.runtimeWiringBuilder(GraphQLStrategy.DEFAULT, SecretContext.none());
 
         namespace.getSchemas().forEach((k, schema) -> {
-            if(schema instanceof InstanceSchema) {
-                if(!((InstanceSchema) schema).isConcrete()) {
+            if (schema instanceof InstanceSchema) {
+                if (!((InstanceSchema) schema).isConcrete()) {
                     builder.type(TypeRuntimeWiring.newTypeWiring(GraphQLStrategy.DEFAULT.typeName(schema))
-                            .typeResolver(new InterfaceResolver((InstanceSchema)schema, GraphQLStrategy.DEFAULT)));
+                            .typeResolver(new InterfaceResolver((InstanceSchema) schema, GraphQLStrategy.DEFAULT)));
                 }
             }
         });
@@ -708,5 +708,44 @@ class GraphQLTest {
         final DatabaseServer databaseServer = DatabaseServer.builder().namespace(namespace).storage(storage).emitter(emitter).build();
 
         GraphQLAdaptor.builder().database(databaseServer).namespace(namespace).build().graphQL();
+    }
+
+    @Test
+    void testQueryHistory() throws Exception {
+
+        final Namespace namespace = namespace();
+        final GraphQL graphQL = graphQL(namespace);
+
+        graphQL.execute(ExecutionInput.newExecutionInput()
+                .query("mutation {\n" +
+                        "  updateTest1(id:\"test1\", data:{x:\"test2\"}) {\n" +
+                        "    id\n" +
+                        "  }\n" +
+                        "}")
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .build());
+
+        final ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput()
+                .context(GraphQLContext.newContext().of("caller", Caller.SUPER).build())
+                .query("query { historyTest1(id: \"test1\") { items { id x, version } } }")
+                .build());
+
+        assertEquals(Collections.singletonMap(
+                "historyTest1", ImmutableMap.of(
+                        "items",
+                        ImmutableList.of(
+                                ImmutableMap.of(
+                                        "id", "test1",
+                                        "x", "test1",
+                                        "version", 1
+                                ),
+                                ImmutableMap.of(
+                                        "id", "test1",
+                                        "x", "test2",
+                                        "version", 2
+                                )
+                        )
+                )
+        ), result.getData());
     }
 }

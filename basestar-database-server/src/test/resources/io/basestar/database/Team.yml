@@ -172,3 +172,11 @@ NestedRef1:
     - ref.refs
     - refs.ref
     - refs.refs
+
+OrderId:
+  type: sequence
+  format: "'ORDER-' + value"
+
+Order:
+  type: object
+  sequence: OrderId

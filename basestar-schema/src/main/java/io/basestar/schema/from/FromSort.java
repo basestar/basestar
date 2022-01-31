@@ -51,13 +51,13 @@ public class FromSort implements From {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Map<Name, Schema<?>> out) {
+    public void collectMaterializationDependencies(final Map<Name, Schema> out) {
 
         from.collectMaterializationDependencies(out);
     }
 
     @Override
-    public void collectDependencies(final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Map<Name, Schema> out) {
 
         from.collectDependencies(out);
     }

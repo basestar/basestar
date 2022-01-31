@@ -96,7 +96,7 @@ public class UseDate implements UseStringLike<LocalDate> {
     }
 
     @Override
-    public Schema<?> openApi(final Set<Name> expand) {
+    public Schema openApi(final Set<Name> expand) {
 
         return new DateSchema();
     }

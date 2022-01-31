@@ -43,4 +43,10 @@ public class StepFunctionStorageTraits implements StorageTraits {
 
         return Concurrency.OPTIMISTIC;
     }
+
+    @Override
+    public boolean supportsSequence() {
+
+        return false;
+    }
 }

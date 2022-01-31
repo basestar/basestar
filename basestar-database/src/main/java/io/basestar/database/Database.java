@@ -98,6 +98,13 @@ public interface Database {
         return queryLink(caller, QueryLinkOptions.builder().setSchema(schema).setId(id).setLink(link).build());
     }
 
+    CompletableFuture<Page<Instance>> queryHistory(Caller caller, QueryHistoryOptions options);
+
+    default CompletableFuture<Page<Instance>> queryHistory(final Caller caller, final Name schema, final String id) {
+
+        return queryLink(caller, QueryLinkOptions.builder().setSchema(schema).setId(id).build());
+    }
+
     CompletableFuture<Map<String, Instance>> batch(Caller caller, BatchOptions options);
 
     default CompletableFuture<Instance> expand(final Caller caller, final Map<String, Object> instance, final Set<Name> expand) {

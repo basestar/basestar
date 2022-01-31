@@ -81,13 +81,19 @@ public class LevelDBStorage implements DefaultIndexStorage {
             Page.Token newPaging = null;
             if(iter.hasNext()) {
                 final Map.Entry<byte[], byte[]> entry = iter.next();
-                if(matches(entry.getKey(), key)) {
+                if (matches(entry.getKey(), key)) {
                     newPaging = new Page.Token(entry.getKey());
                 }
             }
 
             return new Page<>(page, newPaging);
         });
+    }
+
+    @Override
+    public Pager<Map<String, Object>> queryHistoryRange(final Consistency consistency, final ObjectSchema schema, final String id, final Map<Name, Range<Object>> query, final Sort.Order order, final Set<Name> expand) {
+
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -270,7 +276,6 @@ public class LevelDBStorage implements DefaultIndexStorage {
 
             final long version = Instance.getVersion(after);
             final byte[] key = key(schema, id, version);
-            checkExisting(schema, id, 0L, key);
             writes.add(batch -> {
                 final byte[] data = toBytes(schema, version, after);
                 batch.put(key, data);
@@ -310,9 +315,16 @@ public class LevelDBStorage implements DefaultIndexStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return LevelDBStorageTraits.INSTANCE;
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        // FIXME: could implement trivially
+        throw new UnsupportedOperationException();
     }
 
     private byte[] key(final ReferableSchema schema, final BatchResponse.RefKey refKey) {

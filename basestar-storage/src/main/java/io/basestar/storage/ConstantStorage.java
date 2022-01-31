@@ -24,10 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
-import io.basestar.util.Name;
-import io.basestar.util.Nullsafe;
-import io.basestar.util.Pager;
-import io.basestar.util.Sort;
+import io.basestar.util.*;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -143,9 +140,27 @@ public class ConstantStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public StorageTraits storageTraits(final ReferableSchema schema) {
+    public StorageTraits storageTraits(final Schema schema) {
 
         return TRAITS;
+    }
+
+    @Override
+    public CompletableFuture<Long> increment(final SequenceSchema schema) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
+
+        return (stats, token, count) -> get(consistency, schema, id, expand).thenApply(result -> {
+            if (result == null) {
+                return Page.empty();
+            } else {
+                return Page.single(result);
+            }
+        });
     }
 
     private static final StorageTraits TRAITS = new StorageTraits() {
@@ -184,6 +199,12 @@ public class ConstantStorage implements DefaultLayerStorage {
         public Concurrency getObjectConcurrency() {
 
             return Concurrency.OPTIMISTIC;
+        }
+
+        @Override
+        public boolean supportsSequence() {
+
+            return false;
         }
     };
 }

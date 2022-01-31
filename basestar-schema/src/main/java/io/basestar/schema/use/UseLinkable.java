@@ -26,7 +26,7 @@ public interface UseLinkable extends UseQueryable {
     LinkableSchema getSchema();
 
     @Override
-    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         final LinkableSchema schema = getSchema();
         if (!out.containsKey(schema.getQualifiedName())) {

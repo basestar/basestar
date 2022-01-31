@@ -52,13 +52,13 @@ public class Join implements Serializable {
         this.on = Nullsafe.require(builder.getOn()).bind(context);
     }
 
-    public void collectMaterializationDependencies(final Map<Name, Schema<?>> out) {
+    public void collectMaterializationDependencies(final Map<Name, Schema> out) {
 
         left.collectMaterializationDependencies(out);
         right.collectMaterializationDependencies(out);
     }
 
-    public void collectDependencies(final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Map<Name, Schema> out) {
 
         left.collectDependencies(out);
         right.collectDependencies(out);

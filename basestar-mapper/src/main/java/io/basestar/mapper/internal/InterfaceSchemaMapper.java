@@ -50,7 +50,7 @@ public class InterfaceSchemaMapper<T> extends LinkableSchemaMapper<InterfaceSche
     }
 
     @Override
-    public Schema.Builder<?, ?, Instance> schemaBuilder() {
+    public Schema.Builder<?, ?> schemaBuilder() {
 
         return addMembers(InterfaceSchema.builder()
                 .setIndexes(indexes.isEmpty() ? null : indexes));

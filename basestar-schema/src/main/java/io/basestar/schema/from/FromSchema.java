@@ -24,12 +24,12 @@ import java.util.Set;
 public class FromSchema implements From {
 
     @Nonnull
-    private final Schema<?> schema;
+    private final Schema schema;
 
     @Nonnull
     private final Set<Name> expand;
 
-    public FromSchema(final Schema<?> schema, final Set<Name> expand) {
+    public FromSchema(final Schema schema, final Set<Name> expand) {
 
         this.schema = Nullsafe.require(schema);
         this.expand = Immutable.set(expand);
@@ -84,7 +84,7 @@ public class FromSchema implements From {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Map<Name, Schema<?>> out) {
+    public void collectMaterializationDependencies(final Map<Name, Schema> out) {
 
         final LinkableSchema fromSchema = getLinkableSchema();
         if (!out.containsKey(fromSchema.getQualifiedName())) {
@@ -94,7 +94,7 @@ public class FromSchema implements From {
     }
 
     @Override
-    public void collectDependencies(final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Map<Name, Schema> out) {
 
         getSchema().collectDependencies(getExpand(), out);
     }

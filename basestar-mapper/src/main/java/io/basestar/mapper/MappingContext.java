@@ -103,13 +103,13 @@ public class MappingContext implements Serializable {
         }
     }
 
-    public Schema<?> schema(final Class<?> cls) {
+    public Schema schema(final Class<?> cls) {
 
         final Name name = schemaName(cls);
         return namespace(cls).build().requireSchema(name);
     }
-    
-    public Schema<?> schema(final Schema.Resolver resolver, final Class<?> cls) {
+
+    public Schema schema(final Schema.Resolver resolver, final Class<?> cls) {
 
         final Name name = schemaName(cls);
         return namespace(cls).build(resolver).requireSchema(name);

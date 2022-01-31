@@ -151,13 +151,13 @@ public interface UseCollection<V, T extends Collection<V>> extends UseContainer<
     }
 
     @Override
-    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    default void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         getType().collectDependencies(expand, out);
     }
 
     @Override
-    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    default void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         getType().collectMaterializationDependencies(expand, out);
     }

@@ -69,7 +69,7 @@ public class DynamoDBUtils {
         } else if(value instanceof Boolean) {
             return bool((Boolean)value);
         } else if(value instanceof Number) {
-            return n(value.toString());
+            return n((Number) value);
         } else if(value instanceof String) {
             final String str = (String)value;
             if(str.isEmpty()) {
@@ -278,6 +278,11 @@ public class DynamoDBUtils {
     public static AttributeValue n(final String v) {
 
         return AttributeValue.builder().n(v).build();
+    }
+
+    public static AttributeValue n(final Number v) {
+
+        return n(v.toString());
     }
 
     public static AttributeValue s(final String v) {

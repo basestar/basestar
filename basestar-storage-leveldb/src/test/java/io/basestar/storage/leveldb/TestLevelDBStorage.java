@@ -59,4 +59,10 @@ class TestLevelDBStorage extends TestStorage {
             throw new UncheckedIOException(e);
         }
     }
+
+    @Override
+    protected boolean supportsHistoryQuery() {
+
+        return false;
+    }
 }

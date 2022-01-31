@@ -75,7 +75,7 @@ public class FromSql implements From {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Map<Name, Schema<?>> out) {
+    public void collectMaterializationDependencies(final Map<Name, Schema> out) {
 
         if (impl != null) {
             impl.collectMaterializationDependencies(out);
@@ -85,7 +85,7 @@ public class FromSql implements From {
     }
 
     @Override
-    public void collectDependencies(final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Map<Name, Schema> out) {
 
         if (impl != null) {
             impl.collectDependencies(out);
@@ -168,12 +168,12 @@ public class FromSql implements From {
         return impl == null;
     }
 
-    public String getReplacedSql(final Function<Schema<?>, String> replacer) {
+    public String getReplacedSql(final Function<Schema, String> replacer) {
 
         return FunctionSchema.getReplacedDefinition(sql, using, replacer);
     }
 
-    public Pair<String, List<Object>> getReplacedSqlWithBindings(final Function<Schema<?>, String> replacer, final List<Argument> arguments, final Map<String, Object> values) {
+    public Pair<String, List<Object>> getReplacedSqlWithBindings(final Function<Schema, String> replacer, final List<Argument> arguments, final Map<String, Object> values) {
 
         final String sql = getReplacedSql(replacer);
 

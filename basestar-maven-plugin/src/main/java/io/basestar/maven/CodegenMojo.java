@@ -123,7 +123,7 @@ public class CodegenMojo extends AbstractMojo {
 
         private final List<Name> packageNames;
 
-        private final Map<Name, Schema<?>> schemas = new ConcurrentHashMap<>();
+        private final Map<Name, Schema> schemas = new ConcurrentHashMap<>();
 
         public ClassLoadingResolver(final List<String> packageNames) {
 
@@ -132,9 +132,9 @@ public class CodegenMojo extends AbstractMojo {
 
         @Nullable
         @Override
-        public Schema<?> getSchema(final Name qualifiedName) {
+        public Schema getSchema(final Name qualifiedName) {
 
-            if(schemas.containsKey(qualifiedName)) {
+            if (schemas.containsKey(qualifiedName)) {
                 return schemas.get(qualifiedName);
             } else {
                 for (final Name packageName : packageNames) {
@@ -149,7 +149,7 @@ public class CodegenMojo extends AbstractMojo {
         }
 
         @Override
-        public void constructing(final Name qualifiedName, final Schema<?> schema) {
+        public void constructing(final Name qualifiedName, final Schema schema) {
 
             schemas.put(qualifiedName, schema);
         }

@@ -124,4 +124,10 @@ class TestElasticsearchStorage extends TestStorage {
 
         // Skipped
     }
+
+    @Override
+    protected boolean supportsHistoryQuery() {
+
+        return false;
+    }
 }

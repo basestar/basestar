@@ -46,4 +46,6 @@ public interface StorageTraits {
 
         return multi ? getMultiValueIndexConsistency() : getSingleValueIndexConsistency();
     }
+
+    boolean supportsSequence();
 }

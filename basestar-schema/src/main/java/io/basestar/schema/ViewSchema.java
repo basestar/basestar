@@ -484,9 +484,9 @@ public class ViewSchema implements LinkableSchema {
     }
 
     @Override
-    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
-        if(!out.containsKey(qualifiedName)) {
+        if (!out.containsKey(qualifiedName)) {
             out.put(qualifiedName, this);
             from.collectDependencies(out);
             declaredProperties.forEach((k, v) -> v.collectDependencies(expand, out));
@@ -630,7 +630,7 @@ public class ViewSchema implements LinkableSchema {
     }
 
     @Override
-    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema<?>> out) {
+    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
 
         LinkableSchema.super.collectMaterializationDependencies(expand, out);
         this.from.collectMaterializationDependencies(out);
