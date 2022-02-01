@@ -3,10 +3,16 @@ package io.basestar.schema;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
+import io.basestar.schema.use.UseDecimal;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,6 +28,31 @@ public class TestSchema {
         final Namespace rebuilt = Namespace.builder()
                 .setSchemas(Immutable.transformValues(namespace.getSchemas(), (k, v) -> v.descriptor()))
                 .build();
+
+        assertEquals(namespace, rebuilt);
+    }
+
+    @Test
+    void testDecimalSerialization() throws Exception {
+
+        final Namespace.Builder namespace = Namespace.Builder.load(TestInterfaceSchema.class.getResource("decimal.yml"));
+
+        final byte[] yaml;
+        try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             final Writer writer = new OutputStreamWriter(baos, StandardCharsets.UTF_8)) {
+            namespace.yaml(writer);
+            yaml = baos.toByteArray();
+        }
+        try (final ByteArrayInputStream bais = new ByteArrayInputStream(yaml)) {
+            final Namespace result = Namespace.load(bais);
+            final UseDecimal type = (UseDecimal) result
+                    .requireObjectSchema("MyObject")
+                    .requireProperty("value", true)
+                    .getType()
+                    .optional(false);
+            assertEquals(20, type.getPrecision());
+            assertEquals(10, type.getScale());
+        }
     }
 
     @Test

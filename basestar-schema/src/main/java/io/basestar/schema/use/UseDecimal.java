@@ -1,5 +1,6 @@
 package io.basestar.schema.use;
 
+import com.google.common.collect.ImmutableMap;
 import io.basestar.expression.type.Coercion;
 import io.basestar.schema.util.ValueContext;
 import io.basestar.util.Name;
@@ -71,7 +72,12 @@ public class UseDecimal implements UseNumeric<BigDecimal> {
     @Override
     public Object toConfig(final boolean optional) {
 
-        return Use.name(NAME, optional);
+        return ImmutableMap.of(
+                Use.name(NAME, optional), ImmutableMap.of(
+                        PRECISION_KEY, precision,
+                        SCALE_KEY, scale
+                )
+        );
     }
 
     @Override
