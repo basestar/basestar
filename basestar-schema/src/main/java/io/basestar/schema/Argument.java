@@ -48,7 +48,7 @@ public class Argument implements Described, Extendable {
     }
 
     @JsonDeserialize(as = Builder.class)
-    interface Descriptor extends Described, Extendable {
+    public interface Descriptor extends Described, Extendable {
 
         String getName();
 

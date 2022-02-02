@@ -20,6 +20,7 @@ package io.basestar.maven;
  * #L%
  */
 
+import io.basestar.Basestar;
 import io.basestar.codegen.Codegen;
 import io.basestar.codegen.CodegenSettings;
 import io.basestar.mapper.MappingContext;
@@ -72,7 +73,7 @@ public class CodegenMojo extends AbstractMojo {
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public void execute() throws MojoExecutionException {
 
-        System.setProperty("java.protocol.handler.pkgs", "io.basestar.protocol");
+        Basestar.init();
         try {
 
             final List<String> searchPackageNames = new ArrayList<>();
