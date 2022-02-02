@@ -21,6 +21,7 @@ package io.basestar.maven;
  */
 
 import com.google.common.base.Charsets;
+import io.basestar.Basestar;
 import io.basestar.mapper.MappingContext;
 import io.basestar.mapper.annotation.*;
 import io.basestar.schema.Namespace;
@@ -84,7 +85,7 @@ public class NamespaceMojo extends AbstractMojo {
     @SuppressWarnings("ResultOfMethodCallIgnored")
     protected void execute(final ClassLoader classLoader) throws MojoExecutionException {
 
-        System.setProperty("java.protocol.handler.pkgs", "io.basestar.protocol");
+        Basestar.init();
         try {
 
             final Set<Class<?>> classes = new HashSet<>();

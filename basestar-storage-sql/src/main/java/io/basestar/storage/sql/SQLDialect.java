@@ -729,10 +729,13 @@ public interface SQLDialect {
 
     default String createFunctionDDLHeader(final DSLContext context, final org.jooq.Name name, final Use<?> returns, final List<Argument> arguments, final String language) {
 
+        return "CREATE OR REPLACE FUNCTION " + name.toString() + createFunctionDDLArguments(context, returns, arguments, language);
+    }
+
+    default String createFunctionDDLArguments(final DSLContext context, final Use<?> returns, final List<Argument> arguments, final String language) {
+
         final Configuration configuration = context.configuration();
         final StringBuilder result = new StringBuilder();
-        result.append("CREATE OR REPLACE FUNCTION ");
-        result.append(name.toString());
         result.append("(");
         boolean first = true;
         for (final Argument arg : arguments) {

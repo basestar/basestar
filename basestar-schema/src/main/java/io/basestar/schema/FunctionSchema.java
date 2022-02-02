@@ -2,12 +2,9 @@ package io.basestar.schema;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.annotation.JsonSetter;
-import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.basestar.expression.Context;
 import io.basestar.schema.from.From;
-import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.util.Immutable;
 import io.basestar.util.Name;
@@ -21,18 +18,10 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Getter
 @Accessors(chain = true)
-public class FunctionSchema implements Schema {
-
-    public static final Pattern DEFINITION_REPLACEMENT_REGEX = Pattern.compile("\"@\\{(.*?)}\"|@\\{(.*?)}");
+public class FunctionSchema implements CallableSchema {
 
     @Nonnull
     private final Name qualifiedName;
@@ -91,7 +80,7 @@ public class FunctionSchema implements Schema {
     }
 
     @JsonDeserialize(as = Builder.class)
-    public interface Descriptor extends Schema.Descriptor<FunctionSchema> {
+    public interface Descriptor extends CallableSchema.Descriptor<FunctionSchema> {
 
         String TYPE = "function";
 
@@ -101,54 +90,14 @@ public class FunctionSchema implements Schema {
             return TYPE;
         }
 
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-        String getLanguage();
-
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        List<Argument.Descriptor> getArguments();
-
-        Use<?> getReturns();
-
-        String getDefinition();
-
-        @JsonInclude(JsonInclude.Include.NON_EMPTY)
-        Map<String, From.Descriptor> getUsing();
-
-        interface Self extends Schema.Descriptor.Self<FunctionSchema>, FunctionSchema.Descriptor {
-
-            @Override
-            default String getLanguage() {
-
-                return self().getLanguage();
-            }
-
-            default List<Argument.Descriptor> getArguments() {
-
-                return Immutable.transform(self().getArguments(), Argument::descriptor);
-            }
-
-            @Override
-            default Use<?> getReturns() {
-
-                return self().getReturns();
-            }
-
-            @Override
-            default String getDefinition() {
-
-                return self().getDefinition();
-            }
-
-            default Map<String, From.Descriptor> getUsing() {
-
-                return Immutable.transformValues(self().getUsing(), (k, v) -> v.descriptor());
-            }
-        }
-
         @Override
         default FunctionSchema build(final Namespace namespace, final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
             return new FunctionSchema(this, resolver, version, qualifiedName, slot);
+        }
+
+        interface Self extends CallableSchema.Descriptor.Self<FunctionSchema>, Descriptor {
+
         }
     }
 
@@ -156,7 +105,7 @@ public class FunctionSchema implements Schema {
     @Accessors(chain = true)
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonPropertyOrder({"type", "description", "version", "language", "arguments", "returns", "definition", "extensions"})
-    public static class Builder implements Schema.Builder<Builder, FunctionSchema>, FunctionSchema.Descriptor {
+    public static class Builder implements CallableSchema.Builder<Builder, FunctionSchema>, FunctionSchema.Descriptor {
 
         @Nullable
         private Long version;
@@ -168,7 +117,6 @@ public class FunctionSchema implements Schema {
         private String language;
 
         @Nullable
-        @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         private List<Argument.Descriptor> arguments;
 
         @Nullable
@@ -188,89 +136,6 @@ public class FunctionSchema implements Schema {
     public FunctionSchema.Descriptor descriptor() {
 
         return (Descriptor.Self) () -> FunctionSchema.this;
-    }
-
-    @Override
-    public void collectDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
-
-        if (!out.containsKey(qualifiedName)) {
-            out.put(qualifiedName, this);
-            using.forEach((k, v) -> v.collectDependencies(out));
-        }
-    }
-
-    @Override
-    public void collectMaterializationDependencies(final Set<Name> expand, final Map<Name, Schema> out) {
-
-        if (!out.containsKey(qualifiedName)) {
-            out.put(qualifiedName, this);
-            using.forEach((k, v) -> v.collectMaterializationDependencies(out));
-        }
-    }
-
-    public String getReplacedDefinition(final Function<Schema, String> replacer) {
-
-        return getReplacedDefinition(definition, using, replacer);
-    }
-
-    public static String replaceConcrete(final String definition, final Map<String, From> using,
-                                         final Function<Schema, String> replacer) {
-
-        final Matcher matcher = DEFINITION_REPLACEMENT_REGEX.matcher(definition);
-        final StringBuffer buffer = new StringBuffer();
-        while (matcher.find()) {
-            final String name = Nullsafe.orDefault(matcher.group(1), matcher.group(2));
-            final From use = using.get(name);
-            if (use instanceof FromSchema) {
-                matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacer.apply(((FromSchema) use).getSchema())));
-            } else {
-                throw new IllegalStateException("SQL view schema does not declare " + name);
-            }
-        }
-        matcher.appendTail(buffer);
-        return buffer.toString();
-    }
-
-
-    public static String getReplacedDefinition(final String definition, final Map<String, From> using,
-                                               final Function<Schema, String> replacer) {
-
-        if (using.keySet().size() == 0) {
-            return definition;
-        }
-        final String groups = using.keySet().stream()
-                .flatMap(name -> Stream.of(name, "\"" + name + "\""))
-                .map(Pattern::quote)
-                .collect(Collectors.joining("|"));
-
-        final String regex = String.format("(?:[\\s(]|(^))(%s)(?:[(\\s;,]|($))", groups);
-        final Pattern pattern = Pattern.compile(regex);
-        final int groupToReplace = 2;
-
-        final String withReplacements = replace(definition, using, replacer, groupToReplace, pattern);
-        return replaceConcrete(withReplacements, using, replacer);
-    }
-
-    private static String replace(final String definition, final Map<String, From> using,
-                                  final Function<Schema, String> replacer,
-                                  final int groupToReplace, Pattern pattern) {
-
-        final StringBuilder stringBuilder = new StringBuilder(definition);
-        final Matcher matcher = pattern.matcher(definition);
-        if (matcher.find()) {
-            String name = matcher.group(groupToReplace);
-
-            final From use = using.getOrDefault(name, using.get(name.replaceAll("^\"|\"$", "")));
-            if (use instanceof FromSchema) {
-                stringBuilder.replace(matcher.start(groupToReplace), matcher.end(groupToReplace), replacer.apply(((FromSchema) use).getSchema()));
-                return replace(stringBuilder.toString(), using, replacer, groupToReplace, pattern);
-            } else {
-                throw new IllegalStateException("SQL view schema does not declare " + name);
-            }
-
-        }
-
-        return stringBuilder.toString();
     }
 
     @Override
