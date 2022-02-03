@@ -419,7 +419,7 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         }
 
         @Override
-        public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+        public void writeObjectLayer(final ReferableSchema schema, final Map<String, Object> after) {
 
             final String index = strategy.index(schema);
             final String id = schema.id(after);
@@ -428,7 +428,6 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
                     .index(index).source(toSource(schema, after)).id(id)
                     .opType(DocWriteRequest.OpType.INDEX));
             responders.add(response -> BatchResponse.empty());
-            return this;
         }
 
         @Override

@@ -231,5 +231,17 @@ public interface DefaultLayerStorage extends LayeredStorage, ValidatingStorage {
             schema.getIndirectExtend().forEach(layer -> writeHistoryLayer(layer, id, after));
             return this;
         }
+
+        @Override
+        @Deprecated
+        default WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+            if (schema instanceof ReferableSchema) {
+                final ReferableSchema referableSchema = (ReferableSchema) schema;
+                writeObjectLayer(referableSchema, after);
+                referableSchema.getIndirectExtend().forEach(layer -> writeObjectLayer(layer, after));
+            }
+            return this;
+        }
     }
 }
