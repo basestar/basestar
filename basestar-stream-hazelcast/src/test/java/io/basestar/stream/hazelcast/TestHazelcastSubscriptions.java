@@ -5,8 +5,6 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import io.basestar.stream.Subscriptions;
 import io.basestar.stream.TestSubscriptions;
-import java.io.IOException;
-import java.net.InetAddress;
 
 public class TestHazelcastSubscriptions extends TestSubscriptions {
 
