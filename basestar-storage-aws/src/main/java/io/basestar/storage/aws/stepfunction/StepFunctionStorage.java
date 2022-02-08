@@ -305,7 +305,7 @@ public class StepFunctionStorage implements DefaultLayerStorage {
             }
 
             @Override
-            public Storage.WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+            public void writeObjectLayer(final ReferableSchema schema, final Map<String, Object> after) {
 
                 throw new UnsupportedOperationException();
             }

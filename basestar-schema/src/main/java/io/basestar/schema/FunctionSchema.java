@@ -59,6 +59,11 @@ public class FunctionSchema implements CallableSchema {
     @Nonnull
     private final Map<String, From> using;
 
+    public static Builder builder() {
+
+        return new Builder();
+    }
+
     public FunctionSchema(final Descriptor descriptor, final Resolver.Constructing resolver, final Version version, @Nonnull final Name qualifiedName, final int slot) {
 
         resolver.constructing(qualifiedName, this);

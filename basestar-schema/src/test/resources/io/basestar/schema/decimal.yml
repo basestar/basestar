@@ -1,0 +1,7 @@
+MyObject:
+  properties:
+    value:
+      type:
+        decimal:
+          precision: 20
+          scale: 10

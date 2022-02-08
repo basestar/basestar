@@ -723,18 +723,14 @@ public class DynamoDBStorage implements DefaultIndexStorage {
 
         @Override
         @Deprecated
-        public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+        public void writeObjectLayer(final ReferableSchema schema, final Map<String, Object> after) {
 
-            if(schema instanceof ReferableSchema) {
-                items.add(TransactWriteItem.builder()
-                        .put(Put.builder().tableName(strategy.objectTableName((ReferableSchema) schema))
-                                .item(objectItem(strategy, (ReferableSchema) schema, Instance.getId(after), after)).build())
-                        .build());
+            items.add(TransactWriteItem.builder()
+                    .put(Put.builder().tableName(strategy.objectTableName(schema))
+                            .item(objectItem(strategy, schema, Instance.getId(after), after)).build())
+                    .build());
 
-                exceptions.add(null);
-            }
-
-            return this;
+            exceptions.add(null);
         }
 
         @Override

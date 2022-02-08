@@ -999,6 +999,13 @@ public class SQLStorage implements DefaultLayerStorage {
         }
 
         @Override
+        public void writeObjectLayer(final ReferableSchema schema, final Map<String, Object> after) {
+
+            // not needed, alternate implementation of write provided
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
 
             // Fixme: should support materialized views
