@@ -54,6 +54,9 @@
         <sonar.organization>basestar</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <sonar.scanner.force-deprecated-java-version>true</sonar.scanner.force-deprecated-java-version>
+        <surefire.test.argLine.extra>
+            <!-- certain profiles will want to add command-line arguments to the JRE -->
+        </surefire.test.argLine.extra>
     </properties>
 
     <scm>
@@ -180,7 +183,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.3.1</version>
                 <configuration>
                     <failOnError>false</failOnError>
                     <sourcepath>${project.build.directory}/delombok</sourcepath>
@@ -226,9 +229,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M4</version>
+                <version>3.0.0-M5</version>
                 <configuration>
                     <parallel>all</parallel>
+                    <argLine>@{argLine} @{surefire.test.argLine.extra}</argLine>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -241,7 +245,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-site-plugin</artifactId>
-                <version>3.9.0</version>
+                <version>3.10.0</version>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -266,7 +270,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.2</version>
+                <version>0.8.7</version>
                 <configuration>
                     <skip>${skipCoverage}</skip>
                 </configuration>
@@ -375,6 +379,33 @@
                 </plugins>
             </build>
         </profile>
+
+        <profile>
+            <id>jdk9plus</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <properties>
+                <spark.version>3.2.1</spark.version>
+                <!-- this is required for now to let Spark tests run -->
+                <surefire.test.argLine.extra>
+                    <!-- this has to happen on JDK9+: -->
+                    <!-- for both Spark and Hazelcast: -->
+                    --add-opens java.base/java.lang=ALL-UNNAMED
+                    --add-opens java.base/java.nio=ALL-UNNAMED
+                    --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+                    --add-exports java.base/jdk.internal.ref=ALL-UNNAMED
+                    <!-- at least for Spark: -->
+                    --add-opens java.base/sun.util.calendar=ALL-UNNAMED
+                    --add-opens java.base/java.net=ALL-UNNAMED
+                    <!-- as requested by Hazelcast: -->
+                    --add-modules java.se
+                    --add-opens java.management/sun.management=ALL-UNNAMED
+                    --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED
+                </surefire.test.argLine.extra>
+            </properties>
+        </profile>
+
     </profiles>
 
 
