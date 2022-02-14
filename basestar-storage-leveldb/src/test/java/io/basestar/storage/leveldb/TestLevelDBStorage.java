@@ -50,17 +50,33 @@ class TestLevelDBStorage extends TestStorage {
         BASEDIR.mkdirs();
     }
 
+    private static volatile DBFactory factory = null;
+
     @Override
     protected Storage storage(final Namespace namespace) {
+        /* The structure around the 'factory' static variable is that if we ever fail at building
+        a JNI-based (native) LevelDB instance, we'll continue using a Java implementation; but
+        we defer this determination to the first time we actually need to build a Storage.
+         */
         try {
-            return buildStorage(namespace, JniDBFactory.factory);
+            if (factory == null) {
+                factory = JniDBFactory.factory;
+            }
+            return buildStorage(namespace, factory);
         } catch (final UncheckedIOException e) {
+            factory = Iq80DBFactory.factory;
             log.warn("Unable to build Storage using native JNI-based interface. Will substitute a slower Java implementation", e);
-            return buildStorage(namespace, Iq80DBFactory.factory);
+            return buildStorage(namespace, factory);
+        } catch (final UnsatisfiedLinkError e) {
+            factory = Iq80DBFactory.factory;
+            log.warn("Failed to build Storage using native JNI-based interface. Will substitute a slower Java implementation", e);
+            return buildStorage(namespace, factory);
         }
     }
 
-    private Storage buildStorage(final Namespace namespace, final DBFactory factory@) {
+    private Storage buildStorage(final Namespace namespace, final DBFactory factory) {
+        log.debug("Building Storage using factory of type {}", factory.getClass().getName());
+
         try {
             final Options options = new Options();
             options.createIfMissing(true);
