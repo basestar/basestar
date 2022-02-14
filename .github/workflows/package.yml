@@ -23,11 +23,6 @@ jobs:
           settings-path: ${{ github.workspace }} # location for the settings.xml file
       - name: Set up localstack
         run: sudo apt-get install -y python3 python3-pip libsasl2-dev && python3 -m pip install localstack
-      - name: Where's Waldo?
-        run: sudo find / -type s -name "*docker*"
-      - name: Forcing the Docker socket location for Localstack's benefit
-        run: |
-          echo "DOCKER_SOCK=/var/run/docker.sock" >> $GITHUB_ENV
       - name: Pull Localstack docker image
         run: docker pull localstack/localstack:latest
       - name: Pull DynamoDBLocal docker image
