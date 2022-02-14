@@ -344,7 +344,7 @@ public class SQLStorage implements DefaultLayerStorage {
                     ? strategy.dialect().fields(columnCasing, schema)
                     : strategy.dialect().fields(columnCasing, (ReferableSchema) schema, index);
 
-            return new TableImpl<Record>(qualifiedName) {
+            return new TableImpl<org.jooq.Record>(qualifiedName) {
                 {
                     fields.forEach(field -> createField(DSL.name(field.getName()), field.getDataType()));
                 }
@@ -385,10 +385,10 @@ public class SQLStorage implements DefaultLayerStorage {
 
             log.debug("SQL condition {}", condition);
 
-            final SelectSeekStepN<Record> select = context.select(selectFields(schema, table))
+            final SelectSeekStepN<org.jooq.Record> select = context.select(selectFields(schema, table))
                     .from(table.getQualifiedName()).where(condition).orderBy(orderFields);
 
-            final SelectForUpdateStep<Record> seek;
+            final SelectForUpdateStep<org.jooq.Record> seek;
             final long offset;
             if (token == null) {
                 seek = select.limit(DSL.inline(count));
@@ -751,7 +751,7 @@ public class SQLStorage implements DefaultLayerStorage {
         return strategy.getNamingStrategy().indexTableName(schema, index);
     }
 
-    private Map<String, Object> first(final LinkableSchema schema, final Result<Record> result) {
+    private Map<String, Object> first(final LinkableSchema schema, final Result<org.jooq.Record> result) {
 
         if (result.isEmpty()) {
             return null;
@@ -760,14 +760,14 @@ public class SQLStorage implements DefaultLayerStorage {
         }
     }
 
-    private List<Map<String, Object>> all(final QueryableSchema schema, final Result<Record> result) {
+    private List<Map<String, Object>> all(final QueryableSchema schema, final Result<org.jooq.Record> result) {
 
         return result.stream()
                 .map(v -> fromRecord(schema, v))
                 .collect(Collectors.toList());
     }
 
-    private Map<String, Object> fromRecord(final QueryableSchema schema, final Record record) {
+    private Map<String, Object> fromRecord(final QueryableSchema schema, final org.jooq.Record record) {
 
         final SQLDialect dialect = strategy.dialect();
 

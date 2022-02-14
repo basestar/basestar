@@ -179,15 +179,15 @@ public class SnowflakeDialect extends JSONDialect {
 
         final List<Table<?>> tables = new ArrayList<>();
         final Name qualifiedSchemaName = tableCatalog == null ? DSL.name(tableSchema) : DSL.name(DSL.name(tableCatalog), DSL.name(tableSchema));
-        final Result<Record> tablesResult = context.resultQuery(DSL.sql("SHOW OBJECTS LIKE " + DSL.inline(tableName) + " IN SCHEMA " + qualifiedSchemaName)).fetch();
+        final Result<org.jooq.Record> tablesResult = context.resultQuery(DSL.sql("SHOW OBJECTS LIKE " + DSL.inline(tableName) + " IN SCHEMA " + qualifiedSchemaName)).fetch();
         tablesResult.forEach(tableResult -> {
             final String resolvedTableCatalog = tableResult.get("database_name", String.class);
             final String resolvedTableSchema = tableResult.get("schema_name", String.class);
             final String resolvedTableName = tableResult.get("name", String.class);
             final String resolvedKind = tableResult.get("kind", String.class);
             final Name qualifiedName = DSL.name(DSL.name(resolvedTableCatalog), DSL.name(resolvedTableSchema), DSL.name(resolvedTableName));
-            final Result<Record> columnsResult = context.resultQuery(DSL.sql("SHOW COLUMNS IN " + resolvedKind + " " + qualifiedName)).fetch();
-            final Table<?> table = new TableImpl<Record>(qualifiedName) {
+            final Result<org.jooq.Record> columnsResult = context.resultQuery(DSL.sql("SHOW COLUMNS IN " + resolvedKind + " " + qualifiedName)).fetch();
+            final Table<?> table = new TableImpl<org.jooq.Record>(qualifiedName) {
                 {
                     columnsResult.forEach(columnResult -> {
                         final String realColumnName = columnResult.get("column_name", String.class);
