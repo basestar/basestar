@@ -53,6 +53,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mockito;
 
 import java.util.*;
@@ -131,12 +132,16 @@ class TestDatabaseServer {
         );
         this.emitter = Mockito.mock(Emitter.class);
         when(emitter.emit(any(Event.class))).then(inv -> {
-            log.info("Emitting {}", inv.getArgumentAt(0, Event.class));
+            log.info("Emitting {}", inv.getArgument(0, Event.class));
             return CompletableFuture.completedFuture(null);
         });
         when(emitter.emit(any(Collection.class))).then(inv -> {
             final Emitter emitter = (Emitter) inv.getMock();
-            inv.getArgumentAt(0, Collection.class).forEach(event -> emitter.emit((Event) event));
+            final Collection<Event> events = inv.getArgument(0, Collection.class);
+            log.info("Got collection of events with size: {}", events.size());
+            events.forEach(emitter::emit);
+            log.info("..Done emitting collection of events with size: {}", events.size());
+
             return CompletableFuture.completedFuture(null);
         });
         final MemoryStorage memoryStorage = MemoryStorage.builder().build();
@@ -236,7 +241,7 @@ class TestDatabaseServer {
 
     @Test
     void updateSimple() throws Exception {
-
+        log.info(" BEGIN OF UPDATE SIMPLE") ;
         final String id = UUID.randomUUID().toString();
 
         final Map<String, Object> data1 = ImmutableMap.of(
@@ -274,11 +279,15 @@ class TestDatabaseServer {
         final Map<String, Object> version2 = database.read(caller, SIMPLE, id, 2L).get();
         assertEquals(read, version2);
 
-        verify(emitter, times(1))
-                .emit(ObjectUpdatedEvent.of(SIMPLE, id, 1L, create, update));
+        log.info(" VERIFICATION PHASE OF UPDATE SIMPLE") ;
 
-        verify(emitter, times(2)) //dont emmit events for identical values updates
-                .emit(any(ObjectUpdatedEvent.class));
+        final InOrder inOrder = Mockito.inOrder(emitter);
+        inOrder.verify(emitter).emit(ObjectUpdatedEvent.of(SIMPLE, id, 1L, create, update));
+            //dont emmit events for identical values updates
+        // inOrder.verify(emitter).emit(any(ObjectUpdatedEvent.class));
+        inOrder.verifyNoMoreInteractions();
+
+        log.info(" VERIFICATION PHASE OF UPDATE SIMPLE") ;
     }
 
     @Test
