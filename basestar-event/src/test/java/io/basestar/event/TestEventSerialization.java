@@ -57,19 +57,12 @@ class TestEventSerialization {
         }
     }
 
-    static final String INTEL_INPUT =    "H4sIAAAAAAAAAM2QvU/DMBDFr6kEksdOMDIwValst/mUOnTJBlJFxcDmxJfWUh1XthsEfz1uChMwICTETfb5vXvnHxkDRK7ZoRZwAQAr59BDpCTchhtLapYXCY2TVMh4wXMRizovYl5nLF9kGBoSJj1ap0w3+E81rrE1FuFhBECMVVvViX2l9ngvNH6RRs6dx/cxUWNReJRwFRScchrTLGbphvGSp2XCZ5Sx4DFH2+DncOLF1gGRaFUvvOrRwcSpV4TRh2B4QllZoyHCIB+8N6cKY32I/tn/SWP0waI7L388yG+WT2jJ2CxNF0DaAKMyVgt/Pm9eDiF0J9wOroPvOE9b3T3ptZu2q3073d4V1D0vlwGtaD3avyV7+c/JzsskL1kRyPJfkIU3k871MQoDAAA=";
-    static final String APPLE_M1_INPUT = "H4sIAAAAAAAA/82QvU/DMBDFr6kEksdOMDIwValst/mUOnTJBlJFxcDmxJfWUh1XthsEfz1uChMwICTETfb5vXvnHxkDRK7ZoRZwAQAr59BDpCTchhtLapYXCY2TVMh4wXMRizovYl5nLF9kGBoSJj1ap0w3+E81rrE1FuFhBECMVVvViX2l9ngvNH6RRs6dx/cxUWNReJRwFRScchrTLGbphvGSp2XCZ5Sx4DFH2+DncOLF1gGRaFUvvOrRwcSpV4TRh2B4QllZoyHCIB+8N6cKY32I/tn/SWP0waI7L388yG+WT2jJ2CxNF0DaAKMyVgt/Pm9eDiF0J9wOroPvOE9b3T3ptZu2q3073d4V1D0vlwGtaD3avyV7+c/JzsskL1kRyPJfkIU3k871MQoDAAA=";
-    // the only visible difference is in the first few bytes:
-    // 1f 8b 08 00 00 00 00 00 00 ff cd 90 bd 4f c3
-    // 1f 8b 08 00 00 00 00 00 00 00 cd 90 bd 4f c3
-
+    static final String INPUT =    "H4sIAAAAAAAAAM2QvU/DMBDFr6kEksdOMDIwValst/mUOnTJBlJFxcDmxJfWUh1XthsEfz1uChMwICTETfb5vXvnHxkDRK7ZoRZwAQAr59BDpCTchhtLapYXCY2TVMh4wXMRizovYl5nLF9kGBoSJj1ap0w3+E81rrE1FuFhBECMVVvViX2l9ngvNH6RRs6dx/cxUWNReJRwFRScchrTLGbphvGSp2XCZ5Sx4DFH2+DncOLF1gGRaFUvvOrRwcSpV4TRh2B4QllZoyHCIB+8N6cKY32I/tn/SWP0waI7L388yG+WT2jJ2CxNF0DaAKMyVgt/Pm9eDiF0J9wOroPvOE9b3T3ptZu2q3073d4V1D0vlwGtaD3avyV7+c/JzsskL1kRyPJfkIU3k871MQoDAAA=";
+    // This string is an RFC 1952 stream encoded in Base64
     // RFC 1952 says:
     //          +---+---+---+---+---+---+---+---+---+---+
     //         |ID1|ID2|CM |FLG|     MTIME     |XFL|OS | (more-->)
     //         +---+---+---+---+---+---+---+---+---+---+
-    // ID1 ID2 ; CM=DEFLATE ; FLG=none ; MTIME=none; FLG=FNAME ; XFL=none ;
-    // the OS field differs: the INTEL_INPUT (same as generated from JDK8 on Intel) claims a "FAT filesystem (MS-DOS, OS/2, NT/Win32)" according
-    // JDK17 on Apple silicon claims a "Unknown" OS within the RFC 1952 definition
     /* for reference the list of "OS" values is:
          0 - FAT filesystem (MS-DOS, OS/2, NT/Win32)
          1 - Amiga
@@ -88,8 +81,11 @@ class TestEventSerialization {
        255 - unknown
      */
 
-    void testGzipBzonAny(String input, String... alternateInputs) {
-        final byte[] inputBytes = BaseEncoding.base64().decode(input);
+    @Test
+    void testGzipBson() {
+        final byte[] inputBytes = BaseEncoding.base64().decode(INPUT);
+        inputBytes[9] = (byte)0xFF; // 'unknown' OS
+
         final ObjectUpdatedEvent event = EventSerialization.gzipBson().deserialize(ObjectUpdatedEvent.class, inputBytes);
         assertEquals(Name.of("Asset"), event.getSchema());
         assertEquals("15b18950-56ad-428a-ab89-2b71847e28ad", event.getId());
@@ -97,26 +93,14 @@ class TestEventSerialization {
         assertNotNull(event.getBefore());
         assertNotNull(event.getAfter());
         final byte[] outputBytes = EventSerialization.gzipBson().serialize(event);
+        outputBytes[9] = (byte)0xFF; // 'unknown' OS
         final String output = BaseEncoding.base64().encode(outputBytes);
 
-        Set<String> expected = Stream.concat(Arrays.stream(alternateInputs), Stream.of(input)).collect(Collectors.toSet());
+        assertEquals(hexEncode(inputBytes), hexEncode(outputBytes));
 
-        assertTrue(expected.contains(output),
-                () -> "Expected any of:\n" + expected.stream().map(s -> "   " + s + "\n").reduce((a,b) -> a + ",\n"));
-
-        // ignoring the 9th byte (OS field), the actual strings are identical. We make the actual comparison
-        // on the hex representation for ergonomics purpose in case of failure:
-
-        final byte[] inputBytesExcept10thField = Arrays.copyOf(inputBytes, inputBytes.length);
-        inputBytesExcept10thField[9] = (byte)0xFF; // unknown
-        final byte[] outputBytesExcept10thField = Arrays.copyOf(outputBytes, inputBytes.length);
-        outputBytesExcept10thField[9] = (byte)0xFF;
-
-        assertEquals(hexEncode(inputBytesExcept10thField), hexEncode(outputBytesExcept10thField));
-
-        // no matter what, the deserialized event looks the same after a round-trip through our codec.
+        // no matter what, the deserialized event still looks the same after a round-trip through our codec.
         final byte[] reinputBytes = BaseEncoding.base64().decode(output);
-        final ObjectUpdatedEvent reEvent = EventSerialization.gzipBson().deserialize(ObjectUpdatedEvent.class, inputBytes);
+        final ObjectUpdatedEvent reEvent = EventSerialization.gzipBson().deserialize(ObjectUpdatedEvent.class, reinputBytes);
         assertEquals(event, reEvent);
     }
 
@@ -135,16 +119,6 @@ class TestEventSerialization {
         return new String(hexChars, 0, bytes.length*3 - 1);
     }
 
-    @Test
-    void testGzipBson() {
-        /* this proves that using an Intel-generated stream, the resulting output is
-        good enough  */
-        testGzipBzonAny(INTEL_INPUT, APPLE_M1_INPUT);
-
-        /* this proves that using an Apple M1-generated stream, the resulting output is
-        good enough  */
-        testGzipBzonAny(APPLE_M1_INPUT, INTEL_INPUT);
-    }
 
 
 }
