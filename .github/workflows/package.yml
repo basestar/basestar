@@ -16,9 +16,13 @@ jobs:
       - name: Set up JDK ${{ matrix.java-version }}
         uses: actions/setup-java@v1
         with:
+          distribution: 'temurin'
           java-version: ${{ matrix.java-version }}
+          cache: 'maven'
           server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
           settings-path: ${{ github.workspace }} # location for the settings.xml file
+      - name: Set up localstack
+        run: sudo apt-get install -y python3 python3-pip libsasl2-dev && python3 -m pip install localstack
 
       - name: Pull Localstack docker image
         run: docker pull localstack/localstack:latest
