@@ -15,7 +15,7 @@
         <objenesis.version>3.2</objenesis.version> <!-- evicting 2.1 requested by Mockito 1.10.19 -->
 
         <csv.version>1.8</csv.version>
-        <docker-java.version>3.2.1</docker-java.version>
+        <docker-java.version>3.2.12</docker-java.version>
     </properties>
 
     <dependencyManagement>
