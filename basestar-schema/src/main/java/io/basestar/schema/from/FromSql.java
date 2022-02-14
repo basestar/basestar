@@ -3,7 +3,7 @@ package io.basestar.schema.from;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Argument;
 import io.basestar.schema.Bucketing;
-import io.basestar.schema.FunctionSchema;
+import io.basestar.schema.CallableSchema;
 import io.basestar.schema.Schema;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.Use;
@@ -170,7 +170,7 @@ public class FromSql implements From {
 
     public String getReplacedSql(final Function<Schema, String> replacer) {
 
-        return FunctionSchema.getReplacedDefinition(sql, using, replacer);
+        return CallableSchema.getReplacedDefinition(sql, using, replacer);
     }
 
     public Pair<String, List<Object>> getReplacedSqlWithBindings(final Function<Schema, String> replacer, final List<Argument> arguments, final Map<String, Object> values) {

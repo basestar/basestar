@@ -20,10 +20,14 @@ package io.basestar.schema;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.DatabindContext;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
+import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 import io.basestar.schema.exception.MissingSchemaException;
 import io.basestar.util.Name;
+import io.basestar.util.Text;
 import io.basestar.util.Warnings;
 
 import javax.annotation.Nonnull;
@@ -45,16 +49,7 @@ public interface Schema extends Named, Described, Serializable, Extendable {
     String VAR_THIS = "this";
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = ObjectSchema.Builder.class)
-    @JsonSubTypes({
-            @JsonSubTypes.Type(name = EnumSchema.Descriptor.TYPE, value = EnumSchema.Builder.class),
-            @JsonSubTypes.Type(name = StructSchema.Descriptor.TYPE, value = StructSchema.Builder.class),
-            @JsonSubTypes.Type(name = ObjectSchema.Descriptor.TYPE, value = ObjectSchema.Builder.class),
-            @JsonSubTypes.Type(name = InterfaceSchema.Descriptor.TYPE, value = InterfaceSchema.Builder.class),
-            @JsonSubTypes.Type(name = ViewSchema.Descriptor.TYPE, value = ViewSchema.Builder.class),
-            @JsonSubTypes.Type(name = FunctionSchema.Descriptor.TYPE, value = FunctionSchema.Builder.class),
-            @JsonSubTypes.Type(name = QuerySchema.Descriptor.TYPE, value = QuerySchema.Builder.class),
-            @JsonSubTypes.Type(name = SequenceSchema.Descriptor.TYPE, value = SequenceSchema.Builder.class)
-    })
+    @JsonTypeIdResolver(TypeIdResolver.class)
     interface Descriptor<S extends Schema> extends Described, Extendable {
 
         String getType();
@@ -212,20 +207,33 @@ public interface Schema extends Named, Described, Serializable, Extendable {
             }
         }
 
+        @Nonnull
+        default <T extends Schema> T requireSchema(final Name qualifiedName, final Class<T> cls) {
+
+            final Schema schema = requireSchema(qualifiedName);
+            if (cls.isAssignableFrom(schema.getClass())) {
+                return cls.cast(schema);
+            } else {
+                throw new IllegalStateException(qualifiedName + " is not of type " + Schema.schemaTypeName(cls));
+            }
+        }
+
+        @Nonnull
         default Schema requireSchema(final String name) {
 
             return requireSchema(Name.parse(name));
         }
 
         @Nonnull
+        default <T extends Schema> T requireSchema(final String name, final Class<T> cls) {
+
+            return requireSchema(Name.parse(name), cls);
+        }
+
+        @Nonnull
         default InstanceSchema requireInstanceSchema(final Name qualifiedName) {
 
-            final Schema schema = requireSchema(qualifiedName);
-            if(schema instanceof InstanceSchema) {
-                return (InstanceSchema)schema;
-            } else {
-                throw new IllegalStateException(qualifiedName + " is not an instance schema");
-            }
+            return requireSchema(qualifiedName, InstanceSchema.class);
         }
 
         default InstanceSchema requireInstanceSchema(final String name) {
@@ -236,12 +244,7 @@ public interface Schema extends Named, Described, Serializable, Extendable {
         @Nonnull
         default ObjectSchema requireObjectSchema(final Name qualifiedName) {
 
-            final Schema schema = requireSchema(qualifiedName);
-            if (schema instanceof ObjectSchema) {
-                return (ObjectSchema) schema;
-            } else {
-                throw new IllegalStateException(qualifiedName + " is not an object schema");
-            }
+            return requireSchema(qualifiedName, ObjectSchema.class);
         }
 
         default ObjectSchema requireObjectSchema(final String name) {
@@ -252,12 +255,7 @@ public interface Schema extends Named, Described, Serializable, Extendable {
         @Nonnull
         default StructSchema requireStructSchema(final Name qualifiedName) {
 
-            final Schema schema = requireSchema(qualifiedName);
-            if(schema instanceof StructSchema) {
-                return (StructSchema)schema;
-            } else {
-                throw new IllegalStateException(qualifiedName + " is not a struct schema");
-            }
+            return requireSchema(qualifiedName, StructSchema.class);
         }
 
         default StructSchema requireStructSchema(final String name) {
@@ -268,12 +266,7 @@ public interface Schema extends Named, Described, Serializable, Extendable {
         @Nonnull
         default EnumSchema requireEnumSchema(final Name qualifiedName) {
 
-            final Schema schema = requireSchema(qualifiedName);
-            if(schema instanceof EnumSchema) {
-                return (EnumSchema)schema;
-            } else {
-                throw new IllegalStateException(qualifiedName + " is not an enum schema");
-            }
+            return requireSchema(qualifiedName, EnumSchema.class);
         }
 
         default EnumSchema requireEnumSchema(final String name) {
@@ -284,12 +277,7 @@ public interface Schema extends Named, Described, Serializable, Extendable {
         @Nonnull
         default ViewSchema requireViewSchema(final Name qualifiedName) {
 
-            final Schema schema = requireSchema(qualifiedName);
-            if (schema instanceof ViewSchema) {
-                return (ViewSchema) schema;
-            } else {
-                throw new IllegalStateException(qualifiedName + " is not a view schema");
-            }
+            return requireSchema(qualifiedName, ViewSchema.class);
         }
 
         default ViewSchema requireViewSchema(final String name) {
@@ -300,12 +288,7 @@ public interface Schema extends Named, Described, Serializable, Extendable {
         @Nonnull
         default QuerySchema requireQuerySchema(final Name qualifiedName) {
 
-            final Schema schema = requireSchema(qualifiedName);
-            if (schema instanceof QuerySchema) {
-                return (QuerySchema) schema;
-            } else {
-                throw new IllegalStateException(qualifiedName + " is not a query schema");
-            }
+            return requireSchema(qualifiedName, QuerySchema.class);
         }
 
         default QuerySchema requireQuerySchema(final String name) {
@@ -316,12 +299,7 @@ public interface Schema extends Named, Described, Serializable, Extendable {
         @Nonnull
         default LinkableSchema requireLinkableSchema(final Name qualifiedName) {
 
-            final Schema schema = requireSchema(qualifiedName);
-            if (schema instanceof LinkableSchema) {
-                return (LinkableSchema) schema;
-            } else {
-                throw new IllegalStateException(qualifiedName + " is not a linkable schema");
-            }
+            return requireSchema(qualifiedName, LinkableSchema.class);
         }
 
         default LinkableSchema requireLinkableSchema(final String name) {
@@ -332,12 +310,7 @@ public interface Schema extends Named, Described, Serializable, Extendable {
         @Nonnull
         default QueryableSchema requireQueryableSchema(final Name qualifiedName) {
 
-            final Schema schema = requireSchema(qualifiedName);
-            if (schema instanceof QueryableSchema) {
-                return (QueryableSchema) schema;
-            } else {
-                throw new IllegalStateException(qualifiedName + " is not a queryable schema");
-            }
+            return requireSchema(qualifiedName, QueryableSchema.class);
         }
 
         default QueryableSchema requireQueryableSchema(final String name) {
@@ -348,12 +321,7 @@ public interface Schema extends Named, Described, Serializable, Extendable {
         @Nonnull
         default InterfaceSchema requireInterfaceSchema(final Name qualifiedName) {
 
-            final Schema schema = requireSchema(qualifiedName);
-            if (schema instanceof InterfaceSchema) {
-                return (InterfaceSchema) schema;
-            } else {
-                throw new IllegalStateException(qualifiedName + " is not an interface schema");
-            }
+            return requireSchema(qualifiedName, InterfaceSchema.class);
         }
 
         default InterfaceSchema requireInterfaceSchema(final String name) {
@@ -364,12 +332,7 @@ public interface Schema extends Named, Described, Serializable, Extendable {
         @Nonnull
         default ReferableSchema requireReferableSchema(final Name qualifiedName) {
 
-            final Schema schema = requireSchema(qualifiedName);
-            if (schema instanceof ReferableSchema) {
-                return (ReferableSchema) schema;
-            } else {
-                throw new IllegalStateException(qualifiedName + " is not a referable schema");
-            }
+            return requireSchema(qualifiedName, ReferableSchema.class);
         }
 
         default ReferableSchema requireReferableSchema(final String name) {
@@ -380,12 +343,7 @@ public interface Schema extends Named, Described, Serializable, Extendable {
         @Nonnull
         default ValueSchema<?> requireValueSchema(final Name qualifiedName) {
 
-            final Schema schema = requireSchema(qualifiedName);
-            if (schema instanceof ValueSchema<?>) {
-                return (ValueSchema<?>) schema;
-            } else {
-                throw new IllegalStateException(qualifiedName + " is not a value schema");
-            }
+            return requireSchema(qualifiedName, ValueSchema.class);
         }
 
         default ValueSchema<?> requireValueSchema(final String name) {
@@ -396,17 +354,89 @@ public interface Schema extends Named, Described, Serializable, Extendable {
         @Nonnull
         default SequenceSchema requireSequenceSchema(final Name qualifiedName) {
 
-            final Schema schema = requireSchema(qualifiedName);
-            if (schema instanceof SequenceSchema) {
-                return (SequenceSchema) schema;
-            } else {
-                throw new IllegalStateException(qualifiedName + " is not a sequence schema");
-            }
+            return requireSchema(qualifiedName, SequenceSchema.class);
         }
 
         default SequenceSchema requireSequenceSchema(final String name) {
 
             return requireSequenceSchema(Name.parse(name));
+        }
+
+        @Nonnull
+        default CallableSchema requireCallableSchema(final Name qualifiedName) {
+
+            return requireSchema(qualifiedName, CallableSchema.class);
+        }
+
+        default CallableSchema requireCallableSchema(final String name) {
+
+            return requireCallableSchema(Name.parse(name));
+        }
+
+        @Nonnull
+        default FunctionSchema requireFunctionSchema(final Name qualifiedName) {
+
+            return requireSchema(qualifiedName, FunctionSchema.class);
+        }
+
+        default FunctionSchema requireFunctionSchema(final String name) {
+
+            return requireFunctionSchema(Name.parse(name));
+        }
+    }
+
+    static <T extends Schema> String schemaTypeName(final Class<T> cls) {
+
+        final String stripSuffix = "Schema";
+        final String longName = cls.getSimpleName();
+        if (longName.endsWith(stripSuffix)) {
+            return Text.lowerHyphen(cls.getSimpleName().substring(0, longName.length() - stripSuffix.length()));
+        } else {
+            return Text.lowerHyphen(longName);
+        }
+    }
+
+    class TypeIdResolver extends TypeIdResolverBase {
+
+        private static final SchemaClasspath CLASSPATH = SchemaClasspath.DEFAULT;
+
+        private JavaType baseType;
+
+        @Override
+        public void init(final JavaType javaType) {
+
+            this.baseType = javaType;
+        }
+
+        @Override
+        public String idFromValue(final Object value) {
+
+            return idFromValueAndType(value, value.getClass());
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public String idFromValueAndType(final Object value, final Class<?> type) {
+
+            return CLASSPATH.idForClass((Class<Schema.Builder<?, ?>>) type);
+        }
+
+        @Override
+        public JavaType typeFromId(final DatabindContext databindContext, final String id) {
+
+            final Class<?> cls;
+            if (id == null) {
+                cls = CLASSPATH.classForId(ObjectSchema.Builder.TYPE);
+            } else {
+                cls = CLASSPATH.classForId(id);
+            }
+            return databindContext.constructSpecializedType(baseType, cls);
+        }
+
+        @Override
+        public JsonTypeInfo.Id getMechanism() {
+
+            return JsonTypeInfo.Id.NAME;
         }
     }
 }

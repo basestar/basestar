@@ -20,7 +20,7 @@ public class TestFunctionSchema {
     public void testReplacedDefinition() {
 
         final String input = "SELECT * FROM @{test}";
-        final String output = FunctionSchema.getReplacedDefinition(input, ImmutableMap.of("test", new FromSchema(
+        final String output = CallableSchema.getReplacedDefinition(input, ImmutableMap.of("test", new FromSchema(
                 ObjectSchema.builder().build(Name.of("test", "Object")), ImmutableSet.of()
         )), v -> v.getQualifiedName().toString());
 
@@ -31,7 +31,7 @@ public class TestFunctionSchema {
     @MethodSource("dotsReplacements")
     public void shouldReplaceDotsInProvidedSearchTerm(final String input, final String searchTerm, final String expected) {
         //if dots not replaced it can match any char i.e. DOG,CONTEST would match for DOG.CONTEST
-        final String output = FunctionSchema.getReplacedDefinition(
+        final String output = CallableSchema.getReplacedDefinition(
                 input,
                 ImmutableMap.of(searchTerm, new FromSchema(ObjectSchema.builder().build(Name.of("dog", "contestWinners")), ImmutableSet.of())),
                 v -> v.getQualifiedName().toString());
@@ -54,7 +54,7 @@ public class TestFunctionSchema {
     @MethodSource("replacementAtTheStart")
     public void shouldReplaceIfSearchTermIsAtTheStartOfGivenString(final String input, final String searchTerm, final String expected) {
 
-        final String output = FunctionSchema.getReplacedDefinition(
+        final String output = CallableSchema.getReplacedDefinition(
                 input,
                 ImmutableMap.of(searchTerm, new FromSchema(ObjectSchema.builder().build(Name.of("dog", "contest")), ImmutableSet.of())),
                 v -> v.getQualifiedName().toString());
@@ -78,7 +78,7 @@ public class TestFunctionSchema {
     public void shouldReplaceIfSearchTermIsAtTheEndOfGivenString(final String input, final String searchTerm, final String expected) {
 
 
-        final String output = FunctionSchema.getReplacedDefinition(input, ImmutableMap.of(searchTerm, new FromSchema(
+        final String output = CallableSchema.getReplacedDefinition(input, ImmutableMap.of(searchTerm, new FromSchema(
                 ObjectSchema.builder().build(Name.of("test", "Object")), ImmutableSet.of()
         )), v -> v.getQualifiedName().toString());
 
@@ -100,7 +100,7 @@ public class TestFunctionSchema {
     @MethodSource("replacementInTheMiddle")
     public void shouldReplaceIfSearchTermIsInTheMiddle(final String input, final String searchTerm, final String expected) {
 
-        final String output = FunctionSchema.getReplacedDefinition(input, ImmutableMap.of(searchTerm, new FromSchema(
+        final String output = CallableSchema.getReplacedDefinition(input, ImmutableMap.of(searchTerm, new FromSchema(
                 ObjectSchema.builder().build(Name.of("test", "Object")), ImmutableSet.of()
         )), v -> v.getQualifiedName().toString());
 
@@ -120,7 +120,7 @@ public class TestFunctionSchema {
     public void shouldReplaceIfMultipleDifferentMatches() {
 
         final String input = "SELECT first.function(second.function(someValue)) as transformed FROM test where result is null JOIN \"badTestRuns\" btr ON btr.id = id JOIN @{example_test_runs} on id JOIN badTestRuns ON id";
-        final String output = FunctionSchema.getReplacedDefinition(input,
+        final String output = CallableSchema.getReplacedDefinition(input,
                 ImmutableMap.of("test", new FromSchema(ObjectSchema.builder().build(Name.of("test", "Object")), ImmutableSet.of()),
                         "badTestRuns", new FromSchema(ObjectSchema.builder().build(Name.of("bad", "test", "runs")), ImmutableSet.of()),
                         "first.function", new FromSchema(ObjectSchema.builder().build(Name.of("first", "good")), ImmutableSet.of()),

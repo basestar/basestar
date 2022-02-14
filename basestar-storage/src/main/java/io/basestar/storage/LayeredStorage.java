@@ -80,5 +80,8 @@ public interface LayeredStorage extends Storage {
         void deleteObjectLayer(ReferableSchema schema, String id, Map<String, Object> before);
 
         void writeHistoryLayer(ReferableSchema schema, String id, Map<String, Object> after);
+
+        @Deprecated
+        void writeObjectLayer(ReferableSchema schema, Map<String, Object> after);
     }
 }
