@@ -105,3 +105,22 @@ Thing:
         - project.read
         
 ```
+
+
+# Building
+1. Ensure you have ![Localstack](https://docs.localstack.cloud/get-started/) started
+    - if this is the first time, this will get localstack up and running:
+   ```bash
+   python3 -m pip install localstack
+   docker pull localstack/localstack
+   docker pull amazon/dynamodb-local:latest
+   docker pull docker.elastic.co/elasticsearch/elasticsearch:7.8.0
+   localstack start
+   ```
+2. Ensure you have the leveldb 1.8 native library installed on your system if you can
+   (failure to provide this will result in testing against a slower, Java-based implementation of LevelDB)
+3. Build and run tests
+```bash
+mvn test
+```
+
