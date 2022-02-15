@@ -49,11 +49,9 @@ import org.jooq.Field;
 import org.jooq.QueryPart;
 import org.jooq.impl.DSL;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryPart> {
@@ -302,9 +300,21 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
     @Override
     public QueryPart visitIn(final In expression) {
 
-        final Field<Object> lhs = dialect.field(expression.getLhs().visit(this), Object.class);
-        final Field<Object> rhs = dialect.field(expression.getRhs().visit(this), Object.class);
-        return (lhs != null && rhs != null) ? dialect.in(lhs, rhs) : null;
+        final Expression lhs = expression.getLhs();
+        final Expression rhs = expression.getRhs();
+        final Field<Object> lhsField = dialect.field(lhs.visit(this), Object.class);
+        if (rhs instanceof Constant) {
+            final Object values = ((Constant) rhs).getValue();
+            if (values instanceof Collection) {
+                return (lhsField != null) ? dialect.simpleIn(lhsField, ((Collection<?>) values).stream()
+                        .map(dialect::bind).collect(Collectors.toList())) : null;
+            } else {
+                throw new UnsupportedOperationException("RHS of in expression must be a collection");
+            }
+        } else {
+            final Field<Object> rhsField = dialect.field(rhs.visit(this), Object.class);
+            return (lhsField != null && rhsField != null) ? dialect.in(lhsField, rhsField) : null;
+        }
     }
 
     @Override

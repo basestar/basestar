@@ -785,7 +785,12 @@ public interface SQLDialect {
         return lhs.in(rhs);
     }
 
-    default QueryPart bind(final Object value) {
+    default QueryPart simpleIn(final Field<Object> lhs, final List<Field<?>> rhs) {
+
+        return lhs.in(rhs.toArray(new Field<?>[0]));
+    }
+
+    default Field<?> bind(final Object value) {
 
         return DSL.val(value);
     }
