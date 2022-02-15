@@ -132,15 +132,15 @@ class TestDatabaseServer {
         );
         this.emitter = Mockito.mock(Emitter.class);
         when(emitter.emit(any(Event.class))).then(inv -> {
-            log.info("Emitting {}", inv.getArgument(0, Event.class));
+            log.debug("Emitting {}", inv.getArgument(0, Event.class));
             return CompletableFuture.completedFuture(null);
         });
         when(emitter.emit(any(Collection.class))).then(inv -> {
             final Emitter emitter = (Emitter) inv.getMock();
             final Collection<Event> events = inv.getArgument(0, Collection.class);
-            log.info("Got collection of events with size: {}", events.size());
+            log.debug("Got collection of events with size: {}", events.size());
             events.forEach(emitter::emit);
-            log.info("..Done emitting collection of events with size: {}", events.size());
+            log.debug("..Done emitting collection of events with size: {}", events.size());
 
             return CompletableFuture.completedFuture(null);
         });
@@ -241,7 +241,6 @@ class TestDatabaseServer {
 
     @Test
     void updateSimple() throws Exception {
-        log.info(" BEGIN OF UPDATE SIMPLE") ;
         final String id = UUID.randomUUID().toString();
 
         final Map<String, Object> data1 = ImmutableMap.of(
@@ -279,15 +278,20 @@ class TestDatabaseServer {
         final Map<String, Object> version2 = database.read(caller, SIMPLE, id, 2L).get();
         assertEquals(read, version2);
 
-        log.info(" VERIFICATION PHASE OF UPDATE SIMPLE") ;
+        final InOrder inorder = inOrder(emitter);
 
-        final InOrder inOrder = Mockito.inOrder(emitter);
-        inOrder.verify(emitter).emit(ObjectUpdatedEvent.of(SIMPLE, id, 1L, create, update));
+        // we see objects apparently "emit"'d twice. What we actually see is
+        // once through the collection interface, once through the scalar interface
+        inorder.verify(emitter)
+                .emit(Collections.singleton(ObjectCreatedEvent.of(SIMPLE, id, create)));
+        inorder.verify(emitter)
+                .emit(ObjectCreatedEvent.of(SIMPLE, id,  create));
             //dont emmit events for identical values updates
-        // inOrder.verify(emitter).emit(any(ObjectUpdatedEvent.class));
-        inOrder.verifyNoMoreInteractions();
-
-        log.info(" VERIFICATION PHASE OF UPDATE SIMPLE") ;
+        inorder.verify(emitter)
+                .emit(Collections.singleton(ObjectUpdatedEvent.of(SIMPLE, id, 1L, create, update)));
+        inorder.verify(emitter)
+                .emit(ObjectUpdatedEvent.of(SIMPLE, id, 1L, create, update));
+        inorder.verifyNoMoreInteractions();
     }
 
     @Test
