@@ -7,10 +7,7 @@ import io.basestar.schema.use.UseRef;
 import io.basestar.schema.use.UseString;
 import io.basestar.storage.sql.resolver.ValueResolver;
 import io.basestar.util.Name;
-import org.jooq.Configuration;
-import org.jooq.DataType;
-import org.jooq.QueryPart;
-import org.jooq.SQLDialect;
+import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultDataType;
 import org.jooq.impl.SQLDataType;
@@ -210,7 +207,7 @@ public class TrinoDialect extends JSONDialect {
     }
 
     @Override
-    public QueryPart bind(final Object value) {
+    public Field<?> bind(final Object value) {
 
         // Use inline rather than val because some JDBC drivers (Athena) don't support positional params
         return DSL.inline(value);
