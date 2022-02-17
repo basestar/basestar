@@ -490,7 +490,7 @@ public class SQLStorage implements DefaultLayerStorage {
                         @Override
                         public QueryPart visitRef(final UseRef type) {
 
-                            return dialect.refIdField(type, name);
+                            return dialect.refIdField(strategy.getNamingStrategy(), type, name);
                         }
                     });
                 }

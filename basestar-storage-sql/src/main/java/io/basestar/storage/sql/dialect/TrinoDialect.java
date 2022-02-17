@@ -6,6 +6,7 @@ import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.use.UseRef;
 import io.basestar.schema.use.UseString;
 import io.basestar.storage.sql.resolver.ValueResolver;
+import io.basestar.storage.sql.strategy.NamingStrategy;
 import io.basestar.util.Name;
 import org.jooq.*;
 import org.jooq.impl.DSL;
@@ -79,7 +80,7 @@ public class TrinoDialect extends JSONDialect {
     }
 
     @Override
-    public QueryPart refIdField(final UseRef type, final Name name) {
+    public QueryPart refIdField(final NamingStrategy namingStrategy, final UseRef type, final Name name) {
 
         final Name rest = name.withoutFirst();
         if (rest.equals(ObjectSchema.ID_NAME)) {

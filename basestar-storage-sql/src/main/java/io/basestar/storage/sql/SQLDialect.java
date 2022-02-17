@@ -707,9 +707,9 @@ public interface SQLDialect {
         }
     }
 
-    default QueryPart refIdField(final UseRef type, final Name name) {
+    default QueryPart refIdField(final NamingStrategy namingStrategy, final UseRef type, final Name name) {
 
-        return DSL.field(columnName(name));
+        return DSL.field(columnName(namingStrategy.getColumnCasing(), name));
     }
 
     default Optional<? extends Field<?>> missingMetadataValue(final LinkableSchema schema, final String name) {
