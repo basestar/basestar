@@ -193,9 +193,8 @@ public class SQLStorage implements DefaultLayerStorage {
             final SQLExpressionVisitor visitor = strategy.expressionVisitor(schema);
             final Condition condition = visitor.condition(bound);
 
-            final Pair<String, List<Object>> sqlAndBindings = ((FromSql) from)
-                    .getReplacedSqlWithBindings(s -> namingStrategy.reference(s).toString(), schema.getArguments(), arguments);
-            final SQL sql = DSL.sql("(" + sqlAndBindings.getFirst() + ")", sqlAndBindings.getSecond().toArray());
+            final String initialSql = ((FromSql) from).getReplacedSql(s -> namingStrategy.reference(s).toString());
+            final SQL sql = dialect.getReplacedSqlWithBindings(initialSql, schema.getArguments(), arguments);
 
             return (stats, token, count) -> {
 

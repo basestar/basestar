@@ -89,11 +89,16 @@ public class UseRef implements UseLinkable {
         return visitor.visitRef(this);
     }
 
+    public boolean isConcrete() {
+
+        return schema.isConcrete();
+    }
+
     public static UseRef from(final ReferableSchema schema, final Object config) {
 
         final boolean versioned;
         final Cascade cascade;
-        if(config instanceof Map) {
+        if (config instanceof Map) {
             final Map<?, ?> map = ((Map<?, ?>) config);
             versioned = Coercion.isTruthy(map.get(VERSIONED_KEY));
             cascade = Cascade.from(map.get(CASCADE_KEY));

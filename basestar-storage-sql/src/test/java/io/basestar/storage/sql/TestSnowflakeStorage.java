@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
+import io.basestar.expression.constant.Constant;
 import io.basestar.schema.*;
 import io.basestar.schema.use.UseString;
 import io.basestar.schema.util.Casing;
@@ -32,6 +33,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 
 // Cannot run without a real configured snowflake environment
@@ -59,6 +61,8 @@ public class TestSnowflakeStorage extends TestSQLStorage {
 
     // This database exists in a demo account, it is only used as the default DB in the custom name override test
     private static final String SNOWFLAKE_DEFAULT_DATABASE = Nullsafe.orDefault(System.getenv("SNOWFLAKE_DEFAULT_DATABASE"), "SNOWFLAKE");
+
+    protected static final String SQL_STRUCT_QUERY = "SqlStructQuery";
 
     @Override
     protected SQLDialect dialect() {
@@ -210,5 +214,27 @@ public class TestSnowflakeStorage extends TestSQLStorage {
         final Expression expr = Expression.parse("p.x > 0 && p.y > 0 for all p of arrayStruct");
         final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, Immutable.map(), expr, Collections.emptyList(), Collections.emptySet()).page(100).join();
         assertEquals(3, results.size());
+    }
+
+    @Test
+    public void testSqlStructQuery() throws Exception {
+
+        assumeTrue(supportsSql());
+
+        final Storage storage = storage(namespace);
+
+        bulkLoad(storage, loadAddresses());
+
+        final QuerySchema schema = namespace.requireQuerySchema(SQL_STRUCT_QUERY);
+
+        final Page<Map<String, Object>> firstPage = storage.query(Consistency.ATOMIC, schema, Immutable.map("city", Immutable.map("name", "Washington")), Constant.TRUE, Immutable.list(), ImmutableSet.of())
+                .page(20).get();
+
+        assertEquals(1, firstPage.size());
+        assertEquals(schema.create(ImmutableMap.of(
+                "city", "Washington",
+                "count", 2L,
+                "state", "District of Columbia"
+        )), firstPage.get(0));
     }
 }
