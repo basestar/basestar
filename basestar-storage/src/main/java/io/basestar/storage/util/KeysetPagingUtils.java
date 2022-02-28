@@ -26,7 +26,6 @@ import io.basestar.schema.LinkableSchema;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseBinary;
 import io.basestar.schema.use.UseInteger;
-import io.basestar.schema.use.UseString;
 import io.basestar.storage.exception.PagingTokenSyntaxException;
 import io.basestar.util.Bytes;
 import io.basestar.util.Name;

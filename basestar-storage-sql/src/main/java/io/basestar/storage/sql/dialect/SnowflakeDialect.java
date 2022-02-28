@@ -28,10 +28,7 @@ import org.jooq.impl.DefaultDataType;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -473,5 +470,17 @@ public class SnowflakeDialect extends JSONDialect {
                 .collect(Collectors.joining(",")));
 
         return context.execute(DSL.sql(merge.toString(), mergeSelect(orderedRecord)));
+    }
+
+    @Override
+    public Field<?> bind(final Object value) {
+
+        if (value instanceof Collection<?>) {
+            final Collection<?> collection = (Collection<?>) value;
+            return DSL.field(DSL.sql("ARRAY_CONSTRUCT(" + collection.stream().map(v -> "?").collect(Collectors.joining(", ")) + ")",
+                    collection.stream().map(this::bind).toArray(QueryPart[]::new)));
+        } else {
+            return super.bind(value);
+        }
     }
 }

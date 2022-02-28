@@ -27,6 +27,8 @@ import java.util.Comparator;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -94,32 +96,86 @@ public interface SQLDialect {
 
     DataType<?> anyType(UseAny type);
 
-    <T> Map<Field<?>, SelectField<?>> arrayToSQLValues(UseArray<T> type, FieldResolver field, List<T> value);
+    SelectField<?> dateToSQLValue(UseDate type, LocalDate value);
 
-    Map<Field<?>, SelectField<?>> dateToSQLValues(UseDate type, FieldResolver field, LocalDate value);
+    SelectField<?> dateTimeToSQLValue(UseDateTime type, Instant value);
 
-    Map<Field<?>, SelectField<?>> dateTimeToSQLValues(UseDateTime type, FieldResolver field, Instant value);
+    SelectField<?> binaryToSQLValue(UseBinary type, Bytes value);
 
-    <T> Map<Field<?>, SelectField<?>> pageToSQLValues(UsePage<T> type, FieldResolver field, Page<T> value);
+    default SelectField<?> secretToSQLValue(final UseSecret type, final Secret value) {
 
-    <T> Map<Field<?>, SelectField<?>> setToSQLValues(UseSet<T> type, FieldResolver field, Set<T> value);
+        return binaryToSQLValue(UseBinary.DEFAULT, new Bytes(value.encrypted()));
+    }
 
-    <T> Map<Field<?>, SelectField<?>> mapToSQLValues(UseMap<T> type, FieldResolver field, Map<String, T> value);
+    <T> SelectField<?> mapToSQLValue(UseMap<T> type, Map<String, T> value);
 
-    Map<Field<?>, SelectField<?>> structToSQLValues(UseStruct type, FieldResolver field, Instance value);
+    <T> SelectField<?> arrayToSQLValue(UseArray<T> type, List<T> value);
 
-    Map<Field<?>, SelectField<?>> viewToSQLValues(UseView type, FieldResolver field, Instance value);
+    <T> SelectField<?> setToSQLValue(UseSet<T> type, Set<T> value);
 
-    Map<Field<?>, SelectField<?>> refToSQLValues(UseRef type, FieldResolver field, Instance value);
+    <T> SelectField<?> pageToSQLValue(UsePage<T> type, Page<T> value);
 
-    Map<Field<?>, SelectField<?>> binaryToSQLValues(UseBinary type, FieldResolver field, Bytes value);
+    SelectField<?> refToSQLValue(UseRef type, Instance value);
+
+    SelectField<?> structToSQLValue(UseStruct type, Instance value);
+
+    SelectField<?> viewToSQLValue(UseView type, Instance value);
+
+    SelectField<?> anyToSQLValue(UseAny type, Object value);
+
+    default <T> Map<Field<?>, SelectField<?>> arrayToSQLValues(final UseArray<T> type, final FieldResolver field, final List<T> value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, arrayToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
+
+    default Map<Field<?>, SelectField<?>> dateToSQLValues(final UseDate type, final FieldResolver field, final LocalDate value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, dateToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
+
+    default Map<Field<?>, SelectField<?>> dateTimeToSQLValues(final UseDateTime type, final FieldResolver field, final Instant value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, dateTimeToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
+
+    default <T> Map<Field<?>, SelectField<?>> pageToSQLValues(final UsePage<T> type, final FieldResolver field, final Page<T> value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, pageToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
+
+    default <T> Map<Field<?>, SelectField<?>> setToSQLValues(final UseSet<T> type, final FieldResolver field, final Set<T> value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, setToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
+
+    default <T> Map<Field<?>, SelectField<?>> mapToSQLValues(final UseMap<T> type, final FieldResolver field, final Map<String, T> value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, mapToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
+
+    default Map<Field<?>, SelectField<?>> viewToSQLValues(final UseView type, final FieldResolver field, final Instance value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, viewToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
+
+    default Map<Field<?>, SelectField<?>> binaryToSQLValues(final UseBinary type, final FieldResolver field, final Bytes value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, binaryToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
+
+    default Map<Field<?>, SelectField<?>> anyToSQLValues(final UseAny type, final FieldResolver field, final Object value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, anyToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
 
     default Map<Field<?>, SelectField<?>> secretToSQLValues(final UseSecret type, final FieldResolver field, final Secret value) {
 
         return binaryToSQLValues(UseBinary.DEFAULT, field, new Bytes(value.encrypted()));
     }
 
-    Map<Field<?>, SelectField<?>> anyToSQLValues(UseAny type, FieldResolver field, Object value);
+    Map<Field<?>, SelectField<?>> structToSQLValues(UseStruct type, FieldResolver field, Instance value);
+
+    Map<Field<?>, SelectField<?>> refToSQLValues(UseRef type, FieldResolver field, Instance value);
 
     <T> List<T> arrayFromSQLValue(UseArray<T> type, ValueResolver value);
 
@@ -397,6 +453,105 @@ public interface SQLDialect {
         });
     }
 
+    default SelectField<?> toSQLValue(final Use<?> type, final Object value) {
+
+        if (value == null) {
+            return null;
+        }
+
+        return type.visit(new Use.Visitor.Defaulting<SelectField<?>>() {
+
+            @Override
+            public <T> SelectField<?> visitScalar(final UseScalar<T> type) {
+
+                return DSL.val(type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitRef(final UseRef type) {
+
+                return refToSQLValue(type, (Instance) value);
+            }
+
+            @Override
+            public <T> SelectField<?> visitArray(final UseArray<T> type) {
+
+                return arrayToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public <T> SelectField<?> visitPage(final UsePage<T> type) {
+
+                return pageToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitComposite(final UseComposite type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public <T> SelectField<?> visitSet(final UseSet<T> type) {
+
+                return setToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public <T> SelectField<?> visitMap(final UseMap<T> type) {
+
+                return mapToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitStruct(final UseStruct type) {
+
+                return structToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitAny(final UseAny type) {
+
+                return anyToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitBinary(final UseBinary type) {
+
+                return binaryToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitDate(final UseDate type) {
+
+                return dateToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitDateTime(final UseDateTime type) {
+
+                return dateTimeToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitView(final UseView type) {
+
+                return viewToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public <T> SelectField<?> visitOptional(final UseOptional<T> type) {
+
+                return toSQLValue(type.getType(), value);
+            }
+
+            @Override
+            public SelectField<?> visitSecret(final UseSecret type) {
+
+                return secretToSQLValue(type, type.create(value));
+            }
+        });
+    }
 
     default Object fromSQLValue(final Use<?> type, final ValueResolver value) {
 
@@ -707,9 +862,9 @@ public interface SQLDialect {
         }
     }
 
-    default QueryPart refIdField(final UseRef type, final Name name) {
+    default QueryPart refIdField(final NamingStrategy namingStrategy, final UseRef type, final Name name) {
 
-        return DSL.field(columnName(name));
+        return DSL.field(columnName(namingStrategy.getColumnCasing(), name));
     }
 
     default Optional<? extends Field<?>> missingMetadataValue(final LinkableSchema schema, final String name) {
@@ -785,7 +940,12 @@ public interface SQLDialect {
         return lhs.in(rhs);
     }
 
-    default QueryPart bind(final Object value) {
+    default QueryPart simpleIn(final Field<Object> lhs, final List<Field<?>> rhs) {
+
+        return lhs.in(rhs.toArray(new Field<?>[0]));
+    }
+
+    default Field<?> bind(final Object value) {
 
         return DSL.val(value);
     }
@@ -924,5 +1084,29 @@ public interface SQLDialect {
         }
         return context.deleteFrom(table)
                 .where(condition).limit(DSL.inline(1)).execute();
+    }
+
+    default SQL getReplacedSqlWithBindings(final String sql, final List<Argument> arguments, final Map<String, Object> values) {
+
+        final List<Object> bindings = new ArrayList<>();
+        final StringBuffer str = new StringBuffer();
+
+        final Pattern pattern = Pattern.compile("\\$\\{(.*?)}");
+        final Matcher matcher = pattern.matcher(sql);
+        while (matcher.find()) {
+            final String name = matcher.group(1);
+            final Argument argument = arguments.stream().filter(arg -> name.equals(arg.getName()))
+                    .findFirst().orElseThrow(() -> new IllegalStateException("Argument " + name + " not found"));
+            final Object value = values.get(argument.getName());
+            if (value == null && !argument.getType().isOptional()) {
+                throw new IllegalStateException("Argument " + argument.getName() + " not provided");
+            }
+            final Field<?> field = Nullsafe.map(toSQLValue(argument.getType(), value), DSL::field);
+            matcher.appendReplacement(str, "?");
+            bindings.add(field);
+        }
+        matcher.appendTail(str);
+
+        return DSL.sql("(" + str + ")", bindings.toArray());
     }
 }

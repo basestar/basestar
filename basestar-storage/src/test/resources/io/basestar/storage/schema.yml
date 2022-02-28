@@ -338,6 +338,28 @@ SqlQuery:
     count:
       type: integer
 
+Name:
+  type: struct
+  properties:
+    name:
+      type: string
+
+SqlStructQuery:
+  type: query
+  sql: SELECT * FROM @{sqlView} WHERE ${city} IS NULL OR "city" = ${city}['name']
+  arguments:
+    - name: city
+      type: Name?
+  using:
+    sqlView: SqlView
+  properties:
+    state:
+      type: string
+    city:
+      type: string
+    count:
+      type: integer
+
 DefaultSequence:
   type: sequence
 

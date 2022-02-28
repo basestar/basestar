@@ -3,7 +3,6 @@ package io.basestar.storage.sql.dialect;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.basestar.jackson.BasestarModule;
 import io.basestar.schema.Instance;
 import io.basestar.schema.Property;
@@ -101,39 +100,69 @@ public abstract class JSONDialect implements SQLDialect {
     }
 
     @Override
-    public <T> Map<Field<?>, SelectField<?>> arrayToSQLValues(final UseArray<T> type, final FieldResolver field, final List<T> value) {
+    public SelectField<?> dateToSQLValue(final UseDate type, final LocalDate value) {
 
-        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, toJson(value))).orElseGet(ImmutableMap::of);
+        return DSL.val(ISO8601.toSqlDate(value));
     }
 
     @Override
-    public Map<Field<?>, SelectField<?>> dateToSQLValues(final UseDate type, final FieldResolver field, final LocalDate value) {
+    public SelectField<?> dateTimeToSQLValue(final UseDateTime type, final Instant value) {
 
-        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, DSL.val(ISO8601.toSqlDate(value)))).orElseGet(ImmutableMap::of);
+        return DSL.val(ISO8601.toSqlTimestamp(value));
     }
 
     @Override
-    public Map<Field<?>, SelectField<?>> dateTimeToSQLValues(final UseDateTime type, final FieldResolver field, final Instant value) {
+    public SelectField<?> binaryToSQLValue(final UseBinary type, final Bytes value) {
 
-        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, DSL.val(ISO8601.toSqlTimestamp(value)))).orElseGet(ImmutableMap::of);
+        return DSL.val(value.toBase64());
     }
 
     @Override
-    public <T> Map<Field<?>, SelectField<?>> pageToSQLValues(final UsePage<T> type, final FieldResolver field, final Page<T> value) {
+    public <T> SelectField<?> mapToSQLValue(final UseMap<T> type, final Map<String, T> value) {
 
-        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, toJson(value))).orElseGet(ImmutableMap::of);
+        return toJson(value);
     }
 
     @Override
-    public <T> Map<Field<?>, SelectField<?>> setToSQLValues(final UseSet<T> type, final FieldResolver field, final Set<T> value) {
+    public <T> SelectField<?> arrayToSQLValue(final UseArray<T> type, final List<T> value) {
 
-        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, toJson(value))).orElseGet(ImmutableMap::of);
+        return toJson(value);
     }
 
     @Override
-    public <T> Map<Field<?>, SelectField<?>> mapToSQLValues(final UseMap<T> type, final FieldResolver field, final Map<String, T> value) {
+    public <T> SelectField<?> setToSQLValue(final UseSet<T> type, final Set<T> value) {
 
-        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, toJson(value))).orElseGet(ImmutableMap::of);
+        return toJson(value);
+    }
+
+    @Override
+    public <T> SelectField<?> pageToSQLValue(final UsePage<T> type, final Page<T> value) {
+
+        return toJson(value);
+    }
+
+    @Override
+    public SelectField<?> refToSQLValue(final UseRef type, final Instance value) {
+
+        return toJson(value);
+    }
+
+    @Override
+    public SelectField<?> structToSQLValue(final UseStruct type, final Instance value) {
+
+        return toJson(value);
+    }
+
+    @Override
+    public SelectField<?> viewToSQLValue(final UseView type, final Instance value) {
+
+        return toJson(value);
+    }
+
+    @Override
+    public SelectField<?> anyToSQLValue(final UseAny type, final Object value) {
+
+        return toJson(value);
     }
 
     @Override
@@ -148,12 +177,6 @@ public abstract class JSONDialect implements SQLDialect {
     }
 
     @Override
-    public Map<Field<?>, SelectField<?>> viewToSQLValues(final UseView type, final FieldResolver field, final Instance value) {
-
-        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, toJson(value))).orElseGet(ImmutableMap::of);
-    }
-
-    @Override
     public Map<Field<?>, SelectField<?>> refToSQLValues(final UseRef type, final FieldResolver field, final Instance value) {
 
         final Map<Field<?>, SelectField<?>> fields = new HashMap<>(toSQLValues(UseString.DEFAULT, field.resolver(Name.of(ReferableSchema.ID)), value.getId()));
@@ -162,18 +185,6 @@ public abstract class JSONDialect implements SQLDialect {
 
         }
         return fields;
-    }
-
-    @Override
-    public Map<Field<?>, SelectField<?>> binaryToSQLValues(final UseBinary type, final FieldResolver field, final Bytes value) {
-
-        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, DSL.val(value.toBase64()))).orElseGet(ImmutableMap::of);
-    }
-
-    @Override
-    public Map<Field<?>, SelectField<?>> anyToSQLValues(final UseAny type, final FieldResolver field, final Object value) {
-
-        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, toJson(value))).orElseGet(ImmutableMap::of);
     }
 
     @Override

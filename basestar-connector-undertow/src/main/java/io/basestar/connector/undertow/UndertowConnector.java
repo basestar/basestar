@@ -23,8 +23,14 @@ package io.basestar.connector.undertow;
 import io.basestar.api.API;
 import io.undertow.Undertow;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.List;
 
 @Data
+@Slf4j
 public class UndertowConnector {
 
     private final Undertow server;
@@ -46,7 +52,7 @@ public class UndertowConnector {
         if(bufferSize != null) {
             builder.setBufferSize(bufferSize);
         }
-        if(directBuffers != null) {
+        if (directBuffers != null) {
             builder.setDirectBuffers(directBuffers);
         }
         this.server = builder.build();
@@ -55,6 +61,19 @@ public class UndertowConnector {
     public void start() {
 
         server.start();
+    }
+
+    public int port() {
+
+        final List<Undertow.ListenerInfo> listeners = server.getListenerInfo();
+        if (listeners.isEmpty()) {
+            throw new IllegalStateException("no listeners");
+        }
+        final SocketAddress address = listeners.get(0).getAddress();
+        if (!(address instanceof InetSocketAddress)) {
+            throw new IllegalStateException("invalid listener");
+        }
+        return ((InetSocketAddress) address).getPort();
     }
 
     public void stop() {
