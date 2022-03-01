@@ -162,7 +162,12 @@ public class ElasticsearchUtils {
                 final BoolQueryBuilder inner = QueryBuilders.boolQuery();
                 for (int j = 0; j < i; ++j) {
                     final Name name = sort.get(j).getName();
-                    inner.must(QueryBuilders.termQuery(name.toString(), sorting.get(j)));
+                    final Object value = sorting.get(j);
+                    if (value == null) {
+                        inner.mustNot(QueryBuilders.existsQuery(name.toString()));
+                    } else {
+                        inner.must(QueryBuilders.termQuery(name.toString(), sorting.get(j)));
+                    }
                 }
                 inner.must(pagingRange(sort.get(i), sorting.get(i)));
                 outer.should(inner);
