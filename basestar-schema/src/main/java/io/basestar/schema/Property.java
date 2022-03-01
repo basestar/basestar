@@ -420,9 +420,9 @@ public class Property implements Member {
         final Name qualifiedName = path.with(getName());
         if (immutable && !Objects.equals(before, after)) {
             violations.add(new Constraint.Violation(qualifiedName, Constraint.IMMUTABLE, null, ImmutableSet.of()));
-        } else if (after != null) {
+        } else {
             violations.addAll(((Use<Object>) type).validate(context, qualifiedName, after));
-            if (!constraints.isEmpty()) {
+            if (after != null && !constraints.isEmpty()) {
                 final Context newContext = context.with(VAR_VALUE, after);
                 for (final Constraint constraint : constraints) {
                     violations.addAll(constraint.violations(type, newContext, qualifiedName, after));
