@@ -38,10 +38,15 @@
             <version>0.12</version>
         </dependency>
         <dependency>
+            <groupId>org.iq80.leveldb</groupId>
+            <artifactId>leveldb</artifactId>
+            <version>0.12</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.fusesource.leveldbjni</groupId>
             <artifactId>leveldbjni-all</artifactId>
             <version>1.8</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.basestar</groupId>
@@ -53,6 +58,16 @@
             <artifactId>basestar-storage</artifactId>
             <classifier>tests</classifier>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
