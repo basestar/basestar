@@ -103,7 +103,7 @@ public interface Member extends Named, Described, Serializable, Extendable {
 
             final Member result = getMember(name, inherited);
             if (result == null) {
-                throw new MissingMemberException(name);
+                throw new MissingMemberException(name, (inherited ? getMembers() : getDeclaredMembers()).keySet());
             } else {
                 return result;
             }

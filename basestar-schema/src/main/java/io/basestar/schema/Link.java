@@ -457,7 +457,7 @@ public class Link implements Member {
 
             final Link result = getLink(name, inherited);
             if (result == null) {
-                throw new MissingMemberException(name);
+                throw new MissingMemberException(name, (inherited ? getLinks() : getDeclaredLinks()).keySet());
             } else {
                 return result;
             }
