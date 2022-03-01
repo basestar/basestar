@@ -14,7 +14,7 @@
         <awssdk2.version>2.10.86</awssdk2.version>
         <awssdk1.version>1.11.769</awssdk1.version>
         <elasticsearch.version>7.4.2</elasticsearch.version>
-        <jackson.version>2.11.1</jackson.version>
+        <jackson.version>2.11.4</jackson.version>
         <jackson-databind.version>2.11.1</jackson-databind.version>
         <bson4jackson.version>2.9.2</bson4jackson.version>
         <guava.version>30.0-jre</guava.version>
@@ -23,7 +23,7 @@
         <micrometer.version>1.3.6</micrometer.version>
         <unirest.version>3.4.01</unirest.version>
         <avro.version>1.9.2</avro.version>
-        <scala.version>2.12.12</scala.version>
+        <scala.version>2.12.15</scala.version>
         <spark.version>3.0.1</spark.version>
         <hadoop.version>2.8.5</hadoop.version>
         <hazelcast.version>4.0</hazelcast.version>
@@ -32,6 +32,7 @@
         <jsr380.version>2.0.1.Final</jsr380.version>
         <jsr305.version>3.0.2</jsr305.version>
         <jooq.version>3.13.1</jooq.version>
+        <testcontainers.version>1.15.3</testcontainers.version>
     </properties>
 
     <dependencyManagement>
@@ -409,7 +410,44 @@
                 <artifactId>jooq</artifactId>
                 <version>${jooq.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers</artifactId>
+                <version>${testcontainers.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${testcontainers.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${testcontainers.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>trino</artifactId>
+                <version>${testcontainers.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>mysql</artifactId>
+                <version>${testcontainers.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
+    <profiles>
+        <profile>
+            <id>jdk9plus</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <properties>
+                <spark.version>3.2.1</spark.version>
+            </properties>
+        </profile>
+    </profiles>
 </project>

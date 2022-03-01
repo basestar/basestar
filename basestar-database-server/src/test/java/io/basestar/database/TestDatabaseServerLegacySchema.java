@@ -79,12 +79,13 @@ class TestDatabaseServerLegacySchema {
         );
         this.emitter = Mockito.mock(Emitter.class);
         when(emitter.emit(any(Event.class))).then(inv -> {
-            log.info("Emitting {}", inv.getArgumentAt(0, Event.class));
+            log.info("Emitting {}", inv.getArgument(0, Event.class));
             return CompletableFuture.completedFuture(null);
         });
         when(emitter.emit(any(Collection.class))).then(inv -> {
             final Emitter emitter = (Emitter) inv.getMock();
-            inv.getArgumentAt(0, Collection.class).forEach(event -> emitter.emit((Event) event));
+            final Collection<Event> events = inv.getArgument(0, Collection.class);
+            events.forEach(emitter::emit);
             return CompletableFuture.completedFuture(null);
         });
         this.storage = MemoryStorage.builder().build();

@@ -10,9 +10,12 @@
     <artifactId>basestar-test</artifactId>
 
     <properties>
-        <mockito.version>1.10.19</mockito.version>
+        <mockito.version>4.3.1</mockito.version>
+        <hamcrest.version>2.2</hamcrest.version> <!-- evicting 1.1 requested by Mockito 1.10.19 -->
+        <objenesis.version>3.2</objenesis.version> <!-- evicting 2.1 requested by Mockito 1.10.19 -->
+
         <csv.version>1.8</csv.version>
-        <docker-java.version>3.2.1</docker-java.version>
+        <docker-java.version>3.2.12</docker-java.version>
     </properties>
 
     <dependencyManagement>
@@ -41,8 +44,18 @@
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
+            <artifactId>mockito-core</artifactId>
             <version>${mockito.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest</artifactId>
+            <version>${hamcrest.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.objenesis</groupId>
+            <artifactId>objenesis</artifactId>
+            <version>${objenesis.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>

@@ -54,7 +54,7 @@ class TestElasticsearchStorage extends TestStorage {
     static void startLocalStack() {
 
         TestContainers.ensure(ContainerSpec.builder()
-                .image("docker.elastic.co/elasticsearch/elasticsearch:7.4.0")
+                .image("docker.elastic.co/elasticsearch/elasticsearch:7.8.0")
                 .env("discovery.type=single-node")
                 .port(PORT)
                 .waitFor(Pattern.compile(".*Active license is now.*"))
