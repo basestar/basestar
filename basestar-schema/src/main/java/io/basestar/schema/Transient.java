@@ -355,7 +355,7 @@ public class Transient implements Member {
 
             final Transient result = getTransient(name, inherited);
             if (result == null) {
-                throw new MissingMemberException(name);
+                throw new MissingMemberException(name, (inherited ? getTransients() : getDeclaredTransients()).keySet());
             } else {
                 return result;
             }

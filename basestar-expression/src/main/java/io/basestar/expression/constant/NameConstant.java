@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Data
 @AllArgsConstructor
@@ -73,7 +74,7 @@ public class NameConstant implements Expression {
             final Object target = context.get(name.first());
             return resolve(target, name.withoutFirst(), context);
         } else {
-            throw new UndefinedNameException(name.first());
+            throw new UndefinedNameException(name.first(), context.names().stream().map(Name::of).collect(Collectors.toSet()));
         }
     }
 

@@ -20,8 +20,11 @@ package io.basestar.schema.exception;
  * #L%
  */
 
+import com.google.common.base.Joiner;
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.exception.HasExceptionMetadata;
+
+import java.util.Collection;
 
 public class MissingMemberException extends RuntimeException implements HasExceptionMetadata {
 
@@ -33,9 +36,9 @@ public class MissingMemberException extends RuntimeException implements HasExcep
 
     private final String member;
 
-    public MissingMemberException(final String member) {
+    public MissingMemberException(final String member, final Collection<String> names) {
 
-        super("Member " + member + " not found");
+        super("Member " + member + " not found" + (names.isEmpty() ? "" : ", did you mean: " + Joiner.on(", ").join(names)));
         this.member = member;
     }
 

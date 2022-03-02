@@ -147,7 +147,7 @@ public class Query implements Member {
 
             final Query result = getQuery(name, inherited);
             if (result == null) {
-                throw new MissingQueryException(name);
+                throw new MissingQueryException(name, (inherited ? getQueries() : getDeclaredQueries()).keySet());
             } else {
                 return result;
             }

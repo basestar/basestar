@@ -33,10 +33,7 @@ import io.basestar.util.Name;
 import lombok.Data;
 
 import java.lang.reflect.Type;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -189,6 +186,15 @@ public class Lambda implements Expression {
             final boolean has = !arg && context.has(name);
             fullyBound = fullyBound && (has || arg);
             return has;
+        }
+
+        @Override
+        public Set<String> names() {
+
+            final Set<String> names = new HashSet<>();
+            names.addAll(args);
+            names.addAll(context.names());
+            return names;
         }
 
         @Override

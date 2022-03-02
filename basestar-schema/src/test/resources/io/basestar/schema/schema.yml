@@ -49,3 +49,15 @@ User:
           loginCount: integer
           clickCount: integer
 
+Constrained:
+  properties:
+    name:
+      type: string
+    x:
+      type: integer?
+      constraints:
+        - size:
+            min: 2
+            max: 2
+  constraints:
+    - assert: "value.name == 'good'"
