@@ -28,10 +28,7 @@ import io.basestar.util.Name;
 
 import java.io.Serializable;
 import java.lang.reflect.Type;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Stream;
 
 public interface Context extends Serializable {
@@ -70,6 +67,12 @@ public interface Context extends Serializable {
             public boolean has(final String name) {
 
                 return scopeCopy.containsKey(name);
+            }
+
+            @Override
+            public Set<String> names() {
+
+                return scopeCopy.keySet();
             }
 
             @Override
@@ -138,6 +141,15 @@ public interface Context extends Serializable {
             }
 
             @Override
+            public Set<String> names() {
+
+                final Set<String> names = new HashSet<>();
+                names.addAll(scopeCopy.keySet());
+                names.addAll(delegate.names());
+                return names;
+            }
+
+            @Override
             public Callable callable(final Type target, final String method, final Type... args) {
 
                 return delegate.callable(target, method, args);
@@ -164,6 +176,8 @@ public interface Context extends Serializable {
     Object get(String name);
 
     boolean has(String name);
+
+    Set<String> names();
 
     default Context with(final Map<String, ?> scope) {
 

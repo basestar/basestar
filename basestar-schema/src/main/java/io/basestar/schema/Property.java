@@ -418,11 +418,11 @@ public class Property implements Member {
 
         final Set<Constraint.Violation> violations = new HashSet<>();
         final Name qualifiedName = path.with(getName());
-        if(immutable && !Objects.equals(before, after)) {
+        if (immutable && !Objects.equals(before, after)) {
             violations.add(new Constraint.Violation(qualifiedName, Constraint.IMMUTABLE, null, ImmutableSet.of()));
         } else {
-            violations.addAll(((Use<Object>)type).validate(context, qualifiedName, after));
-            if (!constraints.isEmpty()) {
+            violations.addAll(((Use<Object>) type).validate(context, qualifiedName, after));
+            if (after != null && !constraints.isEmpty()) {
                 final Context newContext = context.with(VAR_VALUE, after);
                 for (final Constraint constraint : constraints) {
                     violations.addAll(constraint.violations(type, newContext, qualifiedName, after));
@@ -493,7 +493,7 @@ public class Property implements Member {
 
             final Property result = getProperty(name, inherited);
             if (result == null) {
-                throw new MissingPropertyException(name);
+                throw new MissingPropertyException(name, (inherited ? getProperties() : getDeclaredProperties()).keySet());
             } else {
                 return result;
             }
