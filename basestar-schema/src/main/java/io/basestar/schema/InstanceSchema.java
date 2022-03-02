@@ -32,6 +32,7 @@ import io.basestar.schema.use.UseString;
 import io.basestar.schema.util.*;
 import io.basestar.util.AbstractPath;
 import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
 import io.basestar.util.TopologicalSort;
 import io.leangen.geantyref.TypeFactory;
 
@@ -375,8 +376,8 @@ public interface InstanceSchema extends ValueSchema<Instance>, Member.Resolver, 
         final HashMap<String, Object> changed = new HashMap<>();
         final Map<String, ? extends Member> members = getMembers();
         final List<String> sortedMemberNames = TopologicalSort.sort(members.keySet(), k -> members.get(k)
-                .transientExpand(Name.of(), expand)
-                .stream().map(AbstractPath::first).collect(Collectors.toSet()));
+                .transientExpand(Name.of(), Nullsafe.orDefault(expand))
+                .stream().map(AbstractPath::first).filter(members::containsKey).collect(Collectors.toSet()));
         sortedMemberNames.forEach(name -> {
             final Member member = members.get(name);
             final Map<String, Object> merged = new HashMap<>(object);
