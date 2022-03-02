@@ -1,0 +1,21 @@
+Transients:
+  type: object
+  transients:
+    transient1:
+      expression: "(this.transient2 ? this.transient2 : '') + 'b'"
+      type: string
+      expand:
+        - transient2
+    transient2:
+      expression: "'a'"
+      type: string
+    transient3:
+      expression: "(this.transient4 ? this.transient4 : '') + 'a'"
+      type: string
+      expand:
+        - transient4
+    transient4:
+      expression: "(this.transient3 ? this.transient3 : '') + 'a'"
+      type: string
+      expand:
+        - transient3
