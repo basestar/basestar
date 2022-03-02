@@ -20,8 +20,11 @@ package io.basestar.schema.exception;
  * #L%
  */
 
+import com.google.common.base.Joiner;
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.exception.HasExceptionMetadata;
+
+import java.util.Collection;
 
 public class MissingPropertyException extends RuntimeException implements HasExceptionMetadata {
 
@@ -33,9 +36,9 @@ public class MissingPropertyException extends RuntimeException implements HasExc
 
     private final String property;
 
-    public MissingPropertyException(final String property) {
+    public MissingPropertyException(final String property, final Collection<String> names) {
 
-        super("Property " + property + " not found");
+        super("Property " + property + " not found" + (names.isEmpty() ? "" : ", did you mean: " + Joiner.on(", ").join(names)));
         this.property = property;
     }
 

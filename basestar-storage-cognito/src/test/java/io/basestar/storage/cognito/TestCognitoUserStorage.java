@@ -33,7 +33,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -48,7 +48,7 @@ class TestCognitoUserStorage extends TestStorage {
 
         when(client.adminCreateUser(any(AdminCreateUserRequest.class)))
                 .then(args -> {
-                    final AdminCreateUserRequest req = args.getArgumentAt(0, AdminCreateUserRequest.class);
+                    final AdminCreateUserRequest req = args.getArgument(0, AdminCreateUserRequest.class);
                     return CompletableFuture.supplyAsync(() -> {
                         final String userPoolId = req.userPoolId();
                         final String id = req.username();
@@ -67,7 +67,7 @@ class TestCognitoUserStorage extends TestStorage {
 
         when(client.adminUpdateUserAttributes(any(AdminUpdateUserAttributesRequest.class)))
                 .then(args -> {
-                    final AdminUpdateUserAttributesRequest req = args.getArgumentAt(0, AdminUpdateUserAttributesRequest.class);
+                    final AdminUpdateUserAttributesRequest req = args.getArgument(0, AdminUpdateUserAttributesRequest.class);
                     return CompletableFuture.supplyAsync(() -> {
                         final String userPoolId = req.userPoolId();
                         final String id = req.username();
@@ -87,7 +87,7 @@ class TestCognitoUserStorage extends TestStorage {
 
         when(client.adminGetUser(any(AdminGetUserRequest.class)))
                 .then(args -> {
-                    final AdminGetUserRequest req = args.getArgumentAt(0, AdminGetUserRequest.class);
+                    final AdminGetUserRequest req = args.getArgument(0, AdminGetUserRequest.class);
                     return CompletableFuture.supplyAsync(() -> {
                         final String userPoolId = req.userPoolId();
                         final String id = req.username();
@@ -110,7 +110,7 @@ class TestCognitoUserStorage extends TestStorage {
 
         when(client.adminDeleteUser(any(AdminDeleteUserRequest.class)))
                 .then(args -> {
-                    final AdminDeleteUserRequest req = args.getArgumentAt(0, AdminDeleteUserRequest.class);
+                    final AdminDeleteUserRequest req = args.getArgument(0, AdminDeleteUserRequest.class);
                     return CompletableFuture.supplyAsync(() -> {
                         final String userPoolId = req.userPoolId();
                         final String id = req.username();

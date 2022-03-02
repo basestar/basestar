@@ -593,7 +593,7 @@ public class Index implements Named, Described, Serializable, Extendable {
 
             final Index result = getIndex(name, inherited);
             if (result == null) {
-                throw new MissingMemberException(name);
+                throw new MissingMemberException(name, (inherited ? getIndexes() : getDeclaredIndexes()).keySet());
             } else {
                 return result;
             }

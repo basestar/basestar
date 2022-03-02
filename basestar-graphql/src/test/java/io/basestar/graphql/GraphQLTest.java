@@ -56,8 +56,8 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @Slf4j
@@ -632,10 +632,9 @@ class GraphQLTest {
     }
 
     private void configureMockEmitter(final Emitter emitter) {
-
-        when(emitter.emit(anyCollectionOf(Event.class))).thenReturn(CompletableFuture.completedFuture(null));
+        when(emitter.emit(anyCollection())).thenReturn(CompletableFuture.completedFuture(null));
         when(emitter.emit(any(Event.class))).thenReturn(CompletableFuture.completedFuture(null));
-        when(emitter.emit(anyCollectionOf(Event.class), any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(emitter.emit(anyCollection(), any())).thenReturn(CompletableFuture.completedFuture(null));
         when(emitter.emit(any(Event.class), any())).thenReturn(CompletableFuture.completedFuture(null));
     }
 
@@ -662,7 +661,7 @@ class GraphQLTest {
         assertNotNull(create.get("createTest1"));
 
         verify(emitter, times(1))
-                .emit(anyCollectionOf(Event.class));
+                .emit(anyCollection());
     }
 
     @Test

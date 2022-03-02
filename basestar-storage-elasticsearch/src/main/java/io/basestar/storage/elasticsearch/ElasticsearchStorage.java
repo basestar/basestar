@@ -431,9 +431,26 @@ public class ElasticsearchStorage implements DefaultLayerStorage {
         }
 
         @Override
+        public DefaultLayerStorage.WriteTransaction write(final LinkableSchema schema, final Map<String, Object> after) {
+
+            if (schema instanceof ViewSchema && ((ViewSchema) schema).isMaterialized()) {
+                final String index = strategy.index(schema);
+                final String id = schema.id(after);
+                indices.put(index, schema);
+                request.add(new IndexRequest()
+                        .index(index).source(toSource(schema, after)).id(id)
+                        .opType(DocWriteRequest.OpType.INDEX));
+                responders.add(response -> BatchResponse.empty());
+                return this;
+            } else {
+                return DefaultLayerStorage.WriteTransaction.super.write(schema, after);
+            }
+        }
+
+        @Override
         public CompletableFuture<BatchResponse> write() {
 
-            if(request.numberOfActions() == 0) {
+            if (request.numberOfActions() == 0) {
                 return CompletableFuture.completedFuture(BatchResponse.empty());
             } else {
                 return getIndices(indices)

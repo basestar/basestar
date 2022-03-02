@@ -44,6 +44,7 @@ import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityPr
 import software.amazon.awssdk.services.cognitoidentityprovider.model.*;
 
 import java.io.IOException;
+import java.lang.UnsupportedOperationException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;

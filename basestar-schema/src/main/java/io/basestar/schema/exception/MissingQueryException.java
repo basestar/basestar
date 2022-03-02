@@ -1,7 +1,10 @@
 package io.basestar.schema.exception;
 
+import com.google.common.base.Joiner;
 import io.basestar.exception.ExceptionMetadata;
 import io.basestar.exception.HasExceptionMetadata;
+
+import java.util.Collection;
 
 public class MissingQueryException extends RuntimeException implements HasExceptionMetadata {
 
@@ -13,9 +16,9 @@ public class MissingQueryException extends RuntimeException implements HasExcept
 
     private final String query;
 
-    public MissingQueryException(final String query) {
+    public MissingQueryException(final String query, final Collection<String> names) {
 
-        super("Query " + query + " not found");
+        super("Query " + query + " not found" + (names.isEmpty() ? "" : ", did you mean: " + Joiner.on(", ").join(names)));
         this.query = query;
     }
 

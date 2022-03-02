@@ -33,7 +33,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -48,7 +48,7 @@ class TestCognitoGroupStorage extends TestStorage {
 
         when(client.createGroup(any(CreateGroupRequest.class)))
                 .then(args -> {
-                    final CreateGroupRequest req = args.getArgumentAt(0, CreateGroupRequest.class);
+                    final CreateGroupRequest req = args.getArgument(0, CreateGroupRequest.class);
                     return CompletableFuture.supplyAsync(() -> {
                         final String userPoolId = req.userPoolId();
                         final String id = req.groupName();
@@ -67,7 +67,7 @@ class TestCognitoGroupStorage extends TestStorage {
 
         when(client.updateGroup(any(UpdateGroupRequest.class)))
                 .then(args -> {
-                    final UpdateGroupRequest req = args.getArgumentAt(0, UpdateGroupRequest.class);
+                    final UpdateGroupRequest req = args.getArgument(0, UpdateGroupRequest.class);
                     return CompletableFuture.supplyAsync(() -> {
                         final String userPoolId = req.userPoolId();
                         final String id = req.groupName();
@@ -86,7 +86,7 @@ class TestCognitoGroupStorage extends TestStorage {
 
         when(client.getGroup(any(GetGroupRequest.class)))
                 .then(args -> {
-                    final GetGroupRequest req = args.getArgumentAt(0, GetGroupRequest.class);
+                    final GetGroupRequest req = args.getArgument(0, GetGroupRequest.class);
                     return CompletableFuture.supplyAsync(() -> {
                         final String userPoolId = req.userPoolId();
                         final String id = req.groupName();
@@ -104,7 +104,7 @@ class TestCognitoGroupStorage extends TestStorage {
 
         when(client.deleteGroup(any(DeleteGroupRequest.class)))
                 .then(args -> {
-                    final DeleteGroupRequest req = args.getArgumentAt(0, DeleteGroupRequest.class);
+                    final DeleteGroupRequest req = args.getArgument(0, DeleteGroupRequest.class);
                     return CompletableFuture.supplyAsync(() -> {
                         final String userPoolId = req.userPoolId();
                         final String id = req.groupName();

@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.concurrent.CompletableFuture;
 
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.any;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestDefaultHub {
@@ -46,13 +48,13 @@ class TestDefaultHub {
         final Subscriptions subscriptions = Mockito.mock(Subscriptions.class);
         final Emitter emitter = Mockito.mock(Emitter.class);
 
-        Mockito.when(emitter.emit(Mockito.any(Event.class)))
+        Mockito.when(emitter.emit(any(Event.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
-        Mockito.when(emitter.emit(Mockito.anyCollectionOf(Event.class)))
+        Mockito.when(emitter.emit(anyCollection()))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
-        Mockito.when(subscriptions.query(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+        Mockito.when(subscriptions.query(any(), any(), any(), any()))
                 .thenReturn(Pager.simple(ImmutableList.of(sub)));
 
         final DefaultHub hub = new DefaultHub(subscriptions, namespace, emitter);

@@ -14,24 +14,24 @@ public interface RowMapper<T> {
 
     List<Field<?>> columns();
 
-    T fromRecord(Record record);
+    T fromRecord(org.jooq.Record record);
 
     Map<Field<?>, Object> toRecord(T record);
 
     Field<?> resolve(Name name);
 
-    Table<Record> joined(Table<Record> source, TableResolver resolver);
+    Table<org.jooq.Record> joined(Table<org.jooq.Record> source, TableResolver resolver);
 
     List<SelectFieldOrAsterisk> select();
 
-    default List<T> all(final Result<Record> result) {
+    default List<T> all(final Result<org.jooq.Record> result) {
 
         return result.stream()
                 .map(this::fromRecord)
                 .collect(Collectors.toList());
     }
 
-    default T first(final Result<Record> result) {
+    default T first(final Result<org.jooq.Record> result) {
 
         if (result.isEmpty()) {
             return null;
@@ -78,7 +78,7 @@ public interface RowMapper<T> {
             }
 
             @Override
-            public Map<String, Object> fromRecord(final Record record) {
+            public Map<String, Object> fromRecord(final org.jooq.Record record) {
 
                 final Map<String, Object> values = record.intoMap();
                 final Map<String, Object> result = new HashMap<>();
@@ -116,9 +116,9 @@ public interface RowMapper<T> {
             }
 
             @Override
-            public Table<Record> joined(final Table<Record> source, final TableResolver resolver) {
+            public Table<org.jooq.Record> joined(final Table<org.jooq.Record> source, final TableResolver resolver) {
 
-                Table<Record> result = source.as(DSL.name(rootTable));
+                Table<org.jooq.Record> result = source.as(DSL.name(rootTable));
                 final Map<String, Set<Name>> branches = Name.branch(expand);
                 for(final Map.Entry<String, ColumnMapper<Object>> entry : mappers.entrySet()) {
                     final String name = entry.getKey();
