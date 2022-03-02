@@ -63,11 +63,11 @@ public class ISO8601 {
         } else if (value instanceof TemporalAccessor) {
             return toDateTime((TemporalAccessor) value);
         } else if (value instanceof java.sql.Timestamp) {
-            return ((java.sql.Timestamp) value).toInstant();
+            return ((java.sql.Timestamp) value).toLocalDateTime().toInstant(ZoneOffset.UTC);
         } else if (value instanceof java.sql.Date) {
             return toDateTime(((java.sql.Date) value).toLocalDate());
         } else if (value instanceof Date) {
-            return ((Date) value).toInstant();
+            return LocalDateTime.ofInstant(((Date) value).toInstant(), ZoneId.systemDefault()).toInstant(ZoneOffset.UTC);
         } else if (value instanceof CharSequence) {
             return parseDateTime(value.toString());
         } else if (value instanceof Number) {
@@ -153,11 +153,11 @@ public class ISO8601 {
         } else if (value instanceof TemporalAccessor) {
             return toDate((TemporalAccessor) value);
         } else if (value instanceof java.sql.Timestamp) {
-            return toDate(((java.sql.Timestamp) value).toInstant());
+            return toDate(toDateTime(value));
         } else if (value instanceof java.sql.Date) {
             return ((java.sql.Date) value).toLocalDate();
         } else if (value instanceof Date) {
-            return toDate(((Date) value).toInstant());
+            return toDate(toDateTime(value));
         } else if (value instanceof CharSequence) {
             return parseDate(value.toString());
         } else if (value instanceof Number) {
