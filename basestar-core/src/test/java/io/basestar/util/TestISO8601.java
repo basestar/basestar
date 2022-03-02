@@ -6,7 +6,9 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Date;
+import java.util.TimeZone;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -61,16 +63,23 @@ class TestISO8601 {
     }
 
     @Test
+    @SuppressWarnings("deprecated")
     void testToDateTime() {
 
-        assertNull(ISO8601.toDateTime((Object) null));
-        assertEquals(Instant.parse("2020-01-01T00:00:00.0Z"), ISO8601.toDateTime("2020-01-01"));
-        assertEquals(Instant.parse("2020-01-01T00:00:00.0Z"), ISO8601.toDateTime("2020-01-01T00:00:00.000Z"));
-        assertEquals(Instant.parse("2020-01-01T00:00:00.0Z"), ISO8601.toDateTime((Object) LocalDate.parse("2020-01-01")));
-        assertEquals(Instant.parse("1970-01-01T00:00:00.0Z"), ISO8601.toDateTime(0L));
-        assertEquals(Instant.parse("1970-01-01T00:00:00.0Z"), ISO8601.toDateTime(new Date(0L)));
-        assertEquals(Instant.parse("1970-01-01T00:00:00.0Z"), ISO8601.toDateTime(new java.sql.Date(0L)));
-        assertEquals(Instant.parse("1970-01-01T00:00:00.0Z"), ISO8601.toDateTime(new java.sql.Timestamp(0L)));
-        assertThrows(InvalidDateTimeException.class, () -> ISO8601.toDateTime(ImmutableMap.of()));
+        final TimeZone defaultTz = TimeZone.getDefault();
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone(ZoneId.of("UTC")));
+            assertNull(ISO8601.toDateTime((Object) null));
+            assertEquals(Instant.parse("2020-01-01T00:00:00.0Z"), ISO8601.toDateTime("2020-01-01"));
+            assertEquals(Instant.parse("2020-01-01T00:00:00.0Z"), ISO8601.toDateTime("2020-01-01T00:00:00.000Z"));
+            assertEquals(Instant.parse("2020-01-01T00:00:00.0Z"), ISO8601.toDateTime((Object) LocalDate.parse("2020-01-01")));
+            assertEquals(Instant.parse("1970-01-01T00:00:00.0Z"), ISO8601.toDateTime(0L));
+            assertEquals(Instant.parse("1970-01-01T00:00:00.0Z"), ISO8601.toDateTime(new Date(0L)));
+            assertEquals(Instant.parse("1970-01-01T00:00:00.0Z"), ISO8601.toDateTime(new java.sql.Date(0L)));
+            assertEquals(Instant.parse("1970-01-01T00:00:00.0Z"), ISO8601.toDateTime(new java.sql.Timestamp(0L)));
+            assertThrows(InvalidDateTimeException.class, () -> ISO8601.toDateTime(ImmutableMap.of()));
+        } finally {
+            TimeZone.setDefault(defaultTz);
+        }
     }
 }

@@ -17,9 +17,8 @@ import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.time.ZoneId;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -495,5 +494,18 @@ class TestUse {
         assertEquals(UseArray.from(UseNumber.DEFAULT), Use.commonBase(UseArray.from(UseNumber.DEFAULT), UseArray.from(UseInteger.DEFAULT)));
         assertEquals(UseSet.from(UseNumber.DEFAULT), Use.commonBase(UseSet.from(UseNumber.DEFAULT), UseSet.from(UseInteger.DEFAULT)));
         assertEquals(UseMap.from(UseNumber.DEFAULT), Use.commonBase(UseMap.from(UseNumber.DEFAULT), UseMap.from(UseInteger.DEFAULT)));
+    }
+
+    @Test
+    void testTimezoneIndependent() {
+
+        final Instant expected = ISO8601.toDateTime("2022-03-04T20:04:20Z");
+        for (final String zoneId : ZoneId.getAvailableZoneIds()) {
+            TimeZone.setDefault(TimeZone.getTimeZone(ZoneId.of(zoneId)));
+            @SuppressWarnings("deprecated") final java.sql.Timestamp sqlTimestamp = new java.sql.Timestamp(2022 - 1900, Calendar.MARCH, 4, 20, 4, 20, 0);
+            assertEquals(expected, UseDateTime.DEFAULT.create(sqlTimestamp));
+            @SuppressWarnings("deprecated") final java.util.Date javaDate = new java.util.Date(2022 - 1900, Calendar.MARCH, 4, 20, 4, 20);
+            assertEquals(expected, UseDateTime.DEFAULT.create(javaDate));
+        }
     }
 }
