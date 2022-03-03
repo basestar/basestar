@@ -11,6 +11,7 @@ import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -35,7 +36,25 @@ public class ObjectMethods implements Serializable {
 
     public String tostring(final Object value) {
 
-        return Coercion.toString(value);
+        if (value == null) {
+            return "";
+        } else if (value instanceof Map) {
+            return "{" + ((Map<?, ?>) value).entrySet().stream()
+                    .sorted(Comparator.comparing(e -> tostring(e.getKey())))
+                    .map(e -> e.getKey() + ":" + tostring(e.getValue()))
+                    .collect(Collectors.joining(",")) + "}";
+        } else if (value instanceof Set) {
+            return "[" + ((Set<?>) value).stream()
+                    .map(this::tostring)
+                    .sorted()
+                    .collect(Collectors.joining(",")) + "]";
+        } else if (value instanceof Collection) {
+            return "[" + ((Collection<?>) value).stream()
+                    .map(this::tostring)
+                    .collect(Collectors.joining(",")) + "]";
+        } else {
+            return Coercion.toString(value);
+        }
     }
 
     public Bytes tobinary(final Object value) {
@@ -82,30 +101,9 @@ public class ObjectMethods implements Serializable {
         if (value == null) {
             return null;
         } else {
-            final String digest = digest(value);
+            final String digest = tostring(value);
             final HashCode hash = hashing.hashString(digest, Charsets.UTF_8);
             return Bytes.valueOf(hash.asBytes()).xorFold(length);
-        }
-    }
-
-    private static String digest(final Object value) {
-
-        if (value == null) {
-            return "";
-        } else if (value instanceof Map) {
-            return "{" + ((Map<?, ?>) value).entrySet().stream().sorted()
-                    .map(ObjectMethods::digest)
-                    .collect(Collectors.joining(",")) + "}";
-        } else if (value instanceof Set) {
-            return "[" + ((Set<?>) value).stream().sorted()
-                    .map(ObjectMethods::digest)
-                    .collect(Collectors.joining(",")) + "]";
-        } else if (value instanceof Collection) {
-            return "[" + ((Collection<?>) value).stream()
-                    .map(ObjectMethods::digest)
-                    .collect(Collectors.joining(",")) + "]";
-        } else {
-            return value.toString();
         }
     }
 }

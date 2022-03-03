@@ -20,9 +20,7 @@ package io.basestar.expression;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.*;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import io.basestar.expression.aggregate.Aggregate;
@@ -770,4 +768,22 @@ class TestExpression {
         return result;
     }
 
+    @Test
+    void testToString() {
+
+        check("value.toString()", "test", Context.init(ImmutableMap.of(
+                "value", "test"
+        )));
+        check("value.toString()", "[test]", Context.init(ImmutableMap.of(
+                "value", ImmutableList.of("test")
+        )));
+        check("value.toString()", "{a:x,b:[1,2,3]}", Context.init(ImmutableMap.of(
+                "value", ImmutableSortedMap.orderedBy(Comparator.<String>naturalOrder().reversed())
+                        .put("a", "x").put("b", ImmutableList.of(1, 2, 3)).build())
+        ));
+        check("value.toString()", "[[1,2,3],b,c]", Context.init(ImmutableMap.of(
+                "value", ImmutableSortedSet.orderedBy(Comparator.comparing(Object::toString).reversed())
+                        .add(ImmutableList.of(1, 2, 3), "b", "c").build())
+        ));
+    }
 }
