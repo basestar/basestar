@@ -90,7 +90,9 @@ public class ObjectMethods implements Serializable {
 
     private static String digest(final Object value) {
 
-        if (value instanceof Map) {
+        if (value == null) {
+            return "";
+        } else if (value instanceof Map) {
             return "{" + ((Map<?, ?>) value).entrySet().stream().sorted()
                     .map(ObjectMethods::digest)
                     .collect(Collectors.joining(",")) + "}";
