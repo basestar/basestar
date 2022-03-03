@@ -72,13 +72,13 @@ public class ObjectMethods implements Serializable {
         return Coercion.toDateTime(value);
     }
 
-    public Bytes murmur(final Object value) {
+    public Bytes murmur3(final Object value) {
 
-        return murmur(value, null);
+        return murmur3(value, null);
     }
 
     @SuppressWarnings({"UnstableApiUsage"})
-    public Bytes murmur(final Object value, final Long bytes) {
+    public Bytes murmur3(final Object value, final Long bytes) {
 
         final HashFunction hashing;
         final int length;

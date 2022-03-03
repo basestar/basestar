@@ -701,7 +701,7 @@ class TestExpression {
 
     @Test
     @SuppressWarnings("UnstableApiUsage")
-    void testMurmur() {
+    void testMurmur32() {
 
         final String input1 = "abcdefgh";
         final byte[] h = Hashing.murmur3_32_fixed().hashString(input1, StandardCharsets.UTF_8).asBytes();
@@ -717,11 +717,11 @@ class TestExpression {
                     "value", input1,
                     "length", (long) i + 1
             ));
-            check("value.murmur(length).upperHex()", BaseEncoding.base16().encode(expected).toUpperCase(), context);
-            check("value.murmur(length).lowerHex()", BaseEncoding.base16().encode(expected).toLowerCase(), context);
-            check("value.murmur(length).base64()", BaseEncoding.base64().encode(expected), context);
-            check("value.murmur(length).base32()", BaseEncoding.base32().encode(expected), context);
-            check("value.murmur(4).xorFold(length).upperHex()", BaseEncoding.base16().encode(expected).toUpperCase(), context);
+            check("value.murmur3(length).upperHex()", BaseEncoding.base16().encode(expected).toUpperCase(), context);
+            check("value.murmur3(length).lowerHex()", BaseEncoding.base16().encode(expected).toLowerCase(), context);
+            check("value.murmur3(length).base64()", BaseEncoding.base64().encode(expected), context);
+            check("value.murmur3(length).base32()", BaseEncoding.base32().encode(expected), context);
+            check("value.murmur3(4).xorFold(length).upperHex()", BaseEncoding.base16().encode(expected).toUpperCase(), context);
         }
     }
 
@@ -751,11 +751,11 @@ class TestExpression {
                     "value", input1,
                     "length", (long) i + 1
             ));
-            check("value.murmur(length).upperHex()", BaseEncoding.base16().encode(expected).toUpperCase(), context);
-            check("value.murmur(length).lowerHex()", BaseEncoding.base16().encode(expected).toLowerCase(), context);
-            check("value.murmur(length).base64()", BaseEncoding.base64().encode(expected), context);
-            check("value.murmur(length).base32()", BaseEncoding.base32().encode(expected), context);
-            check("value.murmur(16).xorFold(length).upperHex()", BaseEncoding.base16().encode(expected).toUpperCase(), context);
+            check("value.murmur3(length).upperHex()", BaseEncoding.base16().encode(expected).toUpperCase(), context);
+            check("value.murmur3(length).lowerHex()", BaseEncoding.base16().encode(expected).toLowerCase(), context);
+            check("value.murmur3(length).base64()", BaseEncoding.base64().encode(expected), context);
+            check("value.murmur3(length).base32()", BaseEncoding.base32().encode(expected), context);
+            check("value.murmur3(16).xorFold(length).upperHex()", BaseEncoding.base16().encode(expected).toUpperCase(), context);
         }
     }
 
