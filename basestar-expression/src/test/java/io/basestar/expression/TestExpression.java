@@ -786,4 +786,22 @@ class TestExpression {
                         .add(ImmutableList.of(1, 2, 3), "b", "c").build())
         ));
     }
+
+    @Test
+    void testPad() {
+
+        final Context context = Context.init(ImmutableMap.of(
+                "value", "test"
+        ));
+        check("value.lpad(3, '0')", "test", context);
+        check("value.lpad(4, '0')", "test", context);
+        check("value.lpad(5, '0')", "0test", context);
+        check("value.lpad(6, '0')", "00test", context);
+        assertThrows(IllegalStateException.class, () -> cache.parse("value.lpad(5, '00')").evaluate(context));
+        check("value.rpad(3, '0')", "test", context);
+        check("value.rpad(4, '0')", "test", context);
+        check("value.rpad(5, '0')", "test0", context);
+        check("value.rpad(6, '0')", "test00", context);
+        assertThrows(IllegalStateException.class, () -> cache.parse("value.rpad(5, '00')").evaluate(context));
+    }
 }
