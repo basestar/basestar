@@ -64,7 +64,11 @@ public class Methods implements Serializable {
         }
 
         if(whitelist) {
-            throw new IllegalStateException("Cannot call non-whitelisted method " + methodString(method, args));
+            if (Void.class.equals(target)) {
+                throw new IllegalStateException("Cannot call " + methodString(method, args) + " on null");
+            } else {
+                throw new IllegalStateException("Cannot call non-whitelisted method " + methodString(method, args));
+            }
         } else {
             final Method resolved = findMethod(targetType, method, argTypes);
             if(resolved != null) {
