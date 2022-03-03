@@ -189,4 +189,20 @@ class TestObjectSchema {
         final Set<Constraint.Violation> goodViolations = constrained.validate(Context.init(), constrained.create(ImmutableMap.of("name", "good")));
         assertEquals(0, goodViolations.size());
     }
+
+    @Test
+    void testTransientOrder() throws IOException {
+
+        final Namespace namespace = Namespace.load(TestObjectSchema.class.getResource("transients.yml"));
+
+        final ObjectSchema transients = namespace.requireObjectSchema("Transients");
+
+        final Instance result = transients.evaluateTransients(Context.init(), new Instance(ImmutableMap.of()), ImmutableSet.of(
+                Name.of("transient1"),
+                Name.of("transient3"),
+                Name.of("transient4")
+        ));
+
+        assertEquals("ab", result.get("transient1"));
+    }
 }

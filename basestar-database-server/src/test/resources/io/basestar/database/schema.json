@@ -229,7 +229,7 @@
     },
     "transients": {
       "names": {
-        "expression": "[v.name for v of this.refs]",
+        "expression": "[v.name for v of (this.refs ? this.refs : [])]",
         "expand": [
           "this.refs"
         ]

@@ -30,7 +30,10 @@ import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseInstance;
 import io.basestar.schema.use.UseString;
 import io.basestar.schema.util.*;
+import io.basestar.util.AbstractPath;
 import io.basestar.util.Name;
+import io.basestar.util.Nullsafe;
+import io.basestar.util.TopologicalSort;
 import io.leangen.geantyref.TypeFactory;
 
 import java.io.*;
@@ -370,14 +373,30 @@ public interface InstanceSchema extends ValueSchema<Instance>, Member.Resolver, 
     default Instance evaluateTransients(final Context context, final Instance object, final Set<Name> expand) {
 
         final Map<String, Set<Name>> branches = Name.branch(expand);
-        final Context thisContext = context.with(VAR_THIS, object);
-        return transformMembers(object, (member, value) -> {
-            if (branches.containsKey(member.getName())) {
-                return member.evaluateTransients(thisContext, value, branches.get(member.getName()));
-            } else {
-                return value;
+        final HashMap<String, Object> changed = new HashMap<>();
+        final Map<String, ? extends Member> members = getMembers();
+        final List<String> sortedMemberNames = TopologicalSort.sort(members.keySet(), k -> members.get(k)
+                .transientExpand(Name.of(), Nullsafe.orDefault(expand))
+                .stream().map(AbstractPath::first).filter(members::containsKey).collect(Collectors.toSet()));
+        sortedMemberNames.forEach(name -> {
+            final Member member = members.get(name);
+            final Map<String, Object> merged = new HashMap<>(object);
+            merged.putAll(changed);
+            final Context thisContext = context.with(VAR_THIS, merged);
+            final Object before = object.get(name);
+            final Object after = member.evaluateTransients(thisContext, before, branches.get(member.getName()));
+            // Reference equals is correct behaviour
+            if (before != after) {
+                changed.put(member.getName(), after);
             }
         });
+        if (changed.isEmpty()) {
+            return object;
+        } else {
+            final Map<String, Object> result = new HashMap<>(object);
+            result.putAll(changed);
+            return new Instance(result);
+        }
     }
 
     default Instance transformMembers(final Instance object, final BiFunction<Member, Object, Object> fn) {
