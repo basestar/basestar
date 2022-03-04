@@ -19,6 +19,7 @@ import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -96,6 +97,18 @@ public interface SQLDialect {
 
     DataType<?> anyType(UseAny type);
 
+    SelectField<?> booleanToSQLValue(UseBoolean type, Boolean value);
+
+    SelectField<?> stringToSQLValue(UseString type, String value);
+
+    SelectField<?> enumToSQLValue(UseEnum type, String value);
+
+    SelectField<?> integerToSQLValue(UseInteger type, Long value);
+
+    SelectField<?> numberToSQLValue(UseNumber type, Double value);
+
+    SelectField<?> decimalToSQLValue(UseDecimal type, BigDecimal value);
+
     SelectField<?> dateToSQLValue(UseDate type, LocalDate value);
 
     SelectField<?> dateTimeToSQLValue(UseDateTime type, Instant value);
@@ -122,6 +135,41 @@ public interface SQLDialect {
     SelectField<?> viewToSQLValue(UseView type, Instance value);
 
     SelectField<?> anyToSQLValue(UseAny type, Object value);
+
+    default SelectField<?> nullToSQLValue(final Use<?> type) {
+
+        return DSL.castNull(dataType(type));
+    }
+
+    default <T> Map<Field<?>, SelectField<?>> booleanToSQLValues(final UseBoolean type, final FieldResolver field, final Boolean value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, booleanToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
+
+    default <T> Map<Field<?>, SelectField<?>> stringToSQLValues(final UseString type, final FieldResolver field, final String value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, stringToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
+
+    default <T> Map<Field<?>, SelectField<?>> enumToSQLValues(final UseEnum type, final FieldResolver field, final String value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, enumToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
+
+    default <T> Map<Field<?>, SelectField<?>> integerToSQLValues(final UseInteger type, final FieldResolver field, final Long value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, integerToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
+
+    default <T> Map<Field<?>, SelectField<?>> decimalToSQLValues(final UseDecimal type, final FieldResolver field, final BigDecimal value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, decimalToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
+
+    default <T> Map<Field<?>, SelectField<?>> numberToSQLValues(final UseNumber type, final FieldResolver field, final Double value) {
+
+        return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, numberToSQLValue(type, value))).orElseGet(ImmutableMap::of);
+    }
 
     default <T> Map<Field<?>, SelectField<?>> arrayToSQLValues(final UseArray<T> type, final FieldResolver field, final List<T> value) {
 
@@ -353,24 +401,45 @@ public interface SQLDialect {
         });
     }
 
+
     default Map<Field<?>, SelectField<?>> toSQLValues(final Use<?> type, final FieldResolver field, final Object value) {
 
-        if (value == null) {
-            return Collections.emptyMap();
-        }
-
-        return type.visit(new Use.Visitor.Defaulting<Map<Field<?>, SelectField<?>>>() {
+        return type.visit(new Use.Visitor<Map<Field<?>, SelectField<?>>>() {
 
             @Override
-            public <T> Map<Field<?>, SelectField<?>> visitScalar(final UseScalar<T> type) {
+            public Map<Field<?>, SelectField<?>> visitBoolean(final UseBoolean type) {
 
-                return field.field().<Map<Field<?>, SelectField<?>>>map(f -> ImmutableMap.of(f, DSL.val(type.create(value)))).orElseGet(ImmutableMap::of);
+                return booleanToSQLValues(type, field, type.create(value));
+            }
+
+            @Override
+            public Map<Field<?>, SelectField<?>> visitInteger(final UseInteger type) {
+
+                return integerToSQLValues(type, field, type.create(value));
+            }
+
+            @Override
+            public Map<Field<?>, SelectField<?>> visitNumber(final UseNumber type) {
+
+                return numberToSQLValues(type, field, type.create(value));
+            }
+
+            @Override
+            public Map<Field<?>, SelectField<?>> visitString(final UseString type) {
+
+                return stringToSQLValues(type, field, type.create(value));
+            }
+
+            @Override
+            public Map<Field<?>, SelectField<?>> visitEnum(final UseEnum type) {
+
+                return enumToSQLValues(type, field, type.create(value));
             }
 
             @Override
             public Map<Field<?>, SelectField<?>> visitRef(final UseRef type) {
 
-                return refToSQLValues(type, field, (Instance) value);
+                return refToSQLValues(type, field, type.create(value));
             }
 
             @Override
@@ -383,6 +452,12 @@ public interface SQLDialect {
             public <T> Map<Field<?>, SelectField<?>> visitPage(final UsePage<T> type) {
 
                 return pageToSQLValues(type, field, type.create(value));
+            }
+
+            @Override
+            public Map<Field<?>, SelectField<?>> visitDecimal(final UseDecimal type) {
+
+                return decimalToSQLValues(type, field, type.create(value));
             }
 
             @Override
@@ -440,6 +515,12 @@ public interface SQLDialect {
             }
 
             @Override
+            public Map<Field<?>, SelectField<?>> visitQuery(final UseQuery type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
             public <T> Map<Field<?>, SelectField<?>> visitOptional(final UseOptional<T> type) {
 
                 return toSQLValues(type.getType(), field, value);
@@ -455,22 +536,42 @@ public interface SQLDialect {
 
     default SelectField<?> toSQLValue(final Use<?> type, final Object value) {
 
-        if (value == null) {
-            return null;
-        }
-
-        return type.visit(new Use.Visitor.Defaulting<SelectField<?>>() {
+        return type.visit(new Use.Visitor<SelectField<?>>() {
 
             @Override
-            public <T> SelectField<?> visitScalar(final UseScalar<T> type) {
+            public SelectField<?> visitBoolean(final UseBoolean type) {
 
-                return DSL.val(type.create(value));
+                return booleanToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitInteger(final UseInteger type) {
+
+                return integerToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitNumber(final UseNumber type) {
+
+                return numberToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitString(final UseString type) {
+
+                return stringToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitEnum(final UseEnum type) {
+
+                return enumToSQLValue(type, type.create(value));
             }
 
             @Override
             public SelectField<?> visitRef(final UseRef type) {
 
-                return refToSQLValue(type, (Instance) value);
+                return refToSQLValue(type, type.create(value));
             }
 
             @Override
@@ -483,6 +584,12 @@ public interface SQLDialect {
             public <T> SelectField<?> visitPage(final UsePage<T> type) {
 
                 return pageToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitDecimal(final UseDecimal type) {
+
+                return decimalToSQLValue(type, type.create(value));
             }
 
             @Override
@@ -537,6 +644,12 @@ public interface SQLDialect {
             public SelectField<?> visitView(final UseView type) {
 
                 return viewToSQLValue(type, type.create(value));
+            }
+
+            @Override
+            public SelectField<?> visitQuery(final UseQuery type) {
+
+                throw new UnsupportedOperationException();
             }
 
             @Override
