@@ -43,14 +43,16 @@ import java.util.UUID;
 
 abstract class TestSQLStorage extends TestStorage {
 
+    @Override
     protected boolean supportsLike() {
 
         return true;
     }
 
     @Override
-    protected void testMultiValueIndex() {
+    protected boolean supportsMultiValueIndexes() {
 
+        return false;
     }
 
     @Override

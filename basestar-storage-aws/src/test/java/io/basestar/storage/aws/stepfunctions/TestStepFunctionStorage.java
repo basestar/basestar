@@ -123,4 +123,10 @@ public class TestStepFunctionStorage extends TestStorage {
 
         // A conflict will not be raised on create, because create is idempotent
     }
+
+    @Override
+    protected boolean supportsMultiValueIndexes() {
+
+        return false;
+    }
 }

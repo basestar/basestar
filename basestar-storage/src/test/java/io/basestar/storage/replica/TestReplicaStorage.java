@@ -21,4 +21,10 @@ class TestReplicaStorage extends TestStorage {
                 .setSimpleReplicaConsistency(Consistency.ATOMIC)
                 .build();
     }
+
+    @Override
+    protected boolean supportsMultiValueIndexes() {
+
+        return false;
+    }
 }

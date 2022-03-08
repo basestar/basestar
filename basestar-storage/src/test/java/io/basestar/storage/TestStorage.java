@@ -31,6 +31,7 @@ import io.basestar.schema.*;
 import io.basestar.schema.encoding.FlatEncoding;
 import io.basestar.secret.Secret;
 import io.basestar.storage.exception.ObjectExistsException;
+import io.basestar.storage.exception.UniqueIndexViolationException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.test.CsvUtils;
 import io.basestar.util.Streams;
@@ -67,6 +68,8 @@ public abstract class TestStorage {
     protected static final String SIMPLE = "Simple";
 
     protected static final String POINTSET = "Pointset";
+
+    protected static final String UNIQUE_POINTSET = "UniquePointset";
 
     protected static final String REF_TARGET = "RefTarget";
 
@@ -120,6 +123,16 @@ public abstract class TestStorage {
     }
 
     protected boolean supportsIndexes() {
+
+        return true;
+    }
+
+    protected boolean supportsMultiValueIndexes() {
+
+        return true;
+    }
+
+    protected boolean supportsUniqueIndexes() {
 
         return true;
     }
@@ -751,7 +764,7 @@ public abstract class TestStorage {
     @Test
     protected void testMultiValueIndex() {
 
-        assumeTrue(supportsIndexes());
+        assumeTrue(supportsMultiValueIndexes());
 
         final Storage storage = storage(namespace);
 
@@ -771,10 +784,50 @@ public abstract class TestStorage {
                 )
         ));
 
-        final List<Sort> sort = ImmutableList.of(Sort.asc(Name.of(ObjectSchema.ID)));
         final Expression expr = Expression.parse("p.x == 10 && p.y == 100 for any p of points");
         final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, Immutable.map(), expr, Collections.emptyList(), Collections.emptySet()).page(10).join();
         assertEquals(1, results.size());
+    }
+
+    @Test
+    protected void testUniqueMultiValueIndex() {
+
+        assumeTrue(supportsMultiValueIndexes());
+        assumeTrue(supportsUniqueIndexes());
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema schema = namespace.requireObjectSchema(UNIQUE_POINTSET);
+
+        createComplete(storage, schema, ImmutableMap.of(
+                "points", ImmutableList.of(
+                        new Instance(ImmutableMap.of("x", 10L, "y", 100L)),
+                        new Instance(ImmutableMap.of("x", 5L, "y", 10L))
+                )
+        ));
+
+        createComplete(storage, schema, ImmutableMap.of(
+                "points", ImmutableList.of(
+                        new Instance(ImmutableMap.of("x", 10L, "y", 10L)),
+                        new Instance(ImmutableMap.of("x", 1L, "y", 10L))
+                )
+        ));
+
+        final Expression expr = Expression.parse("p.x == 10 && p.y == 100 for any p of points");
+        final Page<Map<String, Object>> results = storage.query(Consistency.ATOMIC, schema, Immutable.map(), expr, Collections.emptyList(), Collections.emptySet()).page(10).join();
+        assertEquals(1, results.size());
+
+        assertThrows(UniqueIndexViolationException.class, () -> {
+            try {
+                createComplete(storage, schema, ImmutableMap.of(
+                        "points", ImmutableList.of(
+                                new Instance(ImmutableMap.of("x", 1L, "y", 10L))
+                        )
+                ));
+            } catch (final Exception e) {
+                throw e.getCause();
+            }
+        });
     }
 
     @Test

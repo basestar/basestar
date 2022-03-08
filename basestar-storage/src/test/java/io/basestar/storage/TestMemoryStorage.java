@@ -29,4 +29,10 @@ class TestMemoryStorage extends TestStorage {
 
         return MemoryStorage.builder().build();
     }
+
+    @Override
+    protected boolean supportsMultiValueIndexes() {
+
+        return false;
+    }
 }
