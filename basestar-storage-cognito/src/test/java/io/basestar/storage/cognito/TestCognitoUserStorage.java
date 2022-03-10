@@ -148,6 +148,18 @@ class TestCognitoUserStorage extends TestStorage {
         return false;
     }
 
+    @Override
+    protected boolean supportsMultiValueIndexes() {
+
+        return false;
+    }
+
+    @Override
+    protected boolean supportsUniqueIndexes() {
+
+        return false;
+    }
+
 //    @Override
 //    protected boolean supportsIndexes() {
 //

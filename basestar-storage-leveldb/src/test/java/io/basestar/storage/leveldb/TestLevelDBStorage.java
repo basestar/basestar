@@ -23,13 +23,12 @@ package io.basestar.storage.leveldb;
 import io.basestar.schema.Namespace;
 import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
+import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBFactory;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.impl.Iq80DBFactory;
 import org.junit.jupiter.api.BeforeAll;
-
-import org.fusesource.leveldbjni.JniDBFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,6 +90,12 @@ class TestLevelDBStorage extends TestStorage {
 
     @Override
     protected boolean supportsHistoryQuery() {
+
+        return false;
+    }
+
+    @Override
+    protected boolean supportsMultiValueIndexes() {
 
         return false;
     }

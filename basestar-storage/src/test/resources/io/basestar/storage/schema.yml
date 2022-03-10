@@ -136,6 +136,21 @@ Pointset:
         - p.x
         - p.y
 
+UniquePointset:
+  properties:
+    points:
+      type:
+        array?: Point
+  indexes:
+    points:
+      over:
+        p: points
+      partition:
+        - p.x
+        - p.y
+      unique: true
+      consistency: ATOMIC
+
 RefTarget:
   type: object
   properties:
