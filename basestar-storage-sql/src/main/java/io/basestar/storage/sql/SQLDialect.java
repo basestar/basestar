@@ -7,6 +7,8 @@ import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.*;
 import io.basestar.schema.util.Casing;
 import io.basestar.secret.Secret;
+import io.basestar.storage.sql.mapping.PropertyMapping;
+import io.basestar.storage.sql.mapping.ValueTransform;
 import io.basestar.storage.sql.resolver.FieldResolver;
 import io.basestar.storage.sql.resolver.ValueResolver;
 import io.basestar.storage.sql.strategy.NamingStrategy;
@@ -19,8 +21,10 @@ import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -41,36 +45,41 @@ public interface SQLDialect {
         return dmlDialect();
     }
 
-    DataType<?> stringType(UseString type);
+    DataType<String> stringType(UseStringLike<?> type);
 
-    default DataType<?> booleanType(final UseBoolean type) {
+    default DataType<Boolean> booleanType(final UseBoolean type) {
 
         return SQLDataType.BOOLEAN;
     }
 
-    default DataType<?> integerType(final UseInteger type) {
+    default DataType<Long> integerType(final UseInteger type) {
 
         return SQLDataType.BIGINT;
     }
 
-    default DataType<?> numberType(final UseNumber type) {
+    default DataType<Double> numberType(final UseNumber type) {
 
         return SQLDataType.DOUBLE;
     }
 
-    default DataType<?> dateType(final UseDate type) {
+    default DataType<java.sql.Date> dateType(final UseDate type) {
 
-        return SQLDataType.LOCALDATE;
+        return SQLDataType.DATE;
     }
 
-    default DataType<?> dateTimeType(final UseDateTime type) {
+    default DataType<Timestamp> dateTimeType(final UseDateTime type) {
 
         return SQLDataType.TIMESTAMP;
     }
 
-    default DataType<?> enumType(final UseEnum type) {
+    default DataType<String> enumType(final UseEnum type) {
 
         return stringType(UseString.DEFAULT);
+    }
+
+    default DataType<BigDecimal> decimalType(final UseDecimal type) {
+
+        return SQLDataType.DECIMAL(type.getPrecision(), type.getScale());
     }
 
     <T> DataType<?> arrayType(UseArray<T> type);
@@ -349,6 +358,191 @@ public interface SQLDialect {
             public DataType<?> visitSecret(final UseSecret type) {
 
                 return secretType(type);
+            }
+        });
+    }
+
+    default PropertyMapping<Boolean> booleanMapping(final UseBoolean type, final String name) {
+
+        return new PropertyMapping.Simple<>(name, booleanType(type), new ValueTransform.Coercing<>(type, null, v -> v));
+    }
+
+    default PropertyMapping<Long> integerMapping(final UseInteger type, final String name) {
+
+        return new PropertyMapping.Simple<>(name, integerType(type), new ValueTransform.Coercing<>(type, null, v -> v));
+    }
+
+    default PropertyMapping<Double> numberMapping(final UseNumber type, final String name) {
+
+        return new PropertyMapping.Simple<>(name, numberType(type), new ValueTransform.Coercing<>(type, null, v -> v));
+    }
+
+    default PropertyMapping<String> stringMapping(final UseString type, final String name) {
+
+        return new PropertyMapping.Simple<>(name, stringType(type), new ValueTransform.Coercing<>(type, null, v -> v));
+    }
+
+    default PropertyMapping<String> enumMapping(final UseEnum type, final String name) {
+
+        return new PropertyMapping.Simple<>(name, stringType(type), new ValueTransform.Coercing<>(type, null, v -> v));
+    }
+
+    default PropertyMapping<BigDecimal> decimalMapping(final UseDecimal type, final String name) {
+
+        return new PropertyMapping.Simple<>(name, decimalType(type), new ValueTransform.Coercing<>(type, null, v -> v));
+    }
+
+    PropertyMapping<LocalDate> dateMapping(UseDate type, String name);
+
+    PropertyMapping<Instant> dateTimeMapping(UseDateTime type, String name);
+
+    PropertyMapping<Instance> refMapping(UseRef type, String name, Set<Name> expand);
+
+    PropertyMapping<Instance> structMapping(UseStruct type, String name, Set<Name> expand);
+
+    PropertyMapping<Instance> viewMapping(UseView type, String name, Set<Name> expand);
+
+    <T> PropertyMapping<List<T>> arrayMapping(UseArray<T> type, String name, Set<Name> expand);
+
+    <T> PropertyMapping<Page<T>> pageMapping(UsePage<T> type, String name, Set<Name> expand);
+
+    <T> PropertyMapping<Set<T>> setMapping(UseSet<T> type, String name, Set<Name> expand);
+
+    <T> PropertyMapping<Map<String, T>> mapMapping(UseMap<T> type, String name, Set<Name> expand);
+
+    PropertyMapping<Bytes> binaryMapping(UseBinary type, String name);
+
+    PropertyMapping<Secret> secretMapping(UseSecret type, String name);
+
+    <T> PropertyMapping<Object> anyMapping(UseAny type, String name);
+
+    default PropertyMapping<?> propertyMapping(final Use<?> type, final String name, final Set<Name> expand) {
+
+        return type.visit(new Use.Visitor<PropertyMapping<?>>() {
+            @Override
+            public PropertyMapping<?> visitBoolean(final UseBoolean type) {
+
+                return booleanMapping(type, name);
+            }
+
+            @Override
+            public PropertyMapping<?> visitInteger(final UseInteger type) {
+
+                return integerMapping(type, name);
+            }
+
+            @Override
+            public PropertyMapping<?> visitNumber(final UseNumber type) {
+
+                return numberMapping(type, name);
+            }
+
+            @Override
+            public PropertyMapping<?> visitString(final UseString type) {
+
+                return stringMapping(type, name);
+            }
+
+            @Override
+            public PropertyMapping<?> visitEnum(final UseEnum type) {
+
+                return enumMapping(type, name);
+            }
+
+            @Override
+            public PropertyMapping<?> visitRef(final UseRef type) {
+
+                return refMapping(type, name, expand);
+            }
+
+            @Override
+            public <T> PropertyMapping<?> visitArray(final UseArray<T> type) {
+
+                return arrayMapping(type, name, expand);
+            }
+
+            @Override
+            public <T> PropertyMapping<?> visitSet(final UseSet<T> type) {
+
+                return setMapping(type, name, expand);
+            }
+
+            @Override
+            public <T> PropertyMapping<?> visitMap(final UseMap<T> type) {
+
+                return mapMapping(type, name, expand);
+            }
+
+            @Override
+            public PropertyMapping<?> visitStruct(final UseStruct type) {
+
+                return structMapping(type, name, expand);
+            }
+
+            @Override
+            public PropertyMapping<?> visitBinary(final UseBinary type) {
+
+                return binaryMapping(type, name);
+            }
+
+            @Override
+            public PropertyMapping<?> visitDate(final UseDate type) {
+
+                return dateMapping(type, name);
+            }
+
+            @Override
+            public PropertyMapping<?> visitDateTime(final UseDateTime type) {
+
+                return dateTimeMapping(type, name);
+            }
+
+            @Override
+            public PropertyMapping<?> visitView(final UseView type) {
+
+                return viewMapping(type, name, expand);
+            }
+
+            @Override
+            public PropertyMapping<?> visitQuery(final UseQuery type) {
+
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public <T> PropertyMapping<?> visitOptional(final UseOptional<T> type) {
+
+                return type.getType().visit(this);
+            }
+
+            @Override
+            public PropertyMapping<?> visitAny(final UseAny type) {
+
+                return anyMapping(type, name);
+            }
+
+            @Override
+            public PropertyMapping<?> visitSecret(final UseSecret type) {
+
+                return secretMapping(type, name);
+            }
+
+            @Override
+            public <T> PropertyMapping<?> visitPage(final UsePage<T> type) {
+
+                return pageMapping(type, name, expand);
+            }
+
+            @Override
+            public PropertyMapping<?> visitDecimal(final UseDecimal type) {
+
+                return decimalMapping(type, name);
+            }
+
+            @Override
+            public PropertyMapping<?> visitComposite(final UseComposite type) {
+
+                throw new UnsupportedOperationException();
             }
         });
     }

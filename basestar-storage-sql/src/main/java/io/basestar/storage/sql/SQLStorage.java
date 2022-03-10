@@ -22,6 +22,7 @@ package io.basestar.storage.sql;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Context;
 import io.basestar.expression.Expression;
 import io.basestar.expression.compare.Eq;
@@ -56,6 +57,7 @@ import lombok.Data;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
+import org.jooq.Named;
 import org.jooq.*;
 import org.jooq.conf.Settings;
 import org.jooq.exception.DataAccessException;
@@ -121,20 +123,44 @@ public class SQLStorage implements DefaultLayerStorage {
 
     private Optional<org.jooq.Field<?>> resolveField(@Nullable final Table<?> table, final String name) {
 
+        return resolveField(table, null, name);
+    }
+
+    private Optional<org.jooq.Field<?>> resolveField(@Nullable final Table<?> table, @Nullable final Name tableAlias, final String name) {
+
         if (strategy.useMetadata() && table != null) {
-            final String normalizedName = strategy.getNamingStrategy().columnName(name);
-            final List<org.jooq.Field<?>> fields = Arrays.stream(table.fields())
-                    .filter(f -> strategy.getNamingStrategy().columnName(f.getName()).equals(normalizedName))
+            final org.jooq.Name normalizedName;
+            if (tableAlias != null) {
+                normalizedName = joinAlias(tableAlias).append(DSL.name(strategy.getNamingStrategy().columnName(name)));
+            } else {
+                normalizedName = DSL.name(strategy.getNamingStrategy().columnName(name));
+            }
+            final List<org.jooq.Name> fields = Arrays.stream(table.fields())
+                    .map(Named::getQualifiedName)
+                    .map(f -> {
+                        if (f.parts().length > normalizedName.parts().length) {
+                            return DSL.name(Arrays.stream(f.parts()).skip(f.parts().length - normalizedName.parts().length).toArray(org.jooq.Name[]::new));
+                        } else {
+                            return f;
+                        }
+                    })
+                    .filter(f -> f.equals(normalizedName))
                     .collect(Collectors.toList());
             if (fields.isEmpty()) {
                 return Optional.empty();
             } else if (fields.size() > 1) {
                 throw new IllegalStateException("Field " + name + " is ambiguous in " + table.getQualifiedName());
             } else {
-                return Optional.of(fields.get(0));
+                return Optional.of(DSL.field(fields.get(0)));
             }
         } else {
-            return Optional.of(DSL.field(DSL.name(strategy.getNamingStrategy().columnName(name))));
+            final org.jooq.Name fieldName;
+            if (tableAlias != null) {
+                fieldName = joinAlias(tableAlias).append(DSL.name(strategy.getNamingStrategy().columnName(name)));
+            } else {
+                fieldName = DSL.name(strategy.getNamingStrategy().columnName(name));
+            }
+            return Optional.of(DSL.field(fieldName));
         }
     }
 
@@ -151,22 +177,79 @@ public class SQLStorage implements DefaultLayerStorage {
             @Override
             public Optional<Field<?>> field(final Name name) {
 
-                return resolveField(table, root.with(name).toString("_"));
+                return resolveField(table, null, root.with(name).toString("_"));
             }
         };
     }
 
-    private List<SelectFieldOrAsterisk> selectFields(final QueryableSchema schema, @Nullable final Table<?> table) {
+    private FieldResolver fieldResolver(@Nullable final Table<?> table, @Nullable final Name tableAlias, final String name) {
+
+        final Name root = Name.of(name);
+        return new FieldResolver() {
+            @Override
+            public Optional<Field<?>> field() {
+
+                return field(Name.empty());
+            }
+
+            @Override
+            public Optional<Field<?>> field(final Name name) {
+
+                return resolveField(table, tableAlias, root.with(name).toString("_"));
+            }
+        };
+    }
+
+    private List<SelectFieldOrAsterisk> selectFields(final DSLContext context, final QueryableSchema schema, @Nullable final Table<?> table) {
+
+        return selectFields(context, schema, table, null, Immutable.set());
+    }
+
+    private List<SelectFieldOrAsterisk> selectFields(final DSLContext context, final QueryableSchema schema, @Nullable final Table<?> table, @Nullable final Name tableAlias, final Set<Name> expand) {
 
         final SQLDialect dialect = strategy.dialect();
 
         final List<SelectFieldOrAsterisk> fields = new ArrayList<>();
         schema.metadataSchema().forEach((name, type) -> {
-            fields.addAll(dialect.selectFields(fieldResolver(table, name), Name.of(name), type));
+            fields.addAll(dialect.selectFields(fieldResolver(table, tableAlias, name), tableAlias == null ? Name.of(name) : tableAlias.with(name), type));
         });
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         schema.getProperties().forEach((name, prop) -> {
-            fields.addAll(dialect.selectFields(fieldResolver(table, name), Name.of(name), prop.typeOf()));
+            final Set<Name> branch = branches.get(name);
+            if (branch != null) {
+                prop.getType().visit(new Use.Visitor.Defaulting<Void>() {
+
+                    @Override
+                    public <T> Void visitDefault(final Use<T> type) {
+
+                        fields.addAll(dialect.selectFields(fieldResolver(table, tableAlias, name), tableAlias == null ? Name.of(name) : tableAlias.with(name), prop.typeOf()));
+                        return null;
+                    }
+
+                    @Override
+                    public Void visitRef(final UseRef type) {
+
+                        final ReferableSchema otherSchema = type.getSchema();
+                        final Table<?> otherTable = resolveTable(context, otherSchema, type.isVersioned());
+                        fields.addAll(selectFields(context, otherSchema, otherTable, tableAlias == null ? null : tableAlias.with(name), ImmutableSet.of()));
+                        return null;
+                    }
+                });
+            } else {
+                fields.addAll(dialect.selectFields(fieldResolver(table, tableAlias, name), tableAlias == null ? Name.of(name) : tableAlias.with(name), prop.typeOf()));
+            }
         });
+        schema.getLinks().forEach((name, link) -> {
+            if (link.isSingle()) {
+                final Set<Name> branch = branches.get(name);
+                if (branch != null) {
+                    final LinkableSchema otherSchema = link.getSchema();
+                    final Table<?> otherTable = resolveTable(context, otherSchema, false);
+                    fields.addAll(selectFields(context, otherSchema, otherTable, tableAlias == null ? Name.of(name) : tableAlias.with(name), ImmutableSet.of()));
+                }
+            }
+        });
+
         return fields;
     }
 
@@ -202,13 +285,13 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
 
-                    final List<SelectFieldOrAsterisk> fields = selectFields(schema, null);
+                    final List<SelectFieldOrAsterisk> fields = selectFields(context, schema, null);
                     final List<OrderField<?>> orderFields = orderFields(null, sort);
 
-                    return context.select(fields).from(sql).where(condition).orderBy(orderFields)
+                    return context.select(fields).from(DSL.table(sql).as(joinAlias(Name.of()))).where(condition).orderBy(orderFields)
                             .limit(DSL.inline(count)).offset(DSL.inline(offset)).fetchAsync().thenApply(results -> {
 
-                                final List<Map<String, Object>> objects = all(schema, results);
+                                final List<Map<String, Object>> objects = all(schema, results, expand);
 
                                 final Page.Token nextToken;
                                 if (objects.size() < count) {
@@ -301,11 +384,11 @@ public class SQLStorage implements DefaultLayerStorage {
         };
     }
 
-    private Condition condition(final Table<?> table, final LinkableSchema schema, final Index index, final Expression expression) {
+    private Condition condition(final DSLContext context, final Table<?> table, final LinkableSchema schema, final Index index, final Expression expression) {
 
         final Function<Name, QueryPart> columnResolver;
         if (index == null) {
-            columnResolver = objectColumnResolver(table, schema);
+            columnResolver = objectColumnResolver(context, table, schema);
         } else {
             columnResolver = indexColumnResolver(table, (ReferableSchema) schema, index);
         }
@@ -316,7 +399,7 @@ public class SQLStorage implements DefaultLayerStorage {
 
         return sort.stream()
                 .flatMap(v -> {
-                    final Optional<Field<?>> opt = resolveField(table, v.getName().toString());
+                    final Optional<Field<?>> opt = resolveField(table, Name.of(), v.getName().toString());
                     if (opt.isPresent()) {
                         final Field<?> field = opt.get();
                         return Stream.of(v.getOrder() == Sort.Order.ASC ? field.asc() : field.desc());
@@ -327,11 +410,25 @@ public class SQLStorage implements DefaultLayerStorage {
                 .collect(Collectors.toList());
     }
 
+    private Table<?> resolveTable(final DSLContext context, final LinkableSchema schema, final boolean versioned) {
+
+        final org.jooq.Name tableName;
+        if (versioned) {
+            if (schema instanceof ReferableSchema) {
+                tableName = requireHistoryTableName((ReferableSchema) schema);
+            } else {
+                throw new IllegalStateException("Schema " + schema.getQualifiedName() + " cannot be versioned");
+            }
+        } else {
+            tableName = schemaTableName(schema);
+        }
+        return resolveTable(context, tableName, schema, null);
+    }
+
     private Table<?> resolveTable(final DSLContext context, final org.jooq.Name qualifiedName, final LinkableSchema schema) {
 
         return resolveTable(context, qualifiedName, schema, null);
     }
-
 
     private Table<?> resolveTable(final DSLContext context, final org.jooq.Name qualifiedName, final LinkableSchema schema, @Nullable final Index index) {
 
@@ -369,24 +466,39 @@ public class SQLStorage implements DefaultLayerStorage {
                                                                    final Set<Name> expand, final int count,
                                                                    final Page.Token token, final Set<Page.Stat> stats) {
 
-
         final SQLDialect dialect = strategy.dialect();
+        final NamingStrategy namingStrategy = strategy.getNamingStrategy();
 
         final boolean useKeysetPaging = canUseKeysetPaging(schema, sort);
 
         final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
 
-            final Table<?> table = resolveTable(context, tableName, schema, index);
+            final Table<?> table = expandTable(context, schema, resolveTable(context, tableName, schema, index)
+                    .as(joinAlias(Name.empty())), expression, expand);
 
             final List<OrderField<?>> orderFields = orderFields(table, sort);
 
-            final Condition condition = condition(table, schema, index, expression);
+            final Condition condition = condition(context, table, schema, index, expression);
 
             log.debug("SQL condition {}", condition);
 
-            final SelectSeekStepN<org.jooq.Record> select = context.select(selectFields(schema, table))
-                    .from(table.getQualifiedName()).where(condition).orderBy(orderFields);
+            final SelectSelectStep<org.jooq.Record> baseSelect = context.select(selectFields(context, schema, table, Name.empty(), expand));
 
+//            final SelectIntoStep<org.jooq.Record> distinctSelect;
+//            if(requireDistinct(schema, expand)) {
+//                final List<String> primaryKey = schema.primaryKey();
+//                if(primaryKey.isEmpty()) {
+//                    throw new IllegalStateException("Cannot expand " + expand + " on a source with no primary key");
+//                }
+//                distinctSelect = baseSelect;
+////                .distinctOn(primaryKey.stream()
+////                        .map(v -> DSL.field(DSL.name(joinAlias(Name.empty()), namingStrategy.columnName(Name.of(v)))))
+////                        .toArray(org.jooq.Field<?>[]::new));
+//            } else {
+//                distinctSelect = baseSelect;
+//            }
+
+            final SelectSeekStepN<org.jooq.Record> select = baseSelect.from(table).where(condition).orderBy(orderFields);
             final SelectForUpdateStep<org.jooq.Record> seek;
             final long offset;
             if (token == null) {
@@ -403,7 +515,7 @@ public class SQLStorage implements DefaultLayerStorage {
 
             return seek.fetchAsync().thenApply(results -> {
 
-                final List<Map<String, Object>> objects = all(schema, results);
+                final List<Map<String, Object>> objects = all(schema, results, expand);
 
                 final Page.Token nextToken;
                 if (objects.size() < count) {
@@ -425,11 +537,12 @@ public class SQLStorage implements DefaultLayerStorage {
             // Runs in parallel with query
             final CompletableFuture<Page.Stats> statsFuture = withContext(context -> {
 
-                final Table<?> table = resolveTable(context, tableName, schema, index);
+                final Table<?> table = expandTable(context, schema, resolveTable(context, tableName, schema, index)
+                        .as(joinAlias(Name.empty())), expression, expand);
 
-                final Condition condition = condition(table, schema, index, expression);
+                final Condition condition = condition(context, table, schema, index, expression);
 
-                return context.select(DSL.count().as(COUNT_AS)).from(table.getQualifiedName()).where(condition).fetchAsync().thenApply(results -> {
+                return context.select(DSL.count().as(COUNT_AS)).from(table).where(condition).fetchAsync().thenApply(results -> {
 
                     if (results.isEmpty()) {
                         return Page.Stats.ZERO;
@@ -451,47 +564,156 @@ public class SQLStorage implements DefaultLayerStorage {
         }
     }
 
-    private Function<Name, QueryPart> objectColumnResolver(final Table<?> table, final LinkableSchema schema) {
+    private boolean requireDistinct(final LinkableSchema schema, final Set<Name> expand) {
+
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        for (final Link link : schema.getLinks().values()) {
+            final String name = link.getName();
+            final Set<Name> branch = branches.get(name);
+            if (branch != null && link.isSingle()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Table<?> expandTable(final DSLContext context, final LinkableSchema schema, final Table<?> table, final Expression expression, final Set<Name> expand) {
+
+        final NamingStrategy namingStrategy = strategy.getNamingStrategy();
+
+        final Set<Name> joinExpand = expand == null ? new HashSet<>() : new HashSet<>(expand);
+        if (expression != null) {
+            joinExpand.addAll(schema.requiredExpand(expression.names()));
+        }
+
+        Table<?> result = table;
+        final Map<String, Set<Name>> branches = Name.branch(joinExpand);
+        for (final Property property : schema.getProperties().values()) {
+            final String name = property.getName();
+            final Set<Name> branch = branches.get(name);
+            if (branch != null) {
+                final Table<?> current = result;
+                result = property.getType().visit(new Use.Visitor.Defaulting<Table<?>>() {
+                    @Override
+                    public <T> Table<?> visitDefault(final Use<T> type) {
+
+                        return current;
+                    }
+
+                    @Override
+                    public Table<?> visitRef(final UseRef type) {
+
+                        final ReferableSchema otherSchema = type.getSchema();
+                        final Table<?> otherTable = resolveTable(context, otherSchema, type.isVersioned()).as(joinAlias(Name.of()));
+                        final Table<?> otherSelect = DSL.table(context.select(selectFields(context, otherSchema, otherTable, Name.of(), expand)).from(otherTable));
+                        return current.leftJoin(otherSelect.as(joinAlias(Name.of(name))))
+                                .on(
+                                        DSL.field(joinAlias(Name.of()).append(namingStrategy.columnName(Name.of(name).with(ReferableSchema.ID))))
+                                                .eq(DSL.field(joinAlias(Name.of(name)).append(namingStrategy.columnName(Name.of(ReferableSchema.ID)))))
+                                );
+                    }
+                });
+            }
+        }
+        for (final Link link : schema.getLinks().values()) {
+            final String name = link.getName();
+            final Set<Name> branch = branches.get(name);
+            if (branch != null && link.isSingle()) {
+                final LinkableSchema otherSchema = link.getSchema();
+                final Table<?> otherTable = resolveTable(context, otherSchema, false).as(joinAlias(Name.of(name)));
+                final Function<Name, QueryPart> columnResolver = linkColumnResolver(context, table, schema, otherTable, otherSchema);
+                final Condition condition = strategy.expressionVisitor(schema, columnResolver).condition(link.getExpression());
+                result = result.leftJoin(otherTable.as(joinAlias(Name.of(name))))
+                        .on(condition);
+            }
+        }
+        return result;
+    }
+
+    private org.jooq.Name joinAlias(final Name name) {
+
+        return DSL.name("__" + name.toString("__"));
+    }
+
+    private Function<Name, QueryPart> linkColumnResolver(final DSLContext context, final Table<?> table, final LinkableSchema schema, final Table<?> otherTable, final LinkableSchema otherSchema) {
+
+        final Function<Name, QueryPart> resolver = objectColumnResolver(context, table, schema);
+        final Function<Name, QueryPart> otherResolver = objectColumnResolver(context, otherTable, otherSchema);
+
+        return name -> {
+            if (Reserved.THIS.equals(name.first())) {
+                return resolver.apply(name.withoutFirst());
+            } else {
+                return otherResolver.apply(name);
+            }
+        };
+    }
+
+    private Function<Name, QueryPart> objectColumnResolver(final DSLContext context, final Table<?> table, final LinkableSchema schema) {
+
+        return objectColumnResolver(context, table, Name.of(), schema);
+    }
+
+    private Function<Name, QueryPart> objectColumnResolver(final DSLContext context, final Table<?> table, final Name joinAlias, final LinkableSchema schema) {
 
         final SQLDialect dialect = strategy.dialect();
+        final NamingStrategy namingStrategy = strategy.getNamingStrategy();
 
         return name -> {
 
-            if (schema.metadataSchema().containsKey(name.first())) {
+            final String first = name.first();
+            if (schema.metadataSchema().containsKey(first)) {
                 final Name rest = name.withoutFirst();
                 if (rest.isEmpty()) {
-                    return resolveField(table, name.first()).map(DSL::field)
+                    return resolveField(table, joinAlias, name.first()).map(DSL::field)
                             .orElseThrow(() -> new UnsupportedOperationException("Field " + name + " not found"));
                 } else {
                     throw new UnsupportedOperationException("Query of this type is not supported");
                 }
             } else {
-                final Property prop = schema.requireProperty(name.first(), true);
+                final Member member = schema.requireMember(first, true);
                 final Name rest = name.withoutFirst();
-                if (rest.isEmpty()) {
-                    return resolveField(table, name.first()).map(DSL::field)
-                            .orElseThrow(() -> new UnsupportedOperationException("Field " + name + " not found"));
+                if (member instanceof Property) {
+                    if (rest.isEmpty()) {
+                        return resolveField(table, joinAlias, first).map(DSL::field)
+                                .orElseThrow(() -> new UnsupportedOperationException("Field " + name + " not found"));
+                    } else {
+                        return member.typeOf().visit(new Use.Visitor.Defaulting<QueryPart>() {
+                            @Override
+                            public <T> QueryPart visitDefault(final Use<T> type) {
+
+                                throw new UnsupportedOperationException("Query of this type is not supported");
+                            }
+
+                            @Override
+                            public QueryPart visitStruct(final UseStruct type) {
+
+                                // FIXME
+                                return DSL.field(DSL.name(joinAlias(joinAlias), namingStrategy.columnName(name)));
+                            }
+
+                            @Override
+                            public QueryPart visitRef(final UseRef type) {
+
+                                if (rest.equals(Name.of(ReferableSchema.ID))) {
+                                    return dialect.refIdField(namingStrategy, type, name);
+                                } else {
+                                    return DSL.field(joinAlias(Name.of(first)).append(namingStrategy.columnName(rest)));
+                                }
+                            }
+                        });
+                    }
+                } else if (member instanceof Link && ((Link) member).isSingle()) {
+                    if (rest.isEmpty()) {
+                        throw new IllegalStateException("Query of this type is not supported (link expansion must target a property");
+                    } else {
+                        final Link link = (Link) member;
+                        final LinkableSchema otherSchema = link.getSchema();
+                        final Table<?> otherTable = resolveTable(context, otherSchema, false);
+                        return objectColumnResolver(context, otherTable, joinAlias.with(link.getName()), otherSchema).apply(rest);
+                    }
                 } else {
-                    return prop.typeOf().visit(new Use.Visitor.Defaulting<QueryPart>() {
-                        @Override
-                        public <T> QueryPart visitDefault(final Use<T> type) {
-
-                            throw new UnsupportedOperationException("Query of this type is not supported");
-                        }
-
-                        @Override
-                        public QueryPart visitStruct(final UseStruct type) {
-
-                            // FIXME
-                            return DSL.field(strategy.getNamingStrategy().columnName(name));
-                        }
-
-                        @Override
-                        public QueryPart visitRef(final UseRef type) {
-
-                            return dialect.refIdField(strategy.getNamingStrategy(), type, name);
-                        }
-                    });
+                    throw new IllegalStateException("Expansion of " + first + " not supported in " + schema.getQualifiedName());
                 }
             }
         };
@@ -504,77 +726,6 @@ public class SQLStorage implements DefaultLayerStorage {
         // FIXME
         return name -> DSL.field(strategy.getNamingStrategy().columnName(name));
     }
-//
-//    @Override
-//    public List<Pager.Source<Map<String, Object>>> aggregate(final ObjectSchema schema, final Expression query, final Map<String, Expression> group, final Map<String, Aggregate> aggregates) {
-//
-//        final Table<Record> table = DSL.table(objectTableName(schema));
-//
-//        return ImmutableList.of((count, token, stats) -> {
-//
-//            final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
-//
-//                final Function<Name, QueryPart> columnResolver = objectColumnResolver(context, schema);
-//                final SQLExpressionVisitor expressionVisitor = new SQLExpressionVisitor(columnResolver);
-//
-//                final List<GroupField> groupFields = group.entrySet().stream()
-//                        .map(e -> expressionVisitor.field(e.getValue()).as(DSL.name(e.getKey())))
-//                        .collect(Collectors.toList());
-//
-//                final List<Sort> sort = group.keySet().stream().map(Sort::asc).collect(Collectors.toList());
-//
-//                final List<OrderField<?>> orderFields = orderFields(sort);
-//
-//                final Condition condition = condition(context, schema, /* FIXME */ null, query);
-//
-//                log.debug("SQL aggregate condition {}", condition);
-//
-//                final List<SelectFieldOrAsterisk> selectFields = new ArrayList<>();
-//                group.keySet().forEach(k -> {
-//                    selectFields.add(DSL.field(DSL.name(k)));
-//                });
-//                aggregates.forEach((k, v) -> {
-//                    selectFields.add(expressionVisitor.field(v).as(DSL.name(k)));
-//                });
-//
-//                final SelectSeekStepN<Record> select = context.select(selectFields)
-//                        .from(table).where(condition).groupBy(groupFields).orderBy(orderFields);
-//
-//                final SelectForUpdateStep<Record> seek;
-//                if (token == null) {
-//                    seek = select.limit(DSL.inline(count));
-//                } else {
-//                    final List<Object> values = KeysetPagingUtils.keysetValues(schema, sort, token);
-//                    seek = select.seek(values.toArray(new Object[0])).limit(DSL.inline(count));
-//                }
-//
-//                return seek.fetchAsync().thenApply(results -> {
-//
-//                    final List<Map<String, Object>> objects = results.stream()
-//                            .map(v -> {
-//                                final Map<String, Object> value = new HashMap<>();
-//                                group.keySet().forEach(k -> value.put(k, v.get(k)));
-//                                aggregates.keySet().forEach(k -> value.put(k, v.get(k)));
-//                                return value;
-//                            })
-//                            .collect(Collectors.toList());
-//
-//                    final Page.Token nextToken;
-//                    if (objects.size() < count) {
-//                        nextToken = null;
-//                    } else {
-//                        final Map<String, Object> last = objects.get(objects.size() - 1);
-//                        nextToken = KeysetPagingUtils.keysetPagingToken(schema, sort, last);
-//                    }
-//
-//                    return new Page<>(objects, nextToken);
-//                });
-//
-//            });
-//
-//            return pageFuture;
-//        });
-//    }
 
     @Override
     public ReadTransaction read(final Consistency consistency) {
@@ -614,26 +765,25 @@ public class SQLStorage implements DefaultLayerStorage {
                         final ObjectSchema schema = entry.getKey();
                         final Table<?> table = resolveTable(context, schemaTableName(schema), schema);
                         final Set<String> ids = entry.getValue();
-                        all(schema, context.select(selectFields(schema, table))
-                                .from(table.getQualifiedName())
-                                .where(idField(schema).in(literals(ids)))
-                                .fetch())
+                        final Select<org.jooq.Record> select = context.select(selectFields(context, schema, table))
+                                .from(table.as(joinAlias(Name.of())))
+                                .where(idField(schema).in(literals(ids)));
+                        all(schema, select.fetch(), Immutable.set())
                                 .forEach(v -> results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), v), v));
                     }
 
                     for (final Map.Entry<ObjectSchema, Set<IdVersion>> entry : byIdVersion.entrySet()) {
                         final ObjectSchema schema = entry.getKey();
-                        final org.jooq.Name historyTableName = historyTableName(schema)
-                                .orElseThrow(() -> new IllegalStateException("History table is not available, therefore querying by id_version is not allowed"));
+                        final org.jooq.Name historyTableName = requireHistoryTableName(schema);
                         final Table<?> table = resolveTable(context, historyTableName, schema);
                         final Set<Row2<String, Long>> idVersions = entry.getValue().stream()
                                 .map(v -> DSL.row(v.getId(), v.getVersion()))
                                 .collect(Collectors.toSet());
-                        all(schema, context.select(selectFields(schema, table))
-                                .from(table.getQualifiedName())
+                        all(schema, context.select(selectFields(context, schema, table))
+                                .from(table.as(joinAlias(Name.of())))
                                 .where(DSL.row(idField(schema), versionField(schema))
                                         .in(idVersions))
-                                .fetch())
+                                .fetch(), Immutable.set())
                                 .forEach(v -> results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), v), v));
                     }
 
@@ -670,7 +820,39 @@ public class SQLStorage implements DefaultLayerStorage {
     @Override
     public Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
 
-        return Collections.emptySet();
+        final Set<Name> supported = new HashSet<>();
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+
+        for (final Property property : schema.getProperties().values()) {
+            final String name = property.getName();
+            if (branches.containsKey(name)) {
+                supported.addAll(property.getType().visit(new Use.Visitor.Defaulting<Set<Name>>() {
+
+                    @Override
+                    public <T> Set<Name> visitDefault(final Use<T> type) {
+
+                        return Collections.emptySet();
+                    }
+
+                    @Override
+                    public Set<Name> visitRef(final UseRef type) {
+
+                        return Collections.singleton(Name.of(name));
+                    }
+                }));
+            }
+        }
+
+        if (schema instanceof ReferableSchema || (schema instanceof ViewSchema && !schema.primaryKey().isEmpty())) {
+            for (final Link link : schema.getLinks().values()) {
+                final String name = link.getName();
+                if (branches.containsKey(name) && link.isSingle()) {
+                    supported.add(Name.of(name));
+                }
+            }
+        }
+
+        return supported;
     }
 
     @Override
@@ -745,28 +927,33 @@ public class SQLStorage implements DefaultLayerStorage {
         return strategy.getNamingStrategy().historyTableName(schema);
     }
 
+    private org.jooq.Name requireHistoryTableName(final ReferableSchema schema) {
+
+        return historyTableName(schema).orElseThrow(() -> new IllegalStateException("History not enabled for " + schema.getQualifiedName()));
+    }
+
     private Optional<org.jooq.Name> indexTableName(final ReferableSchema schema, final Index index) {
 
         return strategy.getNamingStrategy().indexTableName(schema, index);
     }
 
-    private Map<String, Object> first(final LinkableSchema schema, final Result<org.jooq.Record> result) {
+    private Map<String, Object> first(final LinkableSchema schema, final Result<org.jooq.Record> result, final Set<Name> expand) {
 
         if (result.isEmpty()) {
             return null;
         } else {
-            return fromRecord(schema, result.iterator().next());
+            return fromRecord(schema, result.iterator().next(), expand);
         }
     }
 
-    private List<Map<String, Object>> all(final QueryableSchema schema, final Result<org.jooq.Record> result) {
+    private List<Map<String, Object>> all(final QueryableSchema schema, final Result<org.jooq.Record> result, final Set<Name> expand) {
 
         return result.stream()
-                .map(v -> fromRecord(schema, v))
+                .map(v -> fromRecord(schema, v, expand))
                 .collect(Collectors.toList());
     }
 
-    private Map<String, Object> fromRecord(final QueryableSchema schema, final org.jooq.Record record) {
+    private Map<String, Object> fromRecord(final QueryableSchema schema, final org.jooq.Record record, final Set<Name> expand) {
 
         final SQLDialect dialect = strategy.dialect();
 
@@ -774,20 +961,35 @@ public class SQLStorage implements DefaultLayerStorage {
         final Map<String, Object> result = new HashMap<>();
         schema.metadataSchema().forEach((k, v) ->
                 result.put(k, dialect.fromSQLValue(v, ValueResolver.of(data.get(k)))));
-        schema.getProperties().forEach((k, v) ->
-                result.put(k, dialect.fromSQLValue(v.typeOf(), new ValueResolver() {
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        schema.getProperties().forEach((k, v) -> {
+            result.put(k, dialect.fromSQLValue(v.typeOf(), new ValueResolver() {
+                @Override
+                public Object value() {
+
+                    return data.get(k);
+                }
+
+                @Override
+                public Object value(final Name name) {
+
+                    return data.get(Name.of(k).with(name).toString("_"));
+                }
+            }));
+            final Set<Name> branch = branches.get(k);
+            if (branch != null) {
+                v.getType().visit(new Use.Visitor.Defaulting<Void>() {
                     @Override
-                    public Object value() {
+                    public Void visitRef(final UseRef type) {
 
-                        return data.get(k);
+                        if (data.containsKey(k + "_" + ReferableSchema.ID)) {
+                            result.put(k, fromSubRecord(type.getSchema(), data, k + "_"));
+                        }
+                        return null;
                     }
-
-                    @Override
-                    public Object value(final Name name) {
-
-                        return data.get(Name.of(k).with(name).toString("_"));
-                    }
-                })));
+                });
+            }
+        });
 
         if (Instance.getSchema(result) == null) {
             Instance.setSchema(result, schema.getQualifiedName());
@@ -801,6 +1003,31 @@ public class SQLStorage implements DefaultLayerStorage {
                 }
             }
         }
+        return result;
+    }
+
+    private Object fromSubRecord(final ReferableSchema schema, final Map<String, Object> data, final String prefix) {
+
+        final SQLDialect dialect = strategy.dialect();
+
+        final Map<String, Object> result = new HashMap<>();
+        schema.metadataSchema().forEach((k, v) ->
+                result.put(k, dialect.fromSQLValue(v, ValueResolver.of(data.get(k)))));
+        schema.getProperties().forEach((k, v) -> {
+            result.put(k, dialect.fromSQLValue(v.typeOf(), new ValueResolver() {
+                @Override
+                public Object value() {
+
+                    return data.get(prefix + k);
+                }
+
+                @Override
+                public Object value(final Name name) {
+
+                    return data.get(Name.of(prefix + k).with(name).toString("_"));
+                }
+            }));
+        });
         return result;
     }
 

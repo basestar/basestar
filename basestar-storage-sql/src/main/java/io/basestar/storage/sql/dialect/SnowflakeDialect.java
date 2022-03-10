@@ -54,7 +54,6 @@ public class SnowflakeDialect extends JSONDialect {
 
         return VARIANT_TYPE;
     }
-
     @Override
     public <T> DataType<?> arrayType(final UseArray<T> type) {
 

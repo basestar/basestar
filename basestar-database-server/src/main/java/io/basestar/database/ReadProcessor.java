@@ -208,7 +208,6 @@ public class ReadProcessor {
         }
     }
 
-
     protected CompletableFuture<Page<Instance>> expand(final Consistency consistency, final Consistency linkConsistency, final Context context, final Page<Instance> items, final Set<Name> expand) {
 
         if(items == null) {

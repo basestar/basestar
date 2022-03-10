@@ -143,6 +143,11 @@ RefTarget:
       type: RefSource?
     hello:
       type: string?
+  links:
+    singleSourceLink:
+      single: true
+      schema: RefSource
+      expression: this.id == target.id
 
 RefSource:
   type: object

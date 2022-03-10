@@ -4,11 +4,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import io.basestar.jackson.BasestarModule;
-import io.basestar.schema.Instance;
-import io.basestar.schema.Property;
-import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.*;
 import io.basestar.schema.use.*;
+import io.basestar.secret.Secret;
 import io.basestar.storage.sql.SQLDialect;
+import io.basestar.storage.sql.mapping.PropertyMapping;
+import io.basestar.storage.sql.mapping.ValueTransform;
 import io.basestar.storage.sql.resolver.FieldResolver;
 import io.basestar.storage.sql.resolver.ValueResolver;
 import io.basestar.util.Bytes;
@@ -40,7 +41,7 @@ public abstract class JSONDialect implements SQLDialect {
     }
 
     @Override
-    public DataType<?> stringType(final UseString type) {
+    public DataType<String> stringType(final UseStringLike<?> type) {
 
         return SQLDataType.LONGVARCHAR;
     }
@@ -380,10 +381,180 @@ public abstract class JSONDialect implements SQLDialect {
 
     protected String unescapeJson(final String data) {
 
-        if(isJsonEscaped()) {
+        if (isJsonEscaped()) {
             return StringEscapeUtils.unescapeJava(data.substring(1, data.length() - 1));
         } else {
             return data;
         }
+    }
+
+
+    public <T> PropertyMapping<T> jsonMapping(final Use<T> type, final String name, final Set<Name> expand) {
+
+        return new PropertyMapping.Simple<T>(name, SQLDataType.JSON, new ValueTransform<T, JSON>() {
+            @Override
+            public JSON toSQLValue(final T value) {
+
+                try {
+                    return value == null ? null : JSON.valueOf(objectMapper.writeValueAsString(value));
+                } catch (final IOException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+
+            @Override
+            public T fromSQLValue(final JSON value) {
+
+                try {
+                    return value == null ? null : type.create(objectMapper.readValue(value.data(), Object.class), expand);
+                } catch (final IOException e) {
+                    throw new IllegalStateException();
+                }
+            }
+        });
+    }
+
+    @Override
+    public PropertyMapping<LocalDate> dateMapping(final UseDate type, final String name) {
+
+        return new PropertyMapping.Simple<>(name, dateType(type), new ValueTransform<LocalDate, java.sql.Date>() {
+            @Override
+            public java.sql.Date toSQLValue(final LocalDate value) {
+
+                return value == null ? null : ISO8601.toSqlDate(value);
+            }
+
+            @Override
+            public LocalDate fromSQLValue(final java.sql.Date value) {
+
+                return value == null ? null : ISO8601.toDate(value);
+            }
+        });
+    }
+
+    @Override
+    public PropertyMapping<Instant> dateTimeMapping(final UseDateTime type, final String name) {
+
+        return new PropertyMapping.Simple<>(name, dateTimeType(type), new ValueTransform<Instant, java.sql.Timestamp>() {
+            @Override
+            public java.sql.Timestamp toSQLValue(final Instant value) {
+
+                return value == null ? null : ISO8601.toSqlTimestamp(value);
+            }
+
+            @Override
+            public Instant fromSQLValue(final java.sql.Timestamp value) {
+
+                return value == null ? null : ISO8601.toDateTime(value);
+            }
+        });
+    }
+
+    @Override
+    public PropertyMapping<Instance> refMapping(final UseRef type, final String name, final Set<Name> expand) {
+
+        final List<PropertyMapping<?>> mappings = new ArrayList<>();
+        if (expand == null) {
+            mappings.add(stringMapping(UseString.DEFAULT, ReferableSchema.ID));
+            if (type.isVersioned()) {
+                mappings.add(integerMapping(UseInteger.DEFAULT, ReferableSchema.ID));
+            }
+        } else {
+            final ReferableSchema refSchema = type.getSchema();
+            mappings.addAll(flattenedMappings(refSchema, expand));
+        }
+        return new PropertyMapping.FlattenedRef(name, mappings);
+    }
+
+    @Override
+    public PropertyMapping<Instance> structMapping(final UseStruct type, final String name, final Set<Name> expand) {
+
+        final StructSchema structSchema = type.getSchema();
+        return new PropertyMapping.FlattenedStruct(name, flattenedMappings(structSchema, expand));
+    }
+
+    protected List<PropertyMapping<?>> flattenedMappings(final InstanceSchema schema, final Set<Name> expand) {
+
+        final List<PropertyMapping<?>> mappings = new ArrayList<>();
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        schema.layoutSchema(expand).forEach((propName, propType) -> {
+            final Set<Name> branch = branches.get(propName);
+            mappings.add(propertyMapping(propType, propName, branch));
+        });
+        return mappings;
+    }
+
+    @Override
+    public PropertyMapping<Instance> viewMapping(final UseView type, final String name, final Set<Name> expand) {
+
+        return jsonMapping(type, name, expand);
+    }
+
+    @Override
+    public <T> PropertyMapping<List<T>> arrayMapping(final UseArray<T> type, final String name, final Set<Name> expand) {
+
+        return jsonMapping(type, name, expand);
+    }
+
+    @Override
+    public <T> PropertyMapping<Page<T>> pageMapping(final UsePage<T> type, final String name, final Set<Name> expand) {
+
+        return jsonMapping(type, name, expand);
+    }
+
+    @Override
+    public <T> PropertyMapping<Set<T>> setMapping(final UseSet<T> type, final String name, final Set<Name> expand) {
+
+        return jsonMapping(type, name, expand);
+    }
+
+    @Override
+    public <T> PropertyMapping<Map<String, T>> mapMapping(final UseMap<T> type, final String name, final Set<Name> expand) {
+
+        return jsonMapping(type, name, expand);
+    }
+
+    @Override
+    public PropertyMapping<Bytes> binaryMapping(final UseBinary type, final String name) {
+
+        return new PropertyMapping.Simple<>(name, stringType(UseString.DEFAULT), new ValueTransform<Bytes, String>() {
+
+            @Override
+            public String toSQLValue(final Bytes value) {
+
+                return value == null ? null : value.toBase64();
+            }
+
+            @Override
+            public Bytes fromSQLValue(final String value) {
+
+                return value == null ? null : Bytes.fromBase64(value);
+            }
+        });
+    }
+
+    @Override
+    public PropertyMapping<Secret> secretMapping(final UseSecret type, final String name) {
+
+        return new PropertyMapping.Simple<>(name, stringType(UseString.DEFAULT), new ValueTransform<Secret, String>() {
+
+            @Override
+            public String toSQLValue(final Secret value) {
+
+                return value == null ? null : value.encryptedBase64();
+            }
+
+            @Override
+            public Secret fromSQLValue(final String value) {
+
+                return value == null ? null : Secret.encrypted(value);
+            }
+        });
+    }
+
+    @Override
+    public <T> PropertyMapping<Object> anyMapping(final UseAny type, final String name) {
+
+        return jsonMapping(type, name, null);
     }
 }

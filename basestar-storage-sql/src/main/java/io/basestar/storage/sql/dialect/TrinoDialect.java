@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import io.basestar.schema.Instance;
 import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.use.UseRef;
-import io.basestar.schema.use.UseString;
+import io.basestar.schema.use.UseStringLike;
 import io.basestar.storage.sql.resolver.ValueResolver;
 import io.basestar.storage.sql.strategy.NamingStrategy;
 import io.basestar.util.Name;
@@ -54,7 +54,7 @@ public class TrinoDialect extends JSONDialect {
     }
 
     @Override
-    public DataType<?> stringType(final UseString type) {
+    public DataType<String> stringType(final UseStringLike<?> type) {
 
         return SQLDataType.VARCHAR;
     }

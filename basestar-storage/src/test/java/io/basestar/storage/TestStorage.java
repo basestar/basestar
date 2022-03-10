@@ -959,6 +959,7 @@ public abstract class TestStorage {
     }
 
     @Test
+    @SuppressWarnings("ConstantConditions")
     protected void testRefExpandQuery() {
 
         final Storage storage = storage(namespace);
@@ -980,7 +981,34 @@ public abstract class TestStorage {
         ));
 
         final List<Sort> sort = Sort.parseList("id");
-        final Page<Map<String, Object>> page = page(storage, source, Expression.parse("target.hello == 'world'"), sort, 10);
+        final Page<Map<String, Object>> page = page(storage, source, Expression.parse("target.hello == 'world'"), sort, expand, 10);
+        assertEquals(1, page.size());
+        assertEquals("world", Instance.get(page.get(0), "target", Map.class).get("hello"));
+    }
+
+    @Test
+    protected void testLinkExpandQuery() {
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema target = namespace.requireObjectSchema(REF_TARGET);
+        final ObjectSchema source = namespace.requireObjectSchema(REF_SOURCE);
+
+        final Set<Name> expand = Name.parseSet("singleSourceLink");
+
+        assumeConcurrentObjectWrite(storage, target);
+        assumeConcurrentObjectWrite(storage, source);
+        assumeTrue(storage.supportedExpand(target, expand).containsAll(expand));
+
+        final String targetId = createComplete(storage, target, ImmutableMap.of(
+                "hello", "world"
+        ));
+        createComplete(storage, source, ImmutableMap.of(
+                "target", new Instance(ImmutableMap.of(ObjectSchema.ID, targetId))
+        ));
+
+        final List<Sort> sort = Sort.parseList("id");
+        final Page<Map<String, Object>> page = page(storage, target, Expression.parse("singleSourceLink.hello == 'world'"), sort, expand, 10);
         assertEquals(1, page.size());
     }
 
