@@ -690,6 +690,65 @@
       }
     ]
   },
+  "UniquePointset": {
+    "name": "UniquePointset",
+    "storageDescriptor": {
+      "columns": [
+        {
+          "name": "__bucket0",
+          "type": "bigint"
+        },
+        {
+          "name": "schema",
+          "type": "string"
+        },
+        {
+          "name": "created",
+          "type": "timestamp"
+        },
+        {
+          "name": "id",
+          "type": "string"
+        },
+        {
+          "name": "updated",
+          "type": "timestamp"
+        },
+        {
+          "name": "version",
+          "type": "bigint"
+        },
+        {
+          "name": "hash",
+          "type": "string"
+        },
+        {
+          "name": "points",
+          "type": "array<struct<x:bigint,y:bigint>>"
+        }
+      ],
+      "location": "file://",
+      "inputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+      "outputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+      "compressed": true,
+      "serdeInfo": {
+        "serializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
+        "parameters": {
+          "serialization.format": "1"
+        }
+      },
+      "parameters": {
+        "EXTERNAL": "true",
+        "parquet.compress": "SNAPPY"
+      }
+    },
+    "partitionKeys": [
+      {
+        "name": "__bucket0",
+        "type": "bigint"
+      }
+    ]
+  },
   "DateSort": {
     "name": "DateSort",
     "storageDescriptor": {
