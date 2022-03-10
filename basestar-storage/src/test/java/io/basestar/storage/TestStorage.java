@@ -517,6 +517,44 @@ public abstract class TestStorage {
         }
     }
 
+    @Test
+    protected void testUpdateNull() {
+
+        assumeTrue(supportsUpdate());
+
+        final Storage storage = storage(namespace);
+
+        final ObjectSchema schema = namespace.requireObjectSchema(SIMPLE);
+
+        final String id = UUID.randomUUID().toString();
+
+        final Instance init = instance(schema, id, 1L, data());
+
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+                .createObject(schema, id, init)
+                .write().join();
+
+        final Map<String, Object> nulled = new HashMap<>(init);
+        schema.getProperties().forEach((name, prop) -> nulled.put(name, null));
+
+        final Instance updated = schema.create(nulled);
+
+        storage.write(Consistency.ATOMIC, Versioning.CHECKED)
+                .updateObject(schema, id, init, updated)
+                .write().join();
+
+        final Map<String, Object> current = storage.get(Consistency.ATOMIC, schema, id, ImmutableSet.of()).join();
+        assertNotNull(current);
+        schema.getProperties().forEach((name, prop) -> {
+            if ("struct".equals(name)) {
+                //temporarily ok
+                assertTrue(current.get(name) == null || current.get(name).equals(Immutable.map("x", null, "y", null)));
+            } else {
+                assertNull(current.get(name));
+            }
+        });
+    }
+
     private Map<String, Object> setVersion(final Map<String, Object> before, final long version) {
 
         final Map<String, Object> copy = new HashMap<>(before);

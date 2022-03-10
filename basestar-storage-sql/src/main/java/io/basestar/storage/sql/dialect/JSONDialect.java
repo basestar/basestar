@@ -23,6 +23,7 @@ import org.jooq.impl.SQLDataType;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
@@ -100,69 +101,105 @@ public abstract class JSONDialect implements SQLDialect {
     }
 
     @Override
+    public SelectField<?> booleanToSQLValue(final UseBoolean type, final Boolean value) {
+
+        return value == null ? nullToSQLValue(type) : DSL.val(value);
+    }
+
+    @Override
+    public SelectField<?> stringToSQLValue(final UseString type, final String value) {
+
+        return value == null ? nullToSQLValue(type) : DSL.val(value);
+    }
+
+    @Override
+    public SelectField<?> enumToSQLValue(final UseEnum type, final String value) {
+
+        return value == null ? nullToSQLValue(type) : DSL.val(value);
+    }
+
+    @Override
+    public SelectField<?> integerToSQLValue(final UseInteger type, final Long value) {
+
+        return value == null ? nullToSQLValue(type) : DSL.val(value);
+    }
+
+    @Override
+    public SelectField<?> numberToSQLValue(final UseNumber type, final Double value) {
+
+        return value == null ? nullToSQLValue(type) : DSL.val(value);
+    }
+
+    @Override
+    public SelectField<?> decimalToSQLValue(final UseDecimal type, final BigDecimal value) {
+
+        return value == null ? nullToSQLValue(type) : DSL.val(value);
+    }
+
+    @Override
     public SelectField<?> dateToSQLValue(final UseDate type, final LocalDate value) {
 
-        return DSL.val(ISO8601.toSqlDate(value));
+        return value == null ? nullToSQLValue(type) : DSL.val(ISO8601.toSqlDate(value));
     }
 
     @Override
     public SelectField<?> dateTimeToSQLValue(final UseDateTime type, final Instant value) {
 
-        return DSL.val(ISO8601.toSqlTimestamp(value));
+        return value == null ? nullToSQLValue(type) : DSL.val(ISO8601.toSqlTimestamp(value));
     }
 
     @Override
     public SelectField<?> binaryToSQLValue(final UseBinary type, final Bytes value) {
 
-        return DSL.val(value.toBase64());
+        return value == null ? nullToSQLValue(type) : DSL.val(value.toBase64());
     }
 
     @Override
     public <T> SelectField<?> mapToSQLValue(final UseMap<T> type, final Map<String, T> value) {
 
-        return toJson(value);
+        return value == null ? nullToSQLValue(type) : toJson(value);
     }
 
     @Override
     public <T> SelectField<?> arrayToSQLValue(final UseArray<T> type, final List<T> value) {
 
-        return toJson(value);
+        return value == null ? nullToSQLValue(type) : toJson(value);
     }
 
     @Override
     public <T> SelectField<?> setToSQLValue(final UseSet<T> type, final Set<T> value) {
 
-        return toJson(value);
+        return value == null ? nullToSQLValue(type) : toJson(value);
     }
 
     @Override
     public <T> SelectField<?> pageToSQLValue(final UsePage<T> type, final Page<T> value) {
 
-        return toJson(value);
+        return value == null ? nullToSQLValue(type) : toJson(value);
     }
 
     @Override
     public SelectField<?> refToSQLValue(final UseRef type, final Instance value) {
 
-        return toJson(value);
+        return value == null ? nullToSQLValue(type) : toJson(value);
     }
 
     @Override
     public SelectField<?> structToSQLValue(final UseStruct type, final Instance value) {
 
-        return toJson(value);
+        return value == null ? nullToSQLValue(type) : toJson(value);
     }
 
     @Override
     public SelectField<?> viewToSQLValue(final UseView type, final Instance value) {
 
-        return toJson(value);
+        return value == null ? nullToSQLValue(type) : toJson(value);
     }
 
     @Override
     public SelectField<?> anyToSQLValue(final UseAny type, final Object value) {
 
-        return toJson(value);
+        return value == null ? nullToSQLValue(type) : toJson(value);
     }
 
     @Override
@@ -171,7 +208,8 @@ public abstract class JSONDialect implements SQLDialect {
         final Map<Field<?>, SelectField<?>> fields = new HashMap<>();
         for (final Map.Entry<String, Property> entry : type.getSchema().getProperties().entrySet()) {
             final FieldResolver column = field.resolver(Name.of(entry.getKey()));
-            fields.putAll(toSQLValues(entry.getValue().typeOf(), column, value.get(entry.getKey())));
+            final Use<?> propType = entry.getValue().typeOf();
+            fields.putAll(toSQLValues(propType, column, value == null ? null : value.get(entry.getKey())));
         }
         return fields;
     }
@@ -179,10 +217,9 @@ public abstract class JSONDialect implements SQLDialect {
     @Override
     public Map<Field<?>, SelectField<?>> refToSQLValues(final UseRef type, final FieldResolver field, final Instance value) {
 
-        final Map<Field<?>, SelectField<?>> fields = new HashMap<>(toSQLValues(UseString.DEFAULT, field.resolver(Name.of(ReferableSchema.ID)), value.getId()));
+        final Map<Field<?>, SelectField<?>> fields = new HashMap<>(toSQLValues(UseString.DEFAULT, field.resolver(Name.of(ReferableSchema.ID)), value == null ? null : value.getId()));
         if (type.isVersioned()) {
-            fields.putAll(toSQLValues(UseInteger.DEFAULT, field.resolver(Name.of(ReferableSchema.VERSION)), value.getVersion()));
-
+            fields.putAll(toSQLValues(UseInteger.DEFAULT, field.resolver(Name.of(ReferableSchema.VERSION)), value == null ? null : value.getVersion()));
         }
         return fields;
     }
