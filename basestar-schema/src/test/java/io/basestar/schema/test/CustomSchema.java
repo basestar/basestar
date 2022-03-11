@@ -40,6 +40,11 @@ public class CustomSchema implements Schema {
         }
     }
 
+    public static Builder builder() {
+
+        return new Builder();
+    }
+
     @Nullable
     @Override
     public String getDescription() {

@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -21,15 +20,11 @@ public interface SchemaClasspath {
 
     Class<? extends Schema.Builder<?, ?>> classForId(String id);
 
-    String idForClass(Class<? extends Schema.Builder<?, ?>> cls);
-
     class Default implements SchemaClasspath {
 
         public static final String PROPERTY = "io.basestar.schema.classpath";
 
         private static final Pattern INPUT_NAME_REGEX = Pattern.compile("[a-z\\-]+");
-
-        private static final Pattern OUTPUT_NAME_REGEX = Pattern.compile("[A-Za-z.]+\\.([A-Za-z]+)Schema\\$Builder");
 
         private static final List<String> DEFAULT_SEARCH_PACKAGES = Immutable.list(
                 "io.basestar.schema"
@@ -81,19 +76,6 @@ public interface SchemaClasspath {
         public Class<? extends Schema.Builder<?, ?>> classForId(final String id) {
 
             return classes.computeIfAbsent(id, this::loadClassForId);
-        }
-
-        @Override
-        public String idForClass(final Class<? extends Schema.Builder<?, ?>> cls) {
-
-            final String name = cls.getName();
-            final Matcher matcher = OUTPUT_NAME_REGEX.matcher(name);
-            if (matcher.matches()) {
-                final String match = matcher.group(1);
-                return Text.lowerCamel(match);
-            } else {
-                throw new SchemaValidationException("Schema name " + name + " not valid");
-            }
         }
     }
 }
