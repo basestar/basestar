@@ -40,6 +40,11 @@ public class CustomSchema implements Schema {
         }
     }
 
+    public static Builder builder() {
+
+        return new Builder();
+    }
+
     @Nullable
     @Override
     public String getDescription() {
@@ -75,7 +80,7 @@ public class CustomSchema implements Schema {
     @Override
     public Descriptor<? extends Schema> descriptor() {
 
-        throw new UnsupportedOperationException();
+        return new CustomSchema.Builder();
     }
 
     @Override
