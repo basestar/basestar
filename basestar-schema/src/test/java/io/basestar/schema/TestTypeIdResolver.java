@@ -40,6 +40,6 @@ public class TestTypeIdResolver {
 
         assertEquals(CustomSchema.Builder.class, SchemaClasspath.DEFAULT.classForId(CustomSchema.Builder.TYPE));
         assertEquals(CustomSchema.Builder.TYPE, new Schema.TypeIdResolver().idFromValue(CustomSchema.builder()));
-        assertEquals(CustomSchema.Builder.TYPE, new Schema.TypeIdResolver().idFromValue(ObjectSchema.builder().build().descriptor()));
+        assertEquals(CustomSchema.Builder.TYPE, new Schema.TypeIdResolver().idFromValue(CustomSchema.builder().build().descriptor()));
     }
 }

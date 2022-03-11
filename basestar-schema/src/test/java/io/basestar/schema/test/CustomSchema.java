@@ -80,7 +80,7 @@ public class CustomSchema implements Schema {
     @Override
     public Descriptor<? extends Schema> descriptor() {
 
-        throw new UnsupportedOperationException();
+        return new CustomSchema.Builder();
     }
 
     @Override
