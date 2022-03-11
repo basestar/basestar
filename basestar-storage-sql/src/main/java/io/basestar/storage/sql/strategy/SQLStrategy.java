@@ -65,7 +65,9 @@ public interface SQLStrategy {
         return dialect().describeTable(context, name);
     }
 
+    @Deprecated
     SQLExpressionVisitor expressionVisitor(QueryableSchema schema);
 
+    @Deprecated
     SQLExpressionVisitor expressionVisitor(QueryableSchema schema, Function<io.basestar.util.Name, QueryPart> columnResolver);
 }

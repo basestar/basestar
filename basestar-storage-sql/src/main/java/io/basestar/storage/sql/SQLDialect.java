@@ -2,13 +2,17 @@ package io.basestar.storage.sql;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.basestar.schema.Index;
 import io.basestar.schema.*;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.use.*;
 import io.basestar.schema.util.Casing;
 import io.basestar.secret.Secret;
+import io.basestar.storage.sql.mapping.LinkMapping;
 import io.basestar.storage.sql.mapping.PropertyMapping;
+import io.basestar.storage.sql.mapping.SchemaMapping;
 import io.basestar.storage.sql.mapping.ValueTransform;
+import io.basestar.storage.sql.resolver.ColumnResolver;
 import io.basestar.storage.sql.resolver.FieldResolver;
 import io.basestar.storage.sql.resolver.ValueResolver;
 import io.basestar.storage.sql.strategy.NamingStrategy;
@@ -230,6 +234,7 @@ public interface SQLDialect {
 
     boolean supportsILike();
 
+    @Deprecated
     default DataType<?> dataType(final Use<?> type) {
 
         return type.visit(new Use.Visitor<DataType<?>>() {
@@ -362,145 +367,199 @@ public interface SQLDialect {
         });
     }
 
-    default PropertyMapping<Boolean> booleanMapping(final UseBoolean type, final String name) {
+    default SchemaMapping schemaMapping(final QuerySchema schema, final Map<String, Object> arguments, final Set<Name> expand) {
 
-        return new PropertyMapping.Simple<>(name, booleanType(type), new ValueTransform.Coercing<>(type, null, v -> v));
+        return new SchemaMapping(schema, arguments, null, false, propertyMappings(schema, expand), linkMappings(schema, expand));
     }
 
-    default PropertyMapping<Long> integerMapping(final UseInteger type, final String name) {
+    default SchemaMapping schemaMapping(final LinkableSchema schema, final boolean versioned, final Set<Name> expand) {
 
-        return new PropertyMapping.Simple<>(name, integerType(type), new ValueTransform.Coercing<>(type, null, v -> v));
+        return new SchemaMapping(schema, ImmutableMap.of(), null, versioned, propertyMappings(schema, expand), linkMappings(schema, expand));
     }
 
-    default PropertyMapping<Double> numberMapping(final UseNumber type, final String name) {
+    default SchemaMapping schemaMapping(final LinkableSchema schema, final Index index, final Set<Name> expand) {
 
-        return new PropertyMapping.Simple<>(name, numberType(type), new ValueTransform.Coercing<>(type, null, v -> v));
+        if (index != null) {
+            throw new UnsupportedOperationException();
+        } else {
+            return schemaMapping(schema, false, expand);
+        }
     }
 
-    default PropertyMapping<String> stringMapping(final UseString type, final String name) {
+    default Map<String, PropertyMapping<?>> propertyMappings(final QueryableSchema schema, final Set<Name> expand) {
 
-        return new PropertyMapping.Simple<>(name, stringType(type), new ValueTransform.Coercing<>(type, null, v -> v));
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        final Map<String, PropertyMapping<?>> properties = new HashMap<>();
+        schema.metadataSchema().forEach((name, type) -> {
+            final Set<Name> branch = branches.get(name);
+            properties.put(name, propertyMapping(type, branch));
+        });
+        schema.getProperties().forEach((name, prop) -> {
+            final Set<Name> branch = branches.get(name);
+            properties.put(name, propertyMapping(prop.getType(), branch));
+        });
+        return properties;
     }
 
-    default PropertyMapping<String> enumMapping(final UseEnum type, final String name) {
+    default Map<String, LinkMapping> linkMappings(final QueryableSchema schema, final Set<Name> expand) {
 
-        return new PropertyMapping.Simple<>(name, stringType(type), new ValueTransform.Coercing<>(type, null, v -> v));
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        final Map<String, LinkMapping> links = new HashMap<>();
+        if (schema instanceof ReferableSchema || (schema instanceof ViewSchema && !schema.primaryKey().isEmpty())) {
+            schema.getLinks().forEach((name, link) -> {
+                final Set<Name> branch = branches.get(name);
+                if (branch != null) {
+                    links.put(name, linkMapping(link, branch));
+                }
+            });
+        }
+        return links;
     }
 
-    default PropertyMapping<BigDecimal> decimalMapping(final UseDecimal type, final String name) {
+    default LinkMapping linkMapping(final Link link, final Set<Name> expand) {
 
-        return new PropertyMapping.Simple<>(name, decimalType(type), new ValueTransform.Coercing<>(type, null, v -> v));
+        return new LinkMapping();
     }
 
-    PropertyMapping<LocalDate> dateMapping(UseDate type, String name);
+    default PropertyMapping<Boolean> booleanMapping(final UseBoolean type) {
 
-    PropertyMapping<Instant> dateTimeMapping(UseDateTime type, String name);
+        return PropertyMapping.simple(booleanType(type), new ValueTransform.Coercing<>(type::create, v -> v));
+    }
 
-    PropertyMapping<Instance> refMapping(UseRef type, String name, Set<Name> expand);
+    default PropertyMapping<Long> integerMapping(final UseInteger type) {
 
-    PropertyMapping<Instance> structMapping(UseStruct type, String name, Set<Name> expand);
+        return PropertyMapping.simple(integerType(type), new ValueTransform.Coercing<>(type::create, v -> v));
+    }
 
-    PropertyMapping<Instance> viewMapping(UseView type, String name, Set<Name> expand);
+    default PropertyMapping<Double> numberMapping(final UseNumber type) {
 
-    <T> PropertyMapping<List<T>> arrayMapping(UseArray<T> type, String name, Set<Name> expand);
+        return PropertyMapping.simple(numberType(type), new ValueTransform.Coercing<>(type::create, v -> v));
+    }
 
-    <T> PropertyMapping<Page<T>> pageMapping(UsePage<T> type, String name, Set<Name> expand);
+    default PropertyMapping<String> stringMapping(final UseString type) {
 
-    <T> PropertyMapping<Set<T>> setMapping(UseSet<T> type, String name, Set<Name> expand);
+        return PropertyMapping.simple(stringType(type), new ValueTransform.Coercing<>(type::create, v -> v));
+    }
 
-    <T> PropertyMapping<Map<String, T>> mapMapping(UseMap<T> type, String name, Set<Name> expand);
+    default PropertyMapping<String> enumMapping(final UseEnum type) {
 
-    PropertyMapping<Bytes> binaryMapping(UseBinary type, String name);
+        return PropertyMapping.simple(stringType(type), new ValueTransform.Coercing<>(type::create, v -> v));
+    }
 
-    PropertyMapping<Secret> secretMapping(UseSecret type, String name);
+    default PropertyMapping<BigDecimal> decimalMapping(final UseDecimal type) {
 
-    <T> PropertyMapping<Object> anyMapping(UseAny type, String name);
+        return PropertyMapping.simple(decimalType(type), new ValueTransform.Coercing<>(type::create, v -> v));
+    }
 
-    default PropertyMapping<?> propertyMapping(final Use<?> type, final String name, final Set<Name> expand) {
+    PropertyMapping<LocalDate> dateMapping(UseDate type);
+
+    PropertyMapping<Instant> dateTimeMapping(UseDateTime type);
+
+    PropertyMapping<Instance> refMapping(UseRef type, Set<Name> expand);
+
+    PropertyMapping<Instance> structMapping(UseStruct type, Set<Name> expand);
+
+    PropertyMapping<Instance> viewMapping(UseView type, Set<Name> expand);
+
+    <T> PropertyMapping<List<T>> arrayMapping(UseArray<T> type, Set<Name> expand);
+
+    <T> PropertyMapping<Page<T>> pageMapping(UsePage<T> type, Set<Name> expand);
+
+    <T> PropertyMapping<Set<T>> setMapping(UseSet<T> type, Set<Name> expand);
+
+    <T> PropertyMapping<Map<String, T>> mapMapping(UseMap<T> type, Set<Name> expand);
+
+    PropertyMapping<Bytes> binaryMapping(UseBinary type);
+
+    PropertyMapping<Secret> secretMapping(UseSecret type);
+
+    <T> PropertyMapping<Object> anyMapping(UseAny type);
+
+    default PropertyMapping<?> propertyMapping(final Use<?> type, final Set<Name> expand) {
 
         return type.visit(new Use.Visitor<PropertyMapping<?>>() {
             @Override
             public PropertyMapping<?> visitBoolean(final UseBoolean type) {
 
-                return booleanMapping(type, name);
+                return booleanMapping(type);
             }
 
             @Override
             public PropertyMapping<?> visitInteger(final UseInteger type) {
 
-                return integerMapping(type, name);
+                return integerMapping(type);
             }
 
             @Override
             public PropertyMapping<?> visitNumber(final UseNumber type) {
 
-                return numberMapping(type, name);
+                return numberMapping(type);
             }
 
             @Override
             public PropertyMapping<?> visitString(final UseString type) {
 
-                return stringMapping(type, name);
+                return stringMapping(type);
             }
 
             @Override
             public PropertyMapping<?> visitEnum(final UseEnum type) {
 
-                return enumMapping(type, name);
+                return enumMapping(type);
             }
 
             @Override
             public PropertyMapping<?> visitRef(final UseRef type) {
 
-                return refMapping(type, name, expand);
+                return refMapping(type, expand);
             }
 
             @Override
             public <T> PropertyMapping<?> visitArray(final UseArray<T> type) {
 
-                return arrayMapping(type, name, expand);
+                return arrayMapping(type, expand);
             }
 
             @Override
             public <T> PropertyMapping<?> visitSet(final UseSet<T> type) {
 
-                return setMapping(type, name, expand);
+                return setMapping(type, expand);
             }
 
             @Override
             public <T> PropertyMapping<?> visitMap(final UseMap<T> type) {
 
-                return mapMapping(type, name, expand);
+                return mapMapping(type, expand);
             }
 
             @Override
             public PropertyMapping<?> visitStruct(final UseStruct type) {
 
-                return structMapping(type, name, expand);
+                return structMapping(type, expand);
             }
 
             @Override
             public PropertyMapping<?> visitBinary(final UseBinary type) {
 
-                return binaryMapping(type, name);
+                return binaryMapping(type);
             }
 
             @Override
             public PropertyMapping<?> visitDate(final UseDate type) {
 
-                return dateMapping(type, name);
+                return dateMapping(type);
             }
 
             @Override
             public PropertyMapping<?> visitDateTime(final UseDateTime type) {
 
-                return dateTimeMapping(type, name);
+                return dateTimeMapping(type);
             }
 
             @Override
             public PropertyMapping<?> visitView(final UseView type) {
 
-                return viewMapping(type, name, expand);
+                return viewMapping(type, expand);
             }
 
             @Override
@@ -512,31 +571,31 @@ public interface SQLDialect {
             @Override
             public <T> PropertyMapping<?> visitOptional(final UseOptional<T> type) {
 
-                return type.getType().visit(this);
+                return type.getType().visit(this).nullable();
             }
 
             @Override
             public PropertyMapping<?> visitAny(final UseAny type) {
 
-                return anyMapping(type, name);
+                return anyMapping(type);
             }
 
             @Override
             public PropertyMapping<?> visitSecret(final UseSecret type) {
 
-                return secretMapping(type, name);
+                return secretMapping(type);
             }
 
             @Override
             public <T> PropertyMapping<?> visitPage(final UsePage<T> type) {
 
-                return pageMapping(type, name, expand);
+                return pageMapping(type, expand);
             }
 
             @Override
             public PropertyMapping<?> visitDecimal(final UseDecimal type) {
 
-                return decimalMapping(type, name);
+                return decimalMapping(type);
             }
 
             @Override
@@ -547,6 +606,7 @@ public interface SQLDialect {
         });
     }
 
+    @Deprecated
     default Map<Field<?>, SelectField<?>> toSQLValues(final Use<?> type, final FieldResolver field, final Object value) {
 
         if (value == null) {
@@ -647,6 +707,7 @@ public interface SQLDialect {
         });
     }
 
+    @Deprecated
     default SelectField<?> toSQLValue(final Use<?> type, final Object value) {
 
         if (value == null) {
@@ -747,6 +808,7 @@ public interface SQLDialect {
         });
     }
 
+    @Deprecated
     default Object fromSQLValue(final Use<?> type, final ValueResolver value) {
 
         return type.visit(new Use.Visitor.Defaulting<Object>() {
@@ -842,6 +904,7 @@ public interface SQLDialect {
         });
     }
 
+    @Deprecated
     default List<Field<?>> fields(final Casing casing, final Name name, final Use<?> type) {
 
         return type.visit(new Use.Visitor.Defaulting<List<Field<?>>>() {
@@ -888,11 +951,13 @@ public interface SQLDialect {
         });
     }
 
+    @Deprecated
     default List<Field<?>> fields(final Casing casing, final InstanceSchema schema) {
 
         return fields(casing, Name.empty(), schema);
     }
 
+    @Deprecated
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     default List<Field<?>> fields(final Casing casing, final Name name, final InstanceSchema schema) {
 
@@ -904,6 +969,7 @@ public interface SQLDialect {
         ).collect(Collectors.toList());
     }
 
+    @Deprecated
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     default List<OrderField<?>> indexKeys(final Casing casing, final ReferableSchema schema, final io.basestar.schema.Index index) {
 
@@ -914,6 +980,7 @@ public interface SQLDialect {
         ).collect(Collectors.toList());
     }
 
+    @Deprecated
     default Field<Object> indexField(final Casing casing, final ReferableSchema schema, final io.basestar.schema.Index index, final io.basestar.util.Name name) {
 
         // FIXME: BUG: hacky heuristic
@@ -924,6 +991,7 @@ public interface SQLDialect {
 //        }
     }
 
+    @Deprecated
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     default List<Field<?>> fields(final Casing casing, final ReferableSchema schema, final io.basestar.schema.Index index) {
 
@@ -960,6 +1028,7 @@ public interface SQLDialect {
         return DSL.primaryKey(names.toArray(new org.jooq.Name[0]));
     }
 
+    @Deprecated
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     default List<Field<?>> selectFields(final FieldResolver field, final Name name, final Use<?> type) {
 
@@ -1004,6 +1073,7 @@ public interface SQLDialect {
         });
     }
 
+    @Deprecated
     default <T> Field<T> field(final QueryPart part, final Class<T> type) {
 
         if (part == null) {
@@ -1017,6 +1087,7 @@ public interface SQLDialect {
         }
     }
 
+    @Deprecated
     @SuppressWarnings("unchecked")
     default <T> Field<T> cast(final Field<?> field, final Class<T> type) {
 
@@ -1029,6 +1100,7 @@ public interface SQLDialect {
         }
     }
 
+    @Deprecated
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     default Field<?> field(final QueryPart part) {
 
@@ -1043,12 +1115,14 @@ public interface SQLDialect {
         }
     }
 
+    @Deprecated
     default Condition condition(final QueryPart part) {
 
         if (part == null) {
             return null;
         } else if (part instanceof Field<?>) {
-            return DSL.condition(((Field<?>) part).cast(Boolean.class));
+            final Field<?> field = (Field<?>) part;
+            return field.isNotNull().and(field.cast(Boolean.class));
         } else if (part instanceof Condition) {
             return (Condition) part;
         } else {
@@ -1056,11 +1130,13 @@ public interface SQLDialect {
         }
     }
 
+    @Deprecated
     default QueryPart refIdField(final NamingStrategy namingStrategy, final UseRef type, final Name name) {
 
         return DSL.field(columnName(namingStrategy.getColumnCasing(), name));
     }
 
+    @Deprecated
     default Optional<? extends Field<?>> missingMetadataValue(final LinkableSchema schema, final String name) {
 
         return Optional.empty();
@@ -1219,6 +1295,12 @@ public interface SQLDialect {
         return true;
     }
 
+    default SQLExpressionVisitor expressionResolver(final InferenceContext inferenceContext, final ColumnResolver columnResolver) {
+
+        return new SQLExpressionVisitor(this, inferenceContext, columnResolver::requireColumn);
+    }
+
+    @Deprecated
     default SQLExpressionVisitor expressionResolver(final NamingStrategy namingStrategy, final QueryableSchema schema, final Function<Name, QueryPart> columnResolver) {
 
         final InferenceContext inferenceContext = InferenceContext.from(schema);

@@ -5,6 +5,7 @@ import org.jooq.Field;
 
 import java.util.Optional;
 
+@Deprecated
 public interface FieldResolver {
 
     Optional<Field<?>> field();

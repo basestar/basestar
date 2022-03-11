@@ -98,8 +98,6 @@ public interface LinkableSchema extends QueryableSchema, Query.Resolver {
 
     String forceId(Map<String, Object> data);
 
-    List<String> primaryKey();
-
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
     Use<?> typeOfId();
 

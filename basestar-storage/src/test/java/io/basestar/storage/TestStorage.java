@@ -1414,7 +1414,7 @@ public abstract class TestStorage {
                 "__key", viewSchema.createId(ImmutableMap.of("country", "GB", "state", "London")),
                 "country", "GB",
                 "state", "London",
-                "count", 10
+                "count", 10L
         ));
         transaction.write().get();
 

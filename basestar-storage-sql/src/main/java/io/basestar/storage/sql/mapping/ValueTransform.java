@@ -1,43 +1,58 @@
 package io.basestar.storage.sql.mapping;
 
-import io.basestar.schema.use.Use;
 import io.basestar.util.Name;
 import lombok.Data;
 
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public interface ValueTransform<T, S> {
 
     S toSQLValue(T value);
 
-    T fromSQLValue(S value);
+    T fromSQLValue(S value, Set<Name> expand);
 
-    default <R> ValueTransform<R, S> then(final ValueTransform<R, T> transform) {
+    static <T> ValueTransform<T, T> noop() {
 
-        return new ValueTransform<R, S>() {
+        return new ValueTransform<T, T>() {
             @Override
-            public S toSQLValue(final R value) {
+            public T toSQLValue(final T value) {
 
-                final T first = transform.toSQLValue(value);
-                return ValueTransform.this.toSQLValue(first);
+                return value;
             }
 
             @Override
-            public R fromSQLValue(final S value) {
+            public T fromSQLValue(final T value, final Set<Name> expand) {
 
-                final T first = ValueTransform.this.fromSQLValue(value);
-                return transform.fromSQLValue(first);
+                return value;
             }
         };
     }
 
+//    default <R> ValueTransform<R, S> then(final ValueTransform<R, T> transform) {
+//
+//        return new ValueTransform<R, S>() {
+//            @Override
+//            public S toSQLValue(final R value) {
+//
+//                final T first = transform.toSQLValue(value);
+//                return ValueTransform.this.toSQLValue(first);
+//            }
+//
+//            @Override
+//            public R fromSQLValue(final S value, final Set<Name> expand) {
+//
+//                final T first = ValueTransform.this.fromSQLValue(value, expand);
+//                return transform.fromSQLValue(first, expand);
+//            }
+//        };
+//    }
+
     @Data
     class Coercing<T, S> implements ValueTransform<T, S> {
 
-        private final Use<T> from;
-
-        private final Set<Name> expand;
+        private final BiFunction<S, Set<Name>, T> from;
 
         private final Function<T, S> to;
 
@@ -48,9 +63,9 @@ public interface ValueTransform<T, S> {
         }
 
         @Override
-        public T fromSQLValue(final S value) {
+        public T fromSQLValue(final S value, final Set<Name> expand) {
 
-            return from.create(value, expand);
+            return from.apply(value, expand);
         }
     }
 }

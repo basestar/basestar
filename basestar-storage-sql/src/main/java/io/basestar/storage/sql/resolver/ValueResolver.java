@@ -2,6 +2,7 @@ package io.basestar.storage.sql.resolver;
 
 import io.basestar.util.Name;
 
+@Deprecated
 public interface ValueResolver {
 
     Object value();

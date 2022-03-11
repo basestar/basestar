@@ -1,5 +1,6 @@
 package io.basestar.storage.sql.strategy;
 
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.constant.Constant;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
@@ -9,6 +10,7 @@ import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.from.FromSql;
 import io.basestar.schema.util.Casing;
 import io.basestar.storage.sql.SQLExpressionVisitor;
+import io.basestar.storage.sql.mapping.SchemaMapping;
 import io.basestar.storage.sql.util.DDLStep;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -181,12 +183,14 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
     }
 
     @Override
+    @Deprecated
     public SQLExpressionVisitor expressionVisitor(final QueryableSchema schema) {
 
         return expressionVisitor(schema, name -> DSL.field(DSL.name(namingStrategy.columnName(name.first()))));
     }
 
     @Override
+    @Deprecated
     public SQLExpressionVisitor expressionVisitor(final QueryableSchema schema, final Function<io.basestar.util.Name, QueryPart> columnResolver) {
 
         return dialect().expressionResolver(getNamingStrategy(), schema, columnResolver);
@@ -236,7 +240,9 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
         final Name objectTableName = getNamingStrategy().objectTableName(schema);
         final Optional<Name> historyTableName = getNamingStrategy().historyTableName(schema);
 
-        final List<Field<?>> columns = dialect.fields(columnCasing, schema); //rowMapper(schema, schema.getExpand()).columns();
+        final SchemaMapping schemaMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
+
+        final List<Field<?>> columns = schemaMapping.defineFields(namingStrategy); //rowMapper(schema, schema.getExpand()).columns();
 
         log.info("Creating table {}", objectTableName);
         queries.add(DDLStep.from(withPrimaryKey(schema, context.createTableIfNotExists(objectTableName)
