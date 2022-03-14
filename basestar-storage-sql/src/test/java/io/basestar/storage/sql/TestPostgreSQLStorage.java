@@ -47,4 +47,10 @@ public class TestPostgreSQLStorage extends TestSQLStorage {
         ds.setPassword(PASSWORD);
         return ds;
     }
+
+    @Override
+    protected boolean supportsSql() {
+
+        return false;
+    }
 }

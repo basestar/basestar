@@ -34,7 +34,7 @@ public abstract class TestDialect {
         );
         final Map<String, Object> values = ImmutableMap.of(
                 "a", "str",
-                "b", 1
+                "b", 1.0
         );
         final SQL result = dialect().getReplacedSqlWithBindings(input, arguments, values);
         assertEquals("(SELECT * FROM source WHERE ?=? AND ?=2)", result.toString());

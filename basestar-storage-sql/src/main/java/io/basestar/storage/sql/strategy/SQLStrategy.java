@@ -20,13 +20,10 @@ package io.basestar.storage.sql.strategy;
  * #L%
  */
 
-import io.basestar.schema.QueryableSchema;
 import io.basestar.schema.Schema;
-import io.basestar.storage.sql.SQLExpressionVisitor;
 import io.basestar.storage.sql.util.DDLStep;
 import org.jooq.DSLContext;
 import org.jooq.Name;
-import org.jooq.QueryPart;
 import org.jooq.Table;
 import org.jooq.conf.StatementType;
 import org.slf4j.Logger;
@@ -34,7 +31,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
 
 public interface SQLStrategy {
 
@@ -65,9 +61,9 @@ public interface SQLStrategy {
         return dialect().describeTable(context, name);
     }
 
-    @Deprecated
-    SQLExpressionVisitor expressionVisitor(QueryableSchema schema);
-
-    @Deprecated
-    SQLExpressionVisitor expressionVisitor(QueryableSchema schema, Function<io.basestar.util.Name, QueryPart> columnResolver);
+//    @Deprecated
+//    SQLExpressionVisitor expressionVisitor(QueryableSchema schema);
+//
+//    @Deprecated
+//    SQLExpressionVisitor expressionVisitor(QueryableSchema schema, Function<io.basestar.util.Name, QueryPart> columnResolver);
 }

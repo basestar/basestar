@@ -34,7 +34,7 @@ public class TestPropertyMapping {
                         Name.of("simpleString"),
                         DSL.inline("test")
                 )
-        ), mapping.emit(name, "test"));
+        ), mapping.emit(name, "test", ImmutableSet.of()));
     }
 
     @Test
@@ -45,14 +45,14 @@ public class TestPropertyMapping {
                 .put(Name.of("simpleStruct", "value"), "test2")
                 .build();
 
-        final Instance expected = new Instance(ImmutableMap.<String, Object>builder()
+        final Map<String, Object> expected = new Instance(ImmutableMap.<String, Object>builder()
                 .put("key", "test1")
                 .put("value", "test2")
                 .build());
 
         final Name name = Name.of("simpleStruct");
 
-        final PropertyMapping<Instance> mapping = PropertyMapping.flattenedStruct(ImmutableMap.of(
+        final PropertyMapping<Map<String, Object>> mapping = PropertyMapping.flattenedStruct(ImmutableMap.of(
                 "key", PropertyMapping.simple(SQLDataType.LONGVARCHAR),
                 "value", PropertyMapping.simple(SQLDataType.LONGVARCHAR)));
 
@@ -66,7 +66,7 @@ public class TestPropertyMapping {
                         Name.of("simpleStruct", "value"),
                         DSL.inline("test2")
                 )
-        ), mapping.emit(name, expected));
+        ), mapping.emit(name, expected, ImmutableSet.of()));
     }
 
     @Test
@@ -77,14 +77,14 @@ public class TestPropertyMapping {
                 .put(Name.of("simpleRef", "version"), 1L)
                 .build();
 
-        final Instance expected = new Instance(ImmutableMap.<String, Object>builder()
+        final Map<String, Object> expected = new Instance(ImmutableMap.<String, Object>builder()
                 .put("id", "test1")
                 .put("version", 1L)
                 .build());
 
         final Name name = Name.of("simpleRef");
 
-        final PropertyMapping<Instance> mapping = PropertyMapping.flattenedStruct(ImmutableMap.of(
+        final PropertyMapping<Map<String, Object>> mapping = PropertyMapping.flattenedStruct(ImmutableMap.of(
                 "id", PropertyMapping.simple(SQLDataType.LONGVARCHAR),
                 "version", PropertyMapping.simple(SQLDataType.BIGINT)));
 
@@ -98,6 +98,6 @@ public class TestPropertyMapping {
                         Name.of("simpleRef", "version"),
                         DSL.inline(1L)
                 )
-        ), mapping.emit(name, expected));
+        ), mapping.emit(name, expected, ImmutableSet.of()));
     }
 }

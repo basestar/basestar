@@ -122,7 +122,7 @@ abstract class TestSQLStorage extends TestStorage {
     @Override
     protected boolean supportsAggregation() {
 
-        return true;
+        return false;
     }
 
     @Override

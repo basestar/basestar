@@ -53,7 +53,7 @@ public interface Storage {
 
     StorageTraits storageTraits(Schema schema);
 
-    Set<Name> supportedExpand(LinkableSchema schema, Set<Name> expand);
+    Set<Name> supportedExpand(QueryableSchema schema, Set<Name> expand);
 
     default String name() {
 

@@ -1,17 +1,13 @@
 package io.basestar.storage.sql.strategy;
 
 import com.google.common.collect.ImmutableSet;
-import io.basestar.expression.constant.Constant;
-import io.basestar.schema.Index;
 import io.basestar.schema.*;
-import io.basestar.schema.from.From;
 import io.basestar.schema.from.FromExternal;
-import io.basestar.schema.from.FromSchema;
 import io.basestar.schema.from.FromSql;
 import io.basestar.schema.util.Casing;
-import io.basestar.storage.sql.SQLExpressionVisitor;
-import io.basestar.storage.sql.mapping.SchemaMapping;
+import io.basestar.storage.sql.mapping.QueryMapping;
 import io.basestar.storage.sql.util.DDLStep;
+import io.basestar.util.Immutable;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -22,10 +18,8 @@ import org.jooq.conf.StatementType;
 import org.jooq.impl.DSL;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 
 
 @Data
@@ -154,9 +148,8 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
 
         log.info("Creating fake view {}", viewName);
 
-        final Casing columnCasing = namingStrategy.getColumnCasing();
-
-        final List<Field<?>> columns = dialect.fields(columnCasing, schema);
+        final QueryMapping mapping = dialect.schemaMapping(schema, null, Immutable.set());
+        final List<Field<?>> columns = mapping.defineFields(namingStrategy, ImmutableSet.of());
 
         queries.add(DDLStep.from(withPrimaryKey(schema, context.createTableIfNotExists(viewName)
                 .columns(columns))));
@@ -175,60 +168,60 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
             queries.add(DDLStep.from(context.createOrReplaceView(viewName)
                     .as(DSL.sql(((FromSql) schema.getFrom()).getReplacedSql(s -> namingStrategy.reference(s).toString())))));
         } else if (!(schema.getFrom() instanceof FromExternal)) {
-            queries.add(DDLStep.from(context.createOrReplaceView(viewName)
-                    .as(viewQuery(context, schema))));
+//            queries.add(DDLStep.from(context.createOrReplaceView(viewName)
+//                    .as(viewQuery(context, schema))));
         }
 
         return queries;
     }
 
-    @Override
-    @Deprecated
-    public SQLExpressionVisitor expressionVisitor(final QueryableSchema schema) {
-
-        return expressionVisitor(schema, name -> DSL.field(DSL.name(namingStrategy.columnName(name.first()))));
-    }
-
-    @Override
-    @Deprecated
-    public SQLExpressionVisitor expressionVisitor(final QueryableSchema schema, final Function<io.basestar.util.Name, QueryPart> columnResolver) {
-
-        return dialect().expressionResolver(getNamingStrategy(), schema, columnResolver);
-    }
+//    @Override
+//    @Deprecated
+//    public SQLExpressionVisitor expressionVisitor(final QueryableSchema schema) {
+//
+//        return expressionVisitor(schema, name -> DSL.field(DSL.name(namingStrategy.columnName(name.first()))));
+//    }
+//
+//    @Override
+//    @Deprecated
+//    public SQLExpressionVisitor expressionVisitor(final QueryableSchema schema, final Function<io.basestar.util.Name, QueryPart> columnResolver) {
+//
+//        return dialect().expressionResolver(getNamingStrategy(), schema, columnResolver);
+//    }
 
     protected Select<?> viewQuery(final DSLContext context, final ViewSchema schema) {
 
-        final Collection<SelectFieldOrAsterisk> fields = new ArrayList<>();
-
-        final From from = schema.getFrom();
-        if (from instanceof FromSchema) {
-            final LinkableSchema fromSchema = ((FromSchema) from).getLinkableSchema();
-
-            final SQLExpressionVisitor visitor = expressionVisitor(fromSchema);
-            final Field<?> idField = visitor.field(new Constant(null));
-            fields.add(idField.cast(String.class).as(ViewSchema.ID));
-            schema.getProperties().forEach((k, v) -> {
-                final Field<?> field = visitor.field(v.getExpression());
-                if (field == null) {
-                    log.error("Cannot create view field " + k + " " + v.getExpression());
-                } else {
-                    fields.add(visitor.field(v.getExpression()).as(k));
-                }
-            });
-
-            final Table<?> fromTable = DSL.table(namingStrategy.entityName(fromSchema));
-            final SelectJoinStep<?> step = context.select(fields).from(fromTable);
-
-            if (schema.isGrouping()) {
-                final Collection<GroupField> groupFields = new ArrayList<>();
-                schema.getGroup().forEach(k -> groupFields.add(DSL.field(DSL.name(namingStrategy.columnName(k)))));
-                return step.groupBy(groupFields);
-            } else {
-                return step;
-            }
-        } else {
-            throw new UnsupportedOperationException("Cannot create view from " + schema.getFrom().getClass());
-        }
+//        final Collection<SelectFieldOrAsterisk> fields = new ArrayList<>();
+//
+//        final From from = schema.getFrom();
+//        if (from instanceof FromSchema) {
+//            final LinkableSchema fromSchema = ((FromSchema) from).getLinkableSchema();
+//
+//            final SQLExpressionVisitor visitor = expressionVisitor(fromSchema);
+//            final Field<?> idField = visitor.field(new Constant(null));
+//            fields.add(idField.cast(String.class).as(ViewSchema.ID));
+//            schema.getProperties().forEach((k, v) -> {
+//                final Field<?> field = visitor.field(v.getExpression());
+//                if (field == null) {
+//                    log.error("Cannot create view field " + k + " " + v.getExpression());
+//                } else {
+//                    fields.add(visitor.field(v.getExpression()).as(k));
+//                }
+//            });
+//
+//            final Table<?> fromTable = DSL.table(namingStrategy.entityName(fromSchema));
+//            final SelectJoinStep<?> step = context.select(fields).from(fromTable);
+//
+//            if (schema.isGrouping()) {
+//                final Collection<GroupField> groupFields = new ArrayList<>();
+//                schema.getGroup().forEach(k -> groupFields.add(DSL.field(DSL.name(namingStrategy.columnName(k)))));
+//                return step.groupBy(groupFields);
+//            } else {
+//                return step;
+//            }
+//        } else {
+        throw new UnsupportedOperationException("Cannot create view from " + schema.getFrom().getClass());
+//        }
     }
 
     protected List<DDLStep> createObjectDDL(final DSLContext context, final ReferableSchema schema) {
@@ -240,36 +233,36 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
         final Name objectTableName = getNamingStrategy().objectTableName(schema);
         final Optional<Name> historyTableName = getNamingStrategy().historyTableName(schema);
 
-        final SchemaMapping schemaMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
+        final QueryMapping queryMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
 
-        final List<Field<?>> columns = schemaMapping.defineFields(namingStrategy); //rowMapper(schema, schema.getExpand()).columns();
+        final List<Field<?>> columns = queryMapping.defineFields(namingStrategy, ImmutableSet.of()); //rowMapper(schema, schema.getExpand()).columns();
 
         log.info("Creating table {}", objectTableName);
         queries.add(DDLStep.from(withPrimaryKey(schema, context.createTableIfNotExists(objectTableName)
                 .columns(columns))));
 
-        if (dialect.supportsIndexes()) {
-            for (final Index index : schema.getIndexes().values()) {
-                if (index.isMultiValue()) {
-                    final Optional<Name> indexTableName = getNamingStrategy().indexTableName(schema, index);
-                    log.info("Creating multi-value index table {}", indexTableName);
-                    indexTableName.ifPresent(name -> queries.add(DDLStep.from(context.createTableIfNotExists(name)
-                            .columns(dialect.fields(columnCasing, schema, index))
-                            .constraints(dialect.primaryKey(columnCasing, schema, index)))));
-                } else if (index.isUnique()) {
-                    log.info("Creating unique index {}:{}", objectTableName, index.getName());
-                    queries.add(DDLStep.from(context.createUniqueIndexIfNotExists(index.getName())
-                            .on(DSL.table(objectTableName), dialect.indexKeys(columnCasing, schema, index))));
-                } else {
-                    log.info("Creating index {}:{}", objectTableName, index.getName());
-                    // Fixme
-                    if (!index.getName().equals("expanded")) {
-                        queries.add(DDLStep.from(context.createIndexIfNotExists(index.getName())
-                                .on(DSL.table(objectTableName), dialect.indexKeys(columnCasing, schema, index))));
-                    }
-                }
-            }
-        }
+//        if (dialect.supportsIndexes()) {
+//            for (final Index index : schema.getIndexes().values()) {
+//                if (index.isMultiValue()) {
+//                    final Optional<Name> indexTableName = getNamingStrategy().indexTableName(schema, index);
+//                    log.info("Creating multi-value index table {}", indexTableName);
+//                    indexTableName.ifPresent(name -> queries.add(DDLStep.from(context.createTableIfNotExists(name)
+//                            .columns(dialect.fields(columnCasing, schema, index))
+//                            .constraints(dialect.primaryKey(columnCasing, schema, index)))));
+//                } else if (index.isUnique()) {
+//                    log.info("Creating unique index {}:{}", objectTableName, index.getName());
+//                    queries.add(DDLStep.from(context.createUniqueIndexIfNotExists(index.getName())
+//                            .on(DSL.table(objectTableName), dialect.indexKeys(columnCasing, schema, index))));
+//                } else {
+//                    log.info("Creating index {}:{}", objectTableName, index.getName());
+//                    // Fixme
+//                    if (!index.getName().equals("expanded")) {
+//                        queries.add(DDLStep.from(context.createIndexIfNotExists(index.getName())
+//                                .on(DSL.table(objectTableName), dialect.indexKeys(columnCasing, schema, index))));
+//                    }
+//                }
+//            }
+//        }
 
         if (isHistoryTableEnabled()) {
             historyTableName.ifPresent(name -> {

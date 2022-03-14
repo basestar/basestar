@@ -146,4 +146,10 @@ public class TestTrinoSQLStorage extends TestSQLStorage {
         // Trino connector does not support write
         return false;
     }
+
+    @Override
+    protected boolean supportsSql() {
+
+        return false;
+    }
 }

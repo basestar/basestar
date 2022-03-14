@@ -8,7 +8,6 @@ import io.basestar.schema.Argument;
 import io.basestar.schema.Property;
 import io.basestar.schema.StructSchema;
 import io.basestar.schema.expression.InferenceContext;
-import io.basestar.schema.from.FromSql;
 import io.basestar.schema.use.UseInteger;
 import io.basestar.schema.use.UseStruct;
 import io.basestar.storage.sql.SQLDialect;
@@ -20,6 +19,7 @@ import org.jooq.impl.DSL;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.commons.util.ReflectionUtils;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -60,7 +60,6 @@ public class TestSnowflakeDialect extends TestDialect {
     protected void testGetReplacedSqlWithStructBindings() {
 
         final String input = "SELECT * FROM source WHERE x=${point}['x'] AND y=${point}['y']";
-        final FromSql sql = new FromSql(input, Immutable.list(), Immutable.map(), null);
         final List<Argument> arguments = ImmutableList.of(
                 Argument.builder().setName("point").setType(new UseStruct(StructSchema.builder()
                         .setProperty("x", Property.builder().setType(UseInteger.DEFAULT))
@@ -69,8 +68,8 @@ public class TestSnowflakeDialect extends TestDialect {
         );
         final Map<String, Object> values = ImmutableMap.of(
                 "point", Immutable.map(
-                        "x", 1,
-                        "y", 2
+                        "x", 1L,
+                        "y", 2L
                 )
         );
         final SQL result = dialect().getReplacedSqlWithBindings(input, arguments, values);
@@ -78,7 +77,27 @@ public class TestSnowflakeDialect extends TestDialect {
         // Using internal API of org.jooq.impl.SQLImpl
         @SuppressWarnings("unchecked") final List<QueryPart> substitutes = (List<QueryPart>) ReflectionUtils.tryToReadFieldValue((Class<SQL>) result.getClass(), "substitutes", result)
                 .getOrThrow(IllegalStateException::new);
-        final SQL point = DSL.sql("parse_json('{\"x\":1,\"y\":2}')");
+        final SQL point = DSL.sql("OBJECT_CONSTRUCT(\"x\",1,\"y\",2)");
         assertEquals(ImmutableList.of(point, point), substitutes);
+    }
+
+    @Test
+    protected void testGetReplacedSqlWithNullStructBindings() {
+
+        final String input = "SELECT * FROM source WHERE ${point} IS NOT NULL AND x=${point}['x'] AND y=${point}['y']";
+        final List<Argument> arguments = ImmutableList.of(
+                Argument.builder().setName("point").setType(new UseStruct(StructSchema.builder()
+                        .setProperty("x", Property.builder().setType(UseInteger.DEFAULT))
+                        .setProperty("y", Property.builder().setType(UseInteger.DEFAULT))
+                        .build()).optional(true)).build(null)
+        );
+        final Map<String, Object> values = new HashMap<>();
+        final SQL result = dialect().getReplacedSqlWithBindings(input, arguments, values);
+        assertEquals("(SELECT * FROM source WHERE ? IS NOT NULL AND x=?['x'] AND y=?['y'])", result.toString());
+        // Using internal API of org.jooq.impl.SQLImpl
+        @SuppressWarnings("unchecked") final List<QueryPart> substitutes = (List<QueryPart>) ReflectionUtils.tryToReadFieldValue((Class<SQL>) result.getClass(), "substitutes", result)
+                .getOrThrow(IllegalStateException::new);
+        final SQL point = DSL.sql("cast(null as OBJECT)");
+        assertEquals(ImmutableList.of(point, point, point), substitutes);
     }
 }

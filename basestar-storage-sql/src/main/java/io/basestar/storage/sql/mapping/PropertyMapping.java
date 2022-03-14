@@ -4,16 +4,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.schema.Instance;
+import io.basestar.schema.ReferableSchema;
 import io.basestar.storage.sql.resolver.ColumnResolver;
+import io.basestar.storage.sql.resolver.ExpressionResolver;
 import io.basestar.storage.sql.resolver.RecordResolver;
+import io.basestar.storage.sql.resolver.TableResolver;
 import io.basestar.storage.sql.strategy.NamingStrategy;
 import io.basestar.util.Name;
 import io.basestar.util.Nullsafe;
 import io.basestar.util.Pair;
 import lombok.Data;
-import org.jooq.DataType;
-import org.jooq.Field;
-import org.jooq.SelectField;
+import org.jooq.*;
 import org.jooq.impl.DSL;
 
 import java.util.*;
@@ -23,15 +24,17 @@ public interface PropertyMapping<T> {
 
     T fromRecord(Name qualifiedName, RecordResolver record, Set<Name> expand);
 
-    //Map<Name, DataType<?>> dataTypes(Name alias);
+    List<Field<?>> define(Name qualifiedName, NamingStrategy namingStrategy, Set<Name> expand);
 
-    List<Field<?>> define(Name qualifiedName, NamingStrategy namingStrategy);
+    List<Pair<Name, Field<?>>> select(Name qualifiedName, ColumnResolver columnResolver, Set<Name> expand);
 
-    List<Field<?>> select(Name qualifiedName, ColumnResolver columnResolver);
+    List<Pair<Name, SelectField<?>>> emit(Name qualifiedName, T value, Set<Name> expand);
 
-    List<Pair<Name, SelectField<?>>> emit(Name qualifiedName, T value);
+    DataType<?> mergedDataType();
 
-//    SelectJoinStep<?> join(Name qualifiedName, SchemaMapping schema, TableResolver tableResolver, SelectJoinStep<?> step, Set<Name> expand);
+    SelectField<?> emitMerged(T value, Set<Name> expand);
+
+    Table<?> join(Name qualifiedName, DSLContext context, TableResolver tableResolver, ExpressionResolver expressionResolver, Table<?> table, Set<Name> expand);
 
     PropertyMapping<T> nullable();
 
@@ -55,14 +58,14 @@ public interface PropertyMapping<T> {
         return new FlattenedRef(properties);
     }
 
-    static ExpandedRef expandedRef(final PropertyMapping<Instance> mapping, final SchemaMapping schema) {
+    static ExpandedRef expandedRef(final PropertyMapping<Map<String, Object>> mapping, final QueryMapping schema) {
 
         return new ExpandedRef(mapping, schema);
     }
 
     Set<Name> supportedExpand(Set<Name> expand);
 
-//    Field<?> field(Name qualifiedName, Name name, ColumnResolver columnResolver);
+    Optional<Field<?>> nestedField(Name qualifiedName, Name name);
 
     @Data
     class Simple<T, S> implements PropertyMapping<T> {
@@ -90,29 +93,51 @@ public interface PropertyMapping<T> {
         }
 
         @Override
-        public List<Field<?>> define(final Name qualifiedName, final NamingStrategy namingStrategy) {
+        public List<Field<?>> define(final Name qualifiedName, final NamingStrategy namingStrategy, final Set<Name> expand) {
 
             final org.jooq.Name columnName = namingStrategy.columnName(qualifiedName);
             return ImmutableList.of(DSL.field(columnName, dataType));
         }
 
         @Override
-        public List<Field<?>> select(final Name qualifiedName, final ColumnResolver columnResolver) {
+        public List<Pair<Name, Field<?>>> select(final Name qualifiedName, final ColumnResolver columnResolver, final Set<Name> expand) {
 
-            return ImmutableList.of(columnResolver.column(qualifiedName)
-                    .orElse(DSL.castNull(dataType)).as(DSL.name(qualifiedName.toString())));
+            return ImmutableList.of(Pair.of(qualifiedName, columnResolver.column(qualifiedName)
+                    .orElse(DSL.castNull(dataType))));
         }
 
         @Override
-        public List<Pair<Name, SelectField<?>>> emit(final Name qualifiedName, final T value) {
+        public List<Pair<Name, SelectField<?>>> emit(final Name qualifiedName, final T value, final Set<Name> expand) {
 
-            final Object output;
-            if (transform != null) {
-                output = transform.toSQLValue(value);
+            return ImmutableList.of(Pair.of(qualifiedName, emitMerged(value, expand)));
+        }
+
+        @Override
+        public DataType<S> mergedDataType() {
+
+            return dataType;
+        }
+
+        @Override
+        public SelectField<?> emitMerged(final T value, final Set<Name> expand) {
+
+            if (value == null) {
+                return DSL.castNull(mergedDataType());
             } else {
-                output = value;
+                final Object output;
+                if (transform != null) {
+                    output = transform.toSQLValue(value);
+                } else {
+                    output = value;
+                }
+                return DSL.inline(output, dataType);
             }
-            return ImmutableList.of(Pair.of(qualifiedName, DSL.inline(output, dataType)));
+        }
+
+        @Override
+        public Table<?> join(final Name qualifiedName, final DSLContext context, final TableResolver tableResolver, final ExpressionResolver expressionResolver, final Table<?> table, final Set<Name> expand) {
+
+            return table;
         }
 
         @Override
@@ -127,6 +152,16 @@ public interface PropertyMapping<T> {
             return ImmutableSet.of();
         }
 
+        @Override
+        public Optional<Field<?>> nestedField(final Name qualifiedName, final Name name) {
+
+            if (name.isEmpty()) {
+                return Optional.of(DSL.field(QueryMapping.selectName(qualifiedName)));
+            } else {
+                return Optional.empty();
+            }
+        }
+
 //        @Override
 //        public Field<?> field(final Name qualifiedName, final Name name, final ColumnResolver columnResolver) {
 //
@@ -138,12 +173,27 @@ public interface PropertyMapping<T> {
 //        }
     }
 
-    interface Flattened extends PropertyMapping<Instance> {
+    interface Flattened extends PropertyMapping<Map<String, Object>> {
 
         Map<String, PropertyMapping<?>> getMappings();
 
         @Override
-        default Instance fromRecord(final Name qualifiedName, final RecordResolver record, final Set<Name> expand) {
+        default Table<?> join(final Name qualifiedName, final DSLContext context, final TableResolver tableResolver, final ExpressionResolver expressionResolver, final Table<?> table, final Set<Name> expand) {
+
+            final Map<String, PropertyMapping<?>> mappings = getMappings();
+            Table<?> result = table;
+            final Map<String, Set<Name>> branches = Name.branch(expand);
+            for (final Map.Entry<String, PropertyMapping<?>> entry : mappings.entrySet()) {
+                final String name = entry.getKey();
+                final PropertyMapping<?> mapping = entry.getValue();
+                final Set<Name> branch = branches.get(name);
+                result = mapping.join(qualifiedName.with(name), context, tableResolver, expressionResolver, result, branch);
+            }
+            return result;
+        }
+
+        @Override
+        default Map<String, Object> fromRecord(final Name qualifiedName, final RecordResolver record, final Set<Name> expand) {
 
             final Map<String, PropertyMapping<?>> mappings = getMappings();
             final Map<String, Object> result = new HashMap<>();
@@ -155,38 +205,48 @@ public interface PropertyMapping<T> {
                 final Object value = mapping.fromRecord(qualifiedName.with(name), record, branch);
                 result.put(name, value);
             }
-            return new Instance(result);
+            return result;
         }
 
         @Override
-        default List<Field<?>> define(final Name qualifiedName, final NamingStrategy namingStrategy) {
+        default List<Field<?>> define(final Name qualifiedName, final NamingStrategy namingStrategy, final Set<Name> expand) {
 
             final Map<String, PropertyMapping<?>> mappings = getMappings();
+            final Map<String, Set<Name>> branches = Name.branch(expand);
             return mappings.entrySet().stream()
-                    .flatMap(v -> v.getValue().define(qualifiedName.with(v.getKey()), namingStrategy).stream())
+                    .flatMap(v -> {
+                        final Set<Name> branch = branches.get(v.getKey());
+                        return v.getValue().define(qualifiedName.with(v.getKey()), namingStrategy, branch).stream();
+                    })
                     .collect(Collectors.toList());
         }
 
         @Override
-        default List<Field<?>> select(final Name qualifiedName, final ColumnResolver columnResolver) {
+        default List<Pair<Name, Field<?>>> select(final Name qualifiedName, final ColumnResolver columnResolver, final Set<Name> expand) {
 
             final Map<String, PropertyMapping<?>> mappings = getMappings();
+            final Map<String, Set<Name>> branches = Name.branch(expand);
             return mappings.entrySet().stream()
-                    .flatMap(v -> v.getValue().select(qualifiedName.with(v.getKey()), columnResolver).stream())
+                    .flatMap(v -> {
+                        final Set<Name> branch = branches.get(v.getKey());
+                        return v.getValue().select(qualifiedName.with(v.getKey()), columnResolver, branch).stream();
+                    })
                     .collect(Collectors.toList());
         }
 
         @Override
         @SuppressWarnings("unchecked")
-        default List<Pair<Name, SelectField<?>>> emit(final Name qualifiedName, final Instance value) {
+        default List<Pair<Name, SelectField<?>>> emit(final Name qualifiedName, final Map<String, Object> value, final Set<Name> expand) {
 
             final Map<String, PropertyMapping<?>> mappings = getMappings();
             final List<Pair<Name, SelectField<?>>> result = new ArrayList<>();
+            final Map<String, Set<Name>> branches = Name.branch(expand);
             for (final Map.Entry<String, PropertyMapping<?>> entry : mappings.entrySet()) {
                 final String name = entry.getKey();
+                final Set<Name> branch = branches.get(name);
                 final PropertyMapping<?> mapping = entry.getValue();
                 final Object v = value == null ? null : value.get(name);
-                result.addAll(((PropertyMapping<Object>) mapping).emit(qualifiedName.with(name), v));
+                result.addAll(((PropertyMapping<Object>) mapping).emit(qualifiedName.with(name), v, branch));
             }
             return result;
         }
@@ -206,7 +266,36 @@ public interface PropertyMapping<T> {
             return result;
         }
 
-//        @Override
+        @Override
+        default Optional<Field<?>> nestedField(final Name qualifiedName, final Name name) {
+
+            final Map<String, PropertyMapping<?>> mappings = getMappings();
+            if (name.isEmpty()) {
+                return Optional.empty();
+            } else {
+                final String first = name.first();
+                final PropertyMapping<?> mapping = mappings.get(first);
+                if (mapping != null) {
+                    return mapping.nestedField(qualifiedName.with(first), name.withoutFirst());
+                } else {
+                    return Optional.empty();
+                }
+            }
+        }
+
+        @Override
+        default DataType<?> mergedDataType() {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        default SelectField<?> emitMerged(final Map<String, Object> value, final Set<Name> expand) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        //        @Override
 //        default Field<?> field(final Name qualifiedName, final Name name, final ColumnResolver columnResolver) {
 //
 //            final Map<String, PropertyMapping<?>> mappings = getMappings();
@@ -243,7 +332,7 @@ public interface PropertyMapping<T> {
         }
 
         @Override
-        public PropertyMapping<Instance> nullable() {
+        public PropertyMapping<Map<String, Object>> nullable() {
 
             return new FlattenedStruct(mappings.entrySet().stream().collect(Collectors.toMap(
                     Map.Entry::getKey,
@@ -263,9 +352,9 @@ public interface PropertyMapping<T> {
         }
 
         @Override
-        public Instance fromRecord(final Name qualifiedName, final RecordResolver record, final Set<Name> expand) {
+        public Map<String, Object> fromRecord(final Name qualifiedName, final RecordResolver record, final Set<Name> expand) {
 
-            final Instance instance = Flattened.super.fromRecord(qualifiedName, record, expand);
+            final Map<String, Object> instance = Flattened.super.fromRecord(qualifiedName, record, expand);
             if (Instance.getId(instance) == null) {
                 return null;
             } else {
@@ -274,7 +363,7 @@ public interface PropertyMapping<T> {
         }
 
         @Override
-        public PropertyMapping<Instance> nullable() {
+        public PropertyMapping<Map<String, Object>> nullable() {
 
             return new FlattenedRef(mappings.entrySet().stream().collect(Collectors.toMap(
                     Map.Entry::getKey,
@@ -284,44 +373,83 @@ public interface PropertyMapping<T> {
     }
 
     @Data
-    class ExpandedRef implements PropertyMapping<Instance> {
+    class ExpandedRef implements PropertyMapping<Map<String, Object>> {
 
-        private final PropertyMapping<Instance> mapping;
+        private final PropertyMapping<Map<String, Object>> mapping;
 
-        private final SchemaMapping schema;
+        private final QueryMapping schema;
 
-        public ExpandedRef(final PropertyMapping<Instance> mapping, final SchemaMapping schema) {
+        public ExpandedRef(final PropertyMapping<Map<String, Object>> mapping, final QueryMapping schema) {
 
             this.mapping = mapping;
             this.schema = schema;
         }
 
         @Override
-        public Instance fromRecord(final Name qualifiedName, final RecordResolver record, final Set<Name> expand) {
+        public Map<String, Object> fromRecord(final Name qualifiedName, final RecordResolver record, final Set<Name> expand) {
 
-            return mapping.fromRecord(qualifiedName, record, expand);
+            final Map<String, Object> instance = mapping.fromRecord(qualifiedName, record, expand);
+            if (instance != null) {
+                final Map<String, Object> merged = new HashMap<>(instance);
+                schema.fromRecord(new RecordResolver() {
+                    @Override
+                    public <T> T get(final Name name, final DataType<T> targetType) {
+
+                        return record.get(qualifiedName.with("_").with(name), targetType);
+                    }
+                }, expand).forEach((k, v) -> {
+                    if (!merged.containsKey(k)) {
+                        merged.put(k, v);
+                    }
+                });
+                return merged;
+            } else {
+                return null;
+            }
         }
 
         @Override
-        public List<Field<?>> define(final Name qualifiedName, final NamingStrategy namingStrategy) {
+        public List<Field<?>> define(final Name qualifiedName, final NamingStrategy namingStrategy, final Set<Name> branch) {
 
-            return mapping.define(qualifiedName, namingStrategy);
+            return mapping.define(qualifiedName, namingStrategy, branch);
         }
 
         @Override
-        public List<Field<?>> select(final Name qualifiedName, final ColumnResolver columnResolver) {
+        public List<Pair<Name, Field<?>>> select(final Name qualifiedName, final ColumnResolver columnResolver, final Set<Name> branch) {
 
-            return mapping.select(qualifiedName, columnResolver);
+            return mapping.select(qualifiedName, columnResolver, branch);
         }
 
         @Override
-        public List<Pair<Name, SelectField<?>>> emit(final Name qualifiedName, final Instance value) {
+        public List<Pair<Name, SelectField<?>>> emit(final Name qualifiedName, final Map<String, Object> value, final Set<Name> branch) {
 
-            return mapping.emit(qualifiedName, value);
+            return mapping.emit(qualifiedName, value, branch);
         }
 
         @Override
-        public PropertyMapping<Instance> nullable() {
+        public DataType<?> mergedDataType() {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public SelectField<?> emitMerged(final Map<String, Object> value, final Set<Name> expand) {
+
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Table<?> join(final Name qualifiedName, final DSLContext context, final TableResolver tableResolver, final ExpressionResolver expressionResolver, final Table<?> table, final Set<Name> expand) {
+
+            final Table<?> target = schema.subselect(qualifiedName.with("_"), context, tableResolver, expressionResolver, expand);
+            final Field<Object> sourceId = DSL.field(DSL.name(QueryMapping.selectName(qualifiedName.with(ReferableSchema.ID))));
+            final Field<Object> targetId = DSL.field(DSL.name(QueryMapping.selectName(qualifiedName.with("_").with(ReferableSchema.ID))));
+            return table.leftJoin(DSL.table(DSL.select(DSL.asterisk()).from(target)).as(QueryMapping.selectName(qualifiedName)))
+                    .on(sourceId.eq(targetId));
+        }
+
+        @Override
+        public PropertyMapping<Map<String, Object>> nullable() {
 
             return new ExpandedRef(mapping.nullable(), schema);
         }
@@ -333,6 +461,17 @@ public interface PropertyMapping<T> {
             result.add(Name.empty());
             result.addAll(schema.supportedExpand(expand));
             return result;
+        }
+
+        @Override
+        public Optional<Field<?>> nestedField(final Name qualifiedName, final Name name) {
+
+            final Optional<Field<?>> base = mapping.nestedField(qualifiedName, name);
+            if (base.isPresent()) {
+                return base;
+            } else {
+                return schema.nestedField(qualifiedName.with("_"), name);
+            }
         }
 
 //        @Override

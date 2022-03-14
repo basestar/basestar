@@ -42,7 +42,7 @@ import io.basestar.storage.exception.ObjectExistsException;
 import io.basestar.storage.exception.VersionMismatchException;
 import io.basestar.storage.query.Range;
 import io.basestar.storage.query.RangeVisitor;
-import io.basestar.storage.sql.mapping.SchemaMapping;
+import io.basestar.storage.sql.mapping.QueryMapping;
 import io.basestar.storage.sql.resolver.*;
 import io.basestar.storage.sql.strategy.SQLStrategy;
 import io.basestar.storage.util.KeysetPagingUtils;
@@ -57,7 +57,6 @@ import org.jooq.conf.Settings;
 import org.jooq.exception.DataAccessException;
 import org.jooq.exception.SQLStateClass;
 import org.jooq.impl.DSL;
-import org.jooq.impl.SQLDataType;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -312,8 +311,8 @@ public class SQLStorage implements DefaultLayerStorage {
                                                 final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());
-        final SchemaMapping schemaMapping = strategy.dialect().schemaMapping(schema, false, expand);
-        return (stats, token, count) -> queryImpl(schemaMapping, bound, sort, expand, count, token, stats);
+        final QueryMapping queryMapping = strategy.dialect().schemaMapping(schema, false, expand);
+        return (stats, token, count) -> queryImpl(queryMapping, bound, sort, expand, count, token, stats);
     }
 
 
@@ -322,8 +321,8 @@ public class SQLStorage implements DefaultLayerStorage {
                                                  final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = query.bind(Context.init());
-        final SchemaMapping schemaMapping = strategy.dialect().schemaMapping(schema, arguments, expand);
-        return (stats, token, count) -> queryImpl(schemaMapping, bound, sort, expand, count, token, stats);
+        final QueryMapping queryMapping = strategy.dialect().schemaMapping(schema, arguments, expand);
+        return (stats, token, count) -> queryImpl(queryMapping, bound, sort, expand, count, token, stats);
 
 //
 //        final Expression bound = query.bind(Context.init());
@@ -424,8 +423,8 @@ public class SQLStorage implements DefaultLayerStorage {
 
             final Index index = best;
 
-            final SchemaMapping schemaMapping = strategy.dialect().schemaMapping(schema, index, expand);
-            sources.put(conjunction.digest(), (stats, token, count) -> queryImpl(schemaMapping, conjunction, sort, expand, count, token, stats));
+            final QueryMapping queryMapping = strategy.dialect().schemaMapping(schema, index, expand);
+            sources.put(conjunction.digest(), (stats, token, count) -> queryImpl(queryMapping, conjunction, sort, expand, count, token, stats));
         }
 
         return Pager.merge(Instance.comparator(sort), sources);
@@ -435,8 +434,8 @@ public class SQLStorage implements DefaultLayerStorage {
     public Pager<Map<String, Object>> queryHistory(final Consistency consistency, final ReferableSchema schema, final String id, final Expression query, final List<Sort> sort, final Set<Name> expand) {
 
         final Expression bound = new And(query, new Eq(new NameConstant(ReferableSchema.ID), new Constant(id))).bind(Context.init());
-        final SchemaMapping schemaMapping = strategy.dialect().schemaMapping(schema, true, expand);
-        return (stats, token, count) -> queryImpl(schemaMapping, bound, sort, expand, count, token, stats);
+        final QueryMapping queryMapping = strategy.dialect().schemaMapping(schema, true, expand);
+        return (stats, token, count) -> queryImpl(queryMapping, bound, sort, expand, count, token, stats);
     }
 
 //    private List<OrderField<?>> orderFields(@Nullable final Table<?> table, final List<Sort> sort) {
@@ -508,25 +507,25 @@ public class SQLStorage implements DefaultLayerStorage {
         }
     }
 
-    private CompletableFuture<Page<Map<String, Object>>> queryImpl(final SchemaMapping schemaMapping,
+    private CompletableFuture<Page<Map<String, Object>>> queryImpl(final QueryMapping queryMapping,
                                                                    final Expression expression, final List<Sort> sort,
                                                                    final Set<Name> expand, final int count,
                                                                    final Page.Token token, final Set<Page.Stat> stats) {
 
         final SQLDialect dialect = strategy.dialect();
 
-        final boolean useKeysetPaging = canUseKeysetPaging(schemaMapping.getSchema(), sort);
+        final boolean useKeysetPaging = canUseKeysetPaging(queryMapping.getSchema(), sort);
 
         final CompletableFuture<Page<Map<String, Object>>> pageFuture = withContext(context -> {
 
-            final SelectSeekStepN<org.jooq.Record> select = schemaMapping.select(context, tableResolver, expressionResolver, expression, sort);
+            final SelectSeekStepN<org.jooq.Record> select = queryMapping.select(context, tableResolver, expressionResolver, expression, sort, expand);
             final SelectForUpdateStep<org.jooq.Record> seek;
             final long offset;
             if (token == null) {
                 seek = select.limit(DSL.inline(count));
                 offset = 0;
             } else if (useKeysetPaging) {
-                final List<Object> values = KeysetPagingUtils.keysetValues(schemaMapping.getSchema(), sort, token);
+                final List<Object> values = KeysetPagingUtils.keysetValues(queryMapping.getSchema(), sort, token);
                 seek = select.seek(values.stream().map(dialect::bind).toArray(Object[]::new)).limit(DSL.inline(count));
                 offset = 0;
             } else {
@@ -536,14 +535,14 @@ public class SQLStorage implements DefaultLayerStorage {
 
             return seek.fetchAsync().thenApply(results -> {
 
-                final List<Map<String, Object>> objects = schemaMapping.fromResult(results, expand);
+                final List<Map<String, Object>> objects = queryMapping.fromResult(results, expand);
 
                 final Page.Token nextToken;
                 if (objects.size() < count) {
                     nextToken = null;
                 } else if (useKeysetPaging) {
                     final Map<String, Object> last = objects.get(objects.size() - 1);
-                    nextToken = KeysetPagingUtils.keysetPagingToken(schemaMapping.getSchema(), sort, last);
+                    nextToken = KeysetPagingUtils.keysetPagingToken(queryMapping.getSchema(), sort, last);
                 } else {
                     nextToken = Page.Token.fromLongValue(offset + count);
                 }
@@ -558,7 +557,7 @@ public class SQLStorage implements DefaultLayerStorage {
             // Runs in parallel with query
             final CompletableFuture<Page.Stats> statsFuture = withContext(context -> {
 
-                final SelectConditionStep<org.jooq.Record1<Integer>> select = schemaMapping.selectCount(context, tableResolver, expressionResolver, expression);
+                final SelectConditionStep<org.jooq.Record1<Integer>> select = queryMapping.selectCount(context, tableResolver, expressionResolver, expression, expand);
                 return select.fetchAsync().thenApply(results -> {
 
                     if (results.isEmpty()) {
@@ -770,6 +769,7 @@ public class SQLStorage implements DefaultLayerStorage {
             }
 
             @Override
+            @SuppressWarnings("unchecked")
             public CompletableFuture<BatchResponse> read() {
 
                 final SQLDialect dialect = strategy.dialect();
@@ -782,32 +782,32 @@ public class SQLStorage implements DefaultLayerStorage {
                     for (final Map.Entry<ObjectSchema, Set<String>> entry : byId.entrySet()) {
                         final ObjectSchema schema = entry.getKey();
                         // FIXME: must capture expand
-                        final SchemaMapping schemaMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
+                        final QueryMapping queryMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
                         final Set<String> ids = entry.getValue();
 
-                        final SelectConditionStep<org.jooq.Record> select = schemaMapping.select(context, tableResolver, expressionResolver)
-                                .where(DSL.field(DSL.name(ReferableSchema.ID), SQLDataType.LONGVARCHAR).in(literals(ids)));
+                        final SelectConditionStep<org.jooq.Record> select = queryMapping.select(context, tableResolver, expressionResolver, ImmutableSet.of())
+                                .where(queryMapping.selectField(Name.of(ReferableSchema.ID)).in(literals(ids)));
 
-                        schemaMapping.fromResult(select.fetch(), Immutable.set())
+                        queryMapping.fromResult(select.fetch(), Immutable.set())
                                 .forEach(v -> results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), v), v));
                     }
 
                     for (final Map.Entry<ObjectSchema, Set<IdVersion>> entry : byIdVersion.entrySet()) {
                         final ObjectSchema schema = entry.getKey();
                         // FIXME: must capture expand
-                        final SchemaMapping schemaMapping = dialect.schemaMapping(schema, true, ImmutableSet.of());
+                        final QueryMapping queryMapping = dialect.schemaMapping(schema, true, ImmutableSet.of());
 
                         final Set<Row2<String, Long>> idVersions = entry.getValue().stream()
                                 .map(v -> DSL.row(v.getId(), v.getVersion()))
                                 .collect(Collectors.toSet());
 
-                        final SelectConditionStep<org.jooq.Record> select = schemaMapping.select(context, tableResolver, expressionResolver)
+                        final SelectConditionStep<org.jooq.Record> select = queryMapping.select(context, tableResolver, expressionResolver, ImmutableSet.of())
                                 .where(DSL.row(
-                                        DSL.field(DSL.name(ReferableSchema.ID), SQLDataType.LONGVARCHAR),
-                                        DSL.field(DSL.name(ReferableSchema.VERSION), SQLDataType.BIGINT)
+                                        (Field<String>) queryMapping.selectField(Name.of(ReferableSchema.ID)),
+                                        (Field<Long>) queryMapping.selectField(Name.of(ReferableSchema.VERSION))
                                 ).in(idVersions));
 
-                        schemaMapping.fromResult(select.fetch(), Immutable.set())
+                        queryMapping.fromResult(select.fetch(), Immutable.set())
                                 .forEach(v -> results.put(BatchResponse.RefKey.from(schema.getQualifiedName(), v), v));
                     }
 
@@ -868,10 +868,15 @@ public class SQLStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
+    public Set<Name> supportedExpand(final QueryableSchema schema, final Set<Name> expand) {
 
         final SQLDialect dialect = strategy.dialect();
-        final SchemaMapping mapping = dialect.schemaMapping(schema, false, expand);
+        final QueryMapping mapping;
+        if (schema instanceof LinkableSchema) {
+            mapping = dialect.schemaMapping((LinkableSchema) schema, false, expand);
+        } else {
+            mapping = dialect.schemaMapping((QuerySchema) schema, ImmutableMap.of(), expand);
+        }
         return mapping.supportedExpand(expand);
     }
 
@@ -1152,9 +1157,9 @@ public class SQLStorage implements DefaultLayerStorage {
 
                     final SQLDialect dialect = strategy.dialect();
                     // FIXME: must capture expand
-                    final SchemaMapping schemaMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
+                    final QueryMapping queryMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
 
-                    final int result = schemaMapping.createObjectLayer(context, tableResolver, after).execute();
+                    final int result = queryMapping.createObjectLayer(context, tableResolver, after).execute();
                     if (result != 1) {
                         throw new ObjectExistsException(schema.getQualifiedName(), id);
                     }
@@ -1180,9 +1185,9 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 final SQLDialect dialect = strategy.dialect();
                 // FIXME: must capture expand
-                final SchemaMapping schemaMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
+                final QueryMapping queryMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
 
-                final int result = schemaMapping.updateObjectLayer(context, tableResolver, id, version, after).execute();
+                final int result = queryMapping.updateObjectLayer(context, tableResolver, id, version, after).execute();
 
                 if (result != 1) {
                     throw new VersionMismatchException(schema.getQualifiedName(), id, version);
@@ -1200,9 +1205,9 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 final SQLDialect dialect = strategy.dialect();
                 // FIXME: must capture expand
-                final SchemaMapping schemaMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
+                final QueryMapping queryMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
 
-                final int result = schemaMapping.deleteObjectLayer(context, tableResolver, id, version).execute();
+                final int result = queryMapping.deleteObjectLayer(context, tableResolver, id, version).execute();
 
                 if (result != 1) {
                     throw new VersionMismatchException(schema.getQualifiedName(), id, version);
@@ -1221,10 +1226,10 @@ public class SQLStorage implements DefaultLayerStorage {
 
                     final SQLDialect dialect = strategy.dialect();
                     // FIXME: must capture expand
-                    final SchemaMapping schemaMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
+                    final QueryMapping queryMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
 
                     final Long version = Instance.getVersion(after);
-                    schemaMapping.createHistoryLayer(context, tableResolver, id, version, after).ifPresent(statement -> {
+                    queryMapping.createHistoryLayer(context, tableResolver, id, version, after).ifPresent(statement -> {
 
                         if (statement.execute() != 1) {
                             throw new ObjectExistsException(schema.getQualifiedName(), id);
@@ -1261,9 +1266,9 @@ public class SQLStorage implements DefaultLayerStorage {
 
                         final SQLDialect dialect = strategy.dialect();
                         // FIXME: must capture expand
-                        final SchemaMapping schemaMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
+                        final QueryMapping queryMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
 
-                        schemaMapping.createObjectLayer(context, tableResolver, after).execute();
+                        queryMapping.createObjectLayer(context, tableResolver, after).execute();
 
                         return BatchResponse.empty();
 

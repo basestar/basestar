@@ -1,14 +1,11 @@
 package io.basestar.storage.sql.dialect;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import io.basestar.schema.Instance;
-import io.basestar.schema.ObjectSchema;
 import io.basestar.schema.use.UseRef;
 import io.basestar.schema.use.UseStringLike;
-import io.basestar.storage.sql.resolver.ValueResolver;
-import io.basestar.storage.sql.strategy.NamingStrategy;
-import io.basestar.util.Name;
-import org.jooq.*;
+import org.jooq.Configuration;
+import org.jooq.DataType;
+import org.jooq.Field;
+import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultDataType;
 import org.jooq.impl.SQLDataType;
@@ -65,30 +62,30 @@ public class TrinoDialect extends JSONDialect {
         return new RefDataType<>();
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public Instance refFromSQLValue(final UseRef type, final ValueResolver value) {
-
-        final Object v = value.value();
-        if (v == null) {
-            return null;
-        } else {
-            final Map<String, ?> map = fromJson(v, new TypeReference<Map<String, ?>>() {
-            });
-            return map == null ? null : new Instance((Map<String, Object>) map);
-        }
-    }
-
-    @Override
-    public QueryPart refIdField(final NamingStrategy namingStrategy, final UseRef type, final Name name) {
-
-        final Name rest = name.withoutFirst();
-        if (rest.equals(ObjectSchema.ID_NAME)) {
-            return DSL.field(DSL.name(name.first(), name.last()), String.class);
-        } else {
-            throw new UnsupportedOperationException("Query of this type is not supported");
-        }
-    }
+//    @Override
+//    @SuppressWarnings("unchecked")
+//    public Instance refFromSQLValue(final UseRef type, final ValueResolver value) {
+//
+//        final Object v = value.value();
+//        if (v == null) {
+//            return null;
+//        } else {
+//            final Map<String, ?> map = fromJson(v, new TypeReference<Map<String, ?>>() {
+//            });
+//            return map == null ? null : new Instance((Map<String, Object>) map);
+//        }
+//    }
+//
+//    @Override
+//    public QueryPart refIdField(final NamingStrategy namingStrategy, final UseRef type, final Name name) {
+//
+//        final Name rest = name.withoutFirst();
+//        if (rest.equals(ObjectSchema.ID_NAME)) {
+//            return DSL.field(DSL.name(name.first(), name.last()), String.class);
+//        } else {
+//            throw new UnsupportedOperationException("Query of this type is not supported");
+//        }
+//    }
 
 //    @Override
 //    public <T> DataType<?> arrayType(final UseArray<T> type) {

@@ -1038,7 +1038,7 @@ public abstract class TestStorage {
         ));
 
         final List<Sort> sort = Sort.parseList("id");
-        final Page<Map<String, Object>> page = page(storage, source, Expression.parse("target.source.hello == 'pluto'"), sort, 10);
+        final Page<Map<String, Object>> page = page(storage, source, Expression.parse("target.source.hello == 'pluto'"), sort, expand, 10);
         assertEquals(1, page.size());
     }
 

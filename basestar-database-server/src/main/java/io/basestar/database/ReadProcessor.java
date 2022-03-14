@@ -287,7 +287,7 @@ public class ReadProcessor {
                                 .thenCompose(results -> expand(consistency, linkConsistency, context, results, expand)));
                         return null;
                     }
-                }, ref.getExpand());
+                }, unresolvedExpand(resolvedSchema, ref.getExpand()));
             }
         });
 
@@ -351,7 +351,6 @@ public class ReadProcessor {
                             final Name baseSchemaName = ref.getKey().getSchema();
                             final Name instanceSchemaName = Instance.getSchema(object);
                             final LinkableSchema resolvedSchema = linkableSchema(Nullsafe.orDefault(instanceSchemaName, baseSchemaName));
-
                             result.put(ref, resolvedSchema.expand(object, new Expander() {
                                 @Override
                                 public Instance expandRef(final Name name, final ReferableSchema schema, final Instance ref, final Set<Name> expand) {
@@ -359,7 +358,7 @@ public class ReadProcessor {
                                     final ExpandKey<RefKey> expandKey = ExpandKey.from(latestRefKey(schema.getQualifiedName(), ref), expand);
                                     Instance result = expanded.get(expandKey);
                                     if (result == null) {
-                                        result = ReferableSchema.ref(Instance.getId(ref));
+                                        result = ref;
                                     }
                                     return result;
                                 }
@@ -370,7 +369,7 @@ public class ReadProcessor {
                                     final ExpandKey<RefKey> expandKey = ExpandKey.from(versionedRefKey(schema.getQualifiedName(), ref), expand);
                                     Instance result = expanded.get(expandKey);
                                     if (result == null) {
-                                        result = ReferableSchema.versionedRef(Instance.getId(ref), Instance.getVersion(ref));
+                                        result = ref;
                                     }
                                     return result;
                                 }
@@ -400,18 +399,26 @@ public class ReadProcessor {
         }
     }
 
+    private Set<Name> unresolvedExpand(final LinkableSchema resolvedSchema, final Set<Name> expand) {
+
+        final Set<Name> expanded = storage.supportedExpand(resolvedSchema, expand);
+        final Set<Name> unexpanded = new HashSet<>();
+        expand.forEach(e1 -> {
+            if (expanded.stream().noneMatch(e2 -> e2.equals(e1))) {
+                unexpanded.add(e1);
+            }
+        });
+        return unexpanded;
+    }
+
     protected Instance create(final Map<String, Object> data) {
 
-        if(data == null) {
-            return null;
-        }
-        final QueryableSchema schema = queryableSchema(Instance.getSchema(data));
-        return schema.create(data, schema.getExpand(), true);
+        return create(data, Immutable.set());
     }
 
     protected Instance create(final Map<String, Object> data, final Set<Name> expand) {
 
-        if(data == null) {
+        if (data == null) {
             return null;
         }
         final QueryableSchema schema = queryableSchema(Instance.getSchema(data));

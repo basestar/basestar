@@ -146,7 +146,7 @@ public class SplitLayerStorage implements DefaultLayerStorage {
     }
 
     @Override
-    public Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
+    public Set<Name> supportedExpand(final QueryableSchema schema, final Set<Name> expand) {
 
         return objectStorage.supportedExpand(schema, expand);
     }

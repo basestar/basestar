@@ -57,7 +57,7 @@ public interface DelegatingStorage extends Storage {
     }
 
     @Override
-    default Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
+    default Set<Name> supportedExpand(final QueryableSchema schema, final Set<Name> expand) {
 
         return storage(schema).supportedExpand(schema, expand);
     }
