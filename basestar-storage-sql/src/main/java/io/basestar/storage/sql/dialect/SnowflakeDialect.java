@@ -170,20 +170,9 @@ public class SnowflakeDialect extends JSONDialect {
         return false;
     }
 
-//    @Override
-//    public Optional<? extends Field<?>> missingMetadataValue(final LinkableSchema schema, final String name) {
-//
-//        if (schema instanceof ViewSchema && ViewSchema.ID.equals(name)) {
-//            return Optional.of(DSL.inline((String) null));
-//        } else {
-//            return Optional.empty();
-//        }
-//    }
-
     @Override
     public boolean supportsMaterializedView(final ViewSchema schema) {
 
-//        return schema.getFrom() instanceof FromSql && (((FromSql) schema.getFrom()).getUsing().size() == 1);
         return false;
     }
 

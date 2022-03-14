@@ -26,6 +26,8 @@ import org.jooq.DSLContext;
 import org.jooq.Name;
 import org.jooq.Table;
 import org.jooq.conf.StatementType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.List;
@@ -36,8 +38,17 @@ public interface SQLStrategy {
 
     default void createEntities(final DSLContext context, final Collection<? extends Schema> schemas) {
 
+        final Logger log = LoggerFactory.getLogger(SQLStrategy.class);
         for (final DDLStep query : createEntityDDL(context, schemas)) {
-            query.execute();
+            if (ignoreInvalidDDL()) {
+                try {
+                    query.execute();
+                } catch (final Exception e) {
+                    log.error("Failed to execute DDL step (ignoring)", e);
+                }
+            } else {
+                query.execute();
+            }
         }
     }
 
@@ -49,14 +60,10 @@ public interface SQLStrategy {
 
     boolean useMetadata();
 
+    boolean ignoreInvalidDDL();
+
     default Table<?> describeTable(final DSLContext context, final Name name) {
 
         return dialect().describeTable(context, name);
     }
-
-//    @Deprecated
-//    SQLExpressionVisitor expressionVisitor(QueryableSchema schema);
-//
-//    @Deprecated
-//    SQLExpressionVisitor expressionVisitor(QueryableSchema schema, Function<io.basestar.util.Name, QueryPart> columnResolver);
 }

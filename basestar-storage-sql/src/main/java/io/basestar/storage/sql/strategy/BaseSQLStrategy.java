@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableSet;
 import io.basestar.schema.*;
 import io.basestar.schema.from.FromExternal;
 import io.basestar.schema.from.FromSql;
-import io.basestar.schema.util.Casing;
 import io.basestar.storage.sql.mapping.QueryMapping;
 import io.basestar.storage.sql.util.DDLStep;
 import io.basestar.util.Immutable;
@@ -35,6 +34,8 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
 
     private final boolean useMetadata;
 
+    private final boolean ignoreInvalidDDL;
+
     private EntityTypeStrategy entityTypeStrategy;
 
     private NamingStrategy namingStrategy;
@@ -53,6 +54,12 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
 
     @Override
     public boolean useMetadata() {
+
+        return useMetadata;
+    }
+
+    @Override
+    public boolean ignoreInvalidDDL() {
 
         return useMetadata;
     }
@@ -134,7 +141,7 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
         if (schema.getFrom() instanceof FromSql) {
             query = ((FromSql) schema.getFrom()).getReplacedSql(s -> namingStrategy.reference(s).toString());
         } else {
-            query = viewQuery(context, schema).getSQL();
+            throw new UnsupportedOperationException("Simple views no longer supported in SQL storage");
         }
         queries.add(DDLStep.from(context, "create or replace materialized view " + viewName + " as " + query));
 
@@ -168,74 +175,22 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
             queries.add(DDLStep.from(context.createOrReplaceView(viewName)
                     .as(DSL.sql(((FromSql) schema.getFrom()).getReplacedSql(s -> namingStrategy.reference(s).toString())))));
         } else if (!(schema.getFrom() instanceof FromExternal)) {
-//            queries.add(DDLStep.from(context.createOrReplaceView(viewName)
-//                    .as(viewQuery(context, schema))));
+            log.error("Simple views no longer supported in SQL storage");
         }
 
         return queries;
-    }
-
-//    @Override
-//    @Deprecated
-//    public SQLExpressionVisitor expressionVisitor(final QueryableSchema schema) {
-//
-//        return expressionVisitor(schema, name -> DSL.field(DSL.name(namingStrategy.columnName(name.first()))));
-//    }
-//
-//    @Override
-//    @Deprecated
-//    public SQLExpressionVisitor expressionVisitor(final QueryableSchema schema, final Function<io.basestar.util.Name, QueryPart> columnResolver) {
-//
-//        return dialect().expressionResolver(getNamingStrategy(), schema, columnResolver);
-//    }
-
-    protected Select<?> viewQuery(final DSLContext context, final ViewSchema schema) {
-
-//        final Collection<SelectFieldOrAsterisk> fields = new ArrayList<>();
-//
-//        final From from = schema.getFrom();
-//        if (from instanceof FromSchema) {
-//            final LinkableSchema fromSchema = ((FromSchema) from).getLinkableSchema();
-//
-//            final SQLExpressionVisitor visitor = expressionVisitor(fromSchema);
-//            final Field<?> idField = visitor.field(new Constant(null));
-//            fields.add(idField.cast(String.class).as(ViewSchema.ID));
-//            schema.getProperties().forEach((k, v) -> {
-//                final Field<?> field = visitor.field(v.getExpression());
-//                if (field == null) {
-//                    log.error("Cannot create view field " + k + " " + v.getExpression());
-//                } else {
-//                    fields.add(visitor.field(v.getExpression()).as(k));
-//                }
-//            });
-//
-//            final Table<?> fromTable = DSL.table(namingStrategy.entityName(fromSchema));
-//            final SelectJoinStep<?> step = context.select(fields).from(fromTable);
-//
-//            if (schema.isGrouping()) {
-//                final Collection<GroupField> groupFields = new ArrayList<>();
-//                schema.getGroup().forEach(k -> groupFields.add(DSL.field(DSL.name(namingStrategy.columnName(k)))));
-//                return step.groupBy(groupFields);
-//            } else {
-//                return step;
-//            }
-//        } else {
-        throw new UnsupportedOperationException("Cannot create view from " + schema.getFrom().getClass());
-//        }
     }
 
     protected List<DDLStep> createObjectDDL(final DSLContext context, final ReferableSchema schema) {
 
         final List<DDLStep> queries = new ArrayList<>();
 
-        final Casing columnCasing = namingStrategy.getColumnCasing();
-
         final Name objectTableName = getNamingStrategy().objectTableName(schema);
         final Optional<Name> historyTableName = getNamingStrategy().historyTableName(schema);
 
         final QueryMapping queryMapping = dialect.schemaMapping(schema, false, ImmutableSet.of());
 
-        final List<Field<?>> columns = queryMapping.defineFields(namingStrategy, ImmutableSet.of()); //rowMapper(schema, schema.getExpand()).columns();
+        final List<Field<?>> columns = queryMapping.defineFields(namingStrategy, ImmutableSet.of());
 
         log.info("Creating table {}", objectTableName);
         queries.add(DDLStep.from(withPrimaryKey(schema, context.createTableIfNotExists(objectTableName)

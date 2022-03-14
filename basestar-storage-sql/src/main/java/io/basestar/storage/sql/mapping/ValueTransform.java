@@ -30,25 +30,6 @@ public interface ValueTransform<T, S> {
         };
     }
 
-//    default <R> ValueTransform<R, S> then(final ValueTransform<R, T> transform) {
-//
-//        return new ValueTransform<R, S>() {
-//            @Override
-//            public S toSQLValue(final R value) {
-//
-//                final T first = transform.toSQLValue(value);
-//                return ValueTransform.this.toSQLValue(first);
-//            }
-//
-//            @Override
-//            public R fromSQLValue(final S value, final Set<Name> expand) {
-//
-//                final T first = ValueTransform.this.fromSQLValue(value, expand);
-//                return transform.fromSQLValue(first, expand);
-//            }
-//        };
-//    }
-
     @Data
     class Coercing<T, S> implements ValueTransform<T, S> {
 

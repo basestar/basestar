@@ -162,7 +162,11 @@ RefTarget:
     singleSourceLink:
       single: true
       schema: RefSource
-      expression: this.id == target.id
+      expression: this.id == id
+    missingSourceLink:
+      single: true
+      schema: RefSource
+      expression: this.source.id == id
 
 RefSource:
   type: object

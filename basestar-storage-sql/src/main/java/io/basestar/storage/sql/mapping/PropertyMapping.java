@@ -161,16 +161,6 @@ public interface PropertyMapping<T> {
                 return Optional.empty();
             }
         }
-
-//        @Override
-//        public Field<?> field(final Name qualifiedName, final Name name, final ColumnResolver columnResolver) {
-//
-//            if(name.isEmpty()) {
-//                return columnResolver.column(qualifiedName, dataType);
-//            } else {
-//                throw new UndefinedNameException(name.first());
-//            }
-//        }
     }
 
     interface Flattened extends PropertyMapping<Map<String, Object>> {
@@ -294,31 +284,6 @@ public interface PropertyMapping<T> {
 
             throw new UnsupportedOperationException();
         }
-
-        //        @Override
-//        default Field<?> field(final Name qualifiedName, final Name name, final ColumnResolver columnResolver) {
-//
-//            final Map<String, PropertyMapping<?>> mappings = getMappings();
-//            final PropertyMapping<?> mapping = mappings.get(name.first());
-//            if(mapping != null) {
-//                return mapping.field(qualifiedName, name.withoutFirst(), columnResolver);
-//            } else {
-//                throw new UndefinedNameException(name.first(), mappings.keySet());
-//            }
-//        }
-
-//        @Override
-//        default SelectJoinStep<?> join(final Name qualifiedName, final SchemaMapping schema, final TableResolver tableResolver, final SelectJoinStep<?> step, final Set<Name> expand) {
-//
-//            final Map<String, PropertyMapping<?>> mappings = getMappings();
-//            SelectJoinStep<?> result = step;
-//            for (final Map.Entry<String, PropertyMapping<?>> entry : mappings.entrySet()) {
-//                final String name = entry.getKey();
-//                final PropertyMapping<?> mapping = entry.getValue();
-//                result = mapping.join(qualifiedName.with(name), schema, tableResolver, result, expand);
-//            }
-//            return result;
-//        }
     }
 
     @Data
@@ -473,12 +438,5 @@ public interface PropertyMapping<T> {
                 return schema.nestedField(qualifiedName.with("_"), name);
             }
         }
-
-//        @Override
-//        public Field<?> field(final Name qualifiedName, final Name name, final ColumnResolver columnResolver) {
-//
-//            return mapping.field(qualifiedName, name, columnResolver);
-//        }
-
     }
 }

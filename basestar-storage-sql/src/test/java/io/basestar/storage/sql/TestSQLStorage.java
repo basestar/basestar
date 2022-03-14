@@ -85,6 +85,7 @@ abstract class TestSQLStorage extends TestStorage {
                 .objectSchemaName(objectSchema)
                 .historySchemaName(historySchema)
                 .dialect(dialect)
+                .ignoreInvalidDDL(true)
                 .build();
 
         try(final Connection conn = ds.getConnection()) {

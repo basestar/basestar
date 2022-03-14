@@ -1085,7 +1085,7 @@ public abstract class TestStorage {
         final ObjectSchema target = namespace.requireObjectSchema(REF_TARGET);
         final ObjectSchema source = namespace.requireObjectSchema(REF_SOURCE);
 
-        final Set<Name> expand = Name.parseSet("singleSourceLink");
+        final Set<Name> expand = Name.parseSet("singleSourceLink", "missingSourceLink");
 
         assumeConcurrentObjectWrite(storage, target);
         assumeConcurrentObjectWrite(storage, source);
@@ -1094,13 +1094,17 @@ public abstract class TestStorage {
         final String targetId = createComplete(storage, target, ImmutableMap.of(
                 "hello", "world"
         ));
-        createComplete(storage, source, ImmutableMap.of(
-                "target", new Instance(ImmutableMap.of(ObjectSchema.ID, targetId))
+        createComplete(storage, source, targetId, ImmutableMap.of(
+                "target", new Instance(ImmutableMap.of(ObjectSchema.ID, targetId)),
+                "hello", "world"
         ));
 
         final List<Sort> sort = Sort.parseList("id");
         final Page<Map<String, Object>> page = page(storage, target, Expression.parse("singleSourceLink.hello == 'world'"), sort, expand, 10);
         assertEquals(1, page.size());
+        final Map<String, Object> first = page.get(0);
+        assertEquals("world", Instance.get(first, Name.of("singleSourceLink", "hello")));
+        assertNull(Instance.get(first, Name.of("missingSourceLink")));
     }
 
     @Test
@@ -1131,6 +1135,7 @@ public abstract class TestStorage {
         final List<Sort> sort = Sort.parseList("id");
         final Page<Map<String, Object>> page = page(storage, source, Expression.parse("target.source.hello == 'pluto'"), sort, expand, 10);
         assertEquals(1, page.size());
+        assertEquals("pluto", Instance.get(page.get(0), Name.of("target", "source", "hello")));
     }
 
     @Test

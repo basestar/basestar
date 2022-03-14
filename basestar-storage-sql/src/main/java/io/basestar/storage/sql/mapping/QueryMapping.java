@@ -65,6 +65,14 @@ public class QueryMapping {
                 table = mapping.join(qualifiedName.with(name), context, tableResolver, expressionResolver, table, branch);
             }
         }
+        for (final Map.Entry<String, LinkMapping> entry : links.entrySet()) {
+            final String name = entry.getKey();
+            final LinkMapping mapping = entry.getValue();
+            final Set<Name> branch = branches.get(name);
+            if (branch != null) {
+                table = mapping.join(qualifiedName.with(name), context, tableResolver, expressionResolver, table, branch);
+            }
+        }
         return table;
     }
 
@@ -120,7 +128,12 @@ public class QueryMapping {
             if (property != null) {
                 return property.nestedField(qualifiedName.with(first), name.withoutFirst());
             } else {
-                return Optional.empty();
+                final LinkMapping link = links.get(first);
+                if (link != null) {
+                    return link.nestedField(qualifiedName.with(first), name.withoutFirst());
+                } else {
+                    return Optional.empty();
+                }
             }
         }
     }
@@ -209,12 +222,19 @@ public class QueryMapping {
     public Map<String, Object> fromRecord(final RecordResolver record, final Set<Name> expand) {
 
         final QueryableSchema schema = getSchema();
-        final Map<String, PropertyMapping<?>> properties = getProperties();
 
         final Map<String, Object> result = new HashMap<>();
 
+        final Map<String, Set<Name>> branches = Name.branch(expand);
         properties.forEach((name, prop) -> {
-            result.put(name, prop.fromRecord(Name.of(name), record, expand));
+            final Set<Name> branch = branches.get(name);
+            result.put(name, prop.fromRecord(Name.of(name), record, branch));
+        });
+        links.forEach((name, link) -> {
+            final Set<Name> branch = branches.get(name);
+            if (branch != null) {
+                result.put(name, link.fromRecord(Name.of(name), record, branch));
+            }
         });
 
         if (Instance.getSchema(result) == null) {
@@ -298,7 +318,7 @@ public class QueryMapping {
 
     public static org.jooq.Name selectName(final Name name) {
 
-        return DSL.name(name.toString("_"));
+        return DSL.name("__" + name.toString("_"));
     }
 
     public Field<?> selectField(final Name name) {
