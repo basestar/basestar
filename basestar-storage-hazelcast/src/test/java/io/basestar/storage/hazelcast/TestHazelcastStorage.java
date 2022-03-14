@@ -81,11 +81,6 @@ class TestHazelcastStorage extends TestStorage {
     }
 
     @Override
-    protected void testMultiValueIndex() {
-
-    }
-
-    @Override
     protected void testLarge() {
 
     }
@@ -100,5 +95,11 @@ class TestHazelcastStorage extends TestStorage {
     @Override
     protected void testSortAndPagingNulls() {
 
+    }
+
+    @Override
+    protected boolean supportsMultiValueIndexes() {
+
+        return false;
     }
 }

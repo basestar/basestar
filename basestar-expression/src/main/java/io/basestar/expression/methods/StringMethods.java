@@ -30,6 +30,8 @@ import java.time.LocalDate;
 @SuppressWarnings("unused")
 public class StringMethods implements Serializable {
 
+    private static final int MAX_PAD_LENGTH = 1048576;
+
     public boolean isempty(final String target) {
 
         return target.isEmpty();
@@ -65,6 +67,52 @@ public class StringMethods implements Serializable {
         final int beginPos = begin.intValue() - 1;
         final int endPos = Math.min(target.length(), beginPos + count.intValue());
         return target.substring(beginPos, endPos);
+    }
+
+    public String lpad(final String target, final Long length, final String c) {
+
+        if (target == null || length == null || c == null) {
+            return null;
+        } else if (c.length() != 1) {
+            throw new IllegalStateException("LPad only supports a single padding character");
+        } else if (length > MAX_PAD_LENGTH) {
+            throw new IllegalStateException("LPad would produce a string over " + MAX_PAD_LENGTH + " characters");
+        } else {
+            if (target.length() >= length) {
+                return target;
+            } else {
+                final int pad = length.intValue() - target.length();
+                final StringBuilder buffer = new StringBuilder();
+                for (int i = 0; i != pad; ++i) {
+                    buffer.append(c);
+                }
+                buffer.append(target);
+                return buffer.toString();
+            }
+        }
+    }
+
+    public String rpad(final String target, final Long length, final String c) {
+
+        if (target == null || length == null || c == null) {
+            return null;
+        } else if (c.length() != 1) {
+            throw new IllegalStateException("RPad only supports a single padding character");
+        } else if (length > MAX_PAD_LENGTH) {
+            throw new IllegalStateException("RPad would produce a string over " + MAX_PAD_LENGTH + " characters");
+        } else {
+            if (target.length() >= length) {
+                return target;
+            } else {
+                final int pad = length.intValue() - target.length();
+                final StringBuilder buffer = new StringBuilder();
+                buffer.append(target);
+                for (int i = 0; i != pad; ++i) {
+                    buffer.append(c);
+                }
+                return buffer.toString();
+            }
+        }
     }
 
     public String trim(final String target) {

@@ -154,4 +154,10 @@ class TestDynamoDBStorage extends TestStorage {
 
         return true;
     }
+
+    @Override
+    protected boolean supportsMultiValueIndexes() {
+
+        return true;
+    }
 }

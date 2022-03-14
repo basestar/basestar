@@ -411,14 +411,14 @@ public interface Schema extends Named, Described, Serializable, Extendable {
         @Override
         public String idFromValue(final Object value) {
 
-            return idFromValueAndType(value, value.getClass());
+            final Descriptor<?> descriptor = (Descriptor<?>) value;
+            return descriptor.getType();
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         public String idFromValueAndType(final Object value, final Class<?> type) {
 
-            return CLASSPATH.idForClass((Class<Schema.Builder<?, ?>>) type);
+            return idFromValue(value);
         }
 
         @Override

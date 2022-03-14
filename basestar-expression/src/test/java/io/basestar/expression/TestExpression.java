@@ -20,9 +20,9 @@ package io.basestar.expression;
  * #L%
  */
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.*;
+import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
 import io.basestar.expression.aggregate.Aggregate;
 import io.basestar.expression.call.LambdaCall;
 import io.basestar.expression.compare.Eq;
@@ -47,6 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
@@ -692,8 +693,115 @@ class TestExpression {
     }
 
     @Test
-    void test() {
+    void testMurmurExceptions() {
 
-        Expression.parse("SELECT wer.fileId, \"wer_20\" AS type, wer.currency, wer.grossRoyaltyAmount, wer.taxAmount, wer.commissionAmount, wer.grossRoyaltyAmount - wer.taxAmount - wer.commissionAmount AS netRoyaltyAmount, 0 AS adjustmentAmount, 0 AS returnedAmount FROM wer20 AS wer UNION DISTINCT SELECT wep.fileId, \"wep_20\" AS type, wep.currency, wep.grossRoyaltyAmount, wep.taxAmount, wep.commissionAmount, wep.grossRoyaltyAmount - wep.taxAmount - wep.commissionAmount AS netRoyaltyAmount, 0 AS adjustmentAmount, 0 AS returnedAmount FROM wep20 AS wep UNION DISTINCT SELECT wea.fileId, \"wea_20\" AS type, wea.currency, wea.grossRoyaltyAmount, wea.taxAmount, wea.commissionAmount, wea.grossRoyaltyAmount - wea.taxAmount - wea.commissionAmount AS netRoyaltyAmount, 0 AS adjustmentAmount, 0 AS returnedAmount FROM wea20 AS wea UNION DISTINCT SELECT wbi.fileId, \"wbi_20\" AS type, wbi.currency, wbi.grossRoyaltyAmount, wbi.taxAmount, wbi.commissionAmount, wbi.grossRoyaltyAmount - wbi.taxAmount - wbi.commissionAmount AS netRoyaltyAmount, 0 AS adjustmentAmount, 0 AS returnedAmount FROM wbi20 AS wbi UNION DISTINCT SELECT icc.fileId, \"icc_20\" AS type, icc.currency, 0 AS grossRoyaltyAmount, 0 AS taxAmount, 0 AS commissionAmount, CASE icc.remittingSocietyContingencyAmountSign WHEN \"-\" THEN -icc.remittingSocietyContingencyAmount ELSE icc.remittingSocietyContingencyAmount END AS netRoyaltyAmount, 0 AS adjustmentAmount, 0 AS returnedAmount FROM icc20 AS icc UNION DISTINCT SELECT adj.fileId, \"adj_20\" AS type, sdn.remittanceCurrency AS currency, 0 AS grossRoyaltyAmount, 0 AS taxAmount, 0 AS commissionAmount, 0 AS netRoyaltyAmount, CASE adj.adjustmentAmountSign WHEN \"-\" THEN -adj.adjustmentAmount ELSE adj.adjustmentAmount END AS adjustmentAmount, 0 AS returnedAmount FROM adj20 AS adj, sdn20 AS sdn WHERE adj.fileId == sdn.fileId UNION DISTINCT SELECT rrp.fileId, \"rrp_20\" AS type, sdn.remittanceCurrency AS currency, 0 AS grossRoyaltyAmount, 0 AS taxAmount, 0 AS commissionAmount, 0 AS netRoyaltyAmount, 0 AS adjustmentAmount, CASE rrp.returnAmountSign WHEN \"-\" THEN -rrp.returnAmount ELSE rrp.returnAmount END AS returnedAmount FROM rrp20 AS rrp, sdn20 AS sdn WHERE rrp.fileId == sdn.fileId");
+        assertThrows(IllegalStateException.class, () -> cache.parse("'abc'.murmur(0)").evaluate(Context.init()));
+        assertThrows(IllegalStateException.class, () -> cache.parse("'abc'.murmur(17)").evaluate(Context.init()));
+    }
+
+    @Test
+    @SuppressWarnings("UnstableApiUsage")
+    void testMurmur32() {
+
+        final String input1 = "abcdefgh";
+        final byte[] h = Hashing.murmur3_32_fixed().hashString(input1, StandardCharsets.UTF_8).asBytes();
+        final byte[][] folded = {
+                {x(h[0], h[1], h[2], h[3])},
+                {x(h[0], h[2]), x(h[1], h[3])},
+                {x(h[0], h[3]), h[1], h[2]},
+                h
+        };
+        for (int i = 0; i != 4; ++i) {
+            final byte[] expected = folded[i];
+            final Context context = context(ImmutableMap.of(
+                    "value", input1,
+                    "length", (long) i + 1
+            ));
+            check("value.murmur3(length).upperHex()", BaseEncoding.base16().encode(expected).toUpperCase(), context);
+            check("value.murmur3(length).lowerHex()", BaseEncoding.base16().encode(expected).toLowerCase(), context);
+            check("value.murmur3(length).base64()", BaseEncoding.base64().encode(expected), context);
+            check("value.murmur3(length).base32()", BaseEncoding.base32().encode(expected), context);
+            check("value.murmur3(4).xorFold(length).upperHex()", BaseEncoding.base16().encode(expected).toUpperCase(), context);
+        }
+    }
+
+    @Test
+    @SuppressWarnings("UnstableApiUsage")
+    void testMurmur128() {
+
+        final String input1 = "abcdefgh";
+        final byte[] h = Hashing.murmur3_128().hashString(input1, StandardCharsets.UTF_8).asBytes();
+        final byte[][] folded = {
+                {x(h[0], h[5], h[10], h[15]), x(h[1], h[6], h[11]), x(h[2], h[7], h[12]), x(h[3], h[8], h[13]), x(h[4], h[9], h[14])},
+                {x(h[0], h[6], h[12]), x(h[1], h[7], h[13]), x(h[2], h[8], h[14]), x(h[3], h[9], h[15]), x(h[4], h[10]), x(h[5], h[11])},
+                {x(h[0], h[7], h[14]), x(h[1], h[8], h[15]), x(h[2], h[9]), x(h[3], h[10]), x(h[4], h[11]), x(h[5], h[12]), x(h[6], h[13])},
+                {x(h[0], h[8]), x(h[1], h[9]), x(h[2], h[10]), x(h[3], h[11]), x(h[4], h[12]), x(h[5], h[13]), x(h[6], h[14]), x(h[7], h[15])},
+                {x(h[0], h[9]), x(h[1], h[10]), x(h[2], h[11]), x(h[3], h[12]), x(h[4], h[13]), x(h[5], h[14]), x(h[6], h[15]), h[7], h[8]},
+                {x(h[0], h[10]), x(h[1], h[11]), x(h[2], h[12]), x(h[3], h[13]), x(h[4], h[14]), x(h[5], h[15]), h[6], h[7], h[8], h[9]},
+                {x(h[0], h[11]), x(h[1], h[12]), x(h[2], h[13]), x(h[3], h[14]), x(h[4], h[15]), h[5], h[6], h[7], h[8], h[9], h[10]},
+                {x(h[0], h[12]), x(h[1], h[13]), x(h[2], h[14]), x(h[3], h[15]), h[4], h[5], h[6], h[7], h[8], h[9], h[10], h[11]},
+                {x(h[0], h[13]), x(h[1], h[14]), x(h[2], h[15]), h[3], h[4], h[5], h[6], h[7], h[8], h[9], h[10], h[11], h[12]},
+                {x(h[0], h[14]), x(h[1], h[15]), h[2], h[3], h[4], h[5], h[6], h[7], h[8], h[9], h[10], h[11], h[12], h[13]},
+                {x(h[0], h[15]), h[1], h[2], h[3], h[4], h[5], h[6], h[7], h[8], h[9], h[10], h[11], h[12], h[13], h[14]},
+                h
+        };
+        for (int i = 4; i != 16; ++i) {
+            final byte[] expected = folded[i - 4];
+            final Context context = context(ImmutableMap.of(
+                    "value", input1,
+                    "length", (long) i + 1
+            ));
+            check("value.murmur3(length).upperHex()", BaseEncoding.base16().encode(expected).toUpperCase(), context);
+            check("value.murmur3(length).lowerHex()", BaseEncoding.base16().encode(expected).toLowerCase(), context);
+            check("value.murmur3(length).base64()", BaseEncoding.base64().encode(expected), context);
+            check("value.murmur3(length).base32()", BaseEncoding.base32().encode(expected), context);
+            check("value.murmur3(16).xorFold(length).upperHex()", BaseEncoding.base16().encode(expected).toUpperCase(), context);
+        }
+    }
+
+    private static byte x(byte... bytes) {
+
+        byte result = 0;
+        for (int i = 0; i != bytes.length; ++i) {
+            result ^= bytes[i];
+        }
+        return result;
+    }
+
+    @Test
+    void testToString() {
+
+        check("value.toString()", "test", Context.init(ImmutableMap.of(
+                "value", "test"
+        )));
+        check("value.toString()", "[test]", Context.init(ImmutableMap.of(
+                "value", ImmutableList.of("test")
+        )));
+        check("value.toString()", "{a:x,b:[1,2,3]}", Context.init(ImmutableMap.of(
+                "value", ImmutableSortedMap.orderedBy(Comparator.<String>naturalOrder().reversed())
+                        .put("a", "x").put("b", ImmutableList.of(1, 2, 3)).build())
+        ));
+        check("value.toString()", "[[1,2,3],b,c]", Context.init(ImmutableMap.of(
+                "value", ImmutableSortedSet.orderedBy(Comparator.comparing(Object::toString).reversed())
+                        .add(ImmutableList.of(1, 2, 3), "b", "c").build())
+        ));
+    }
+
+    @Test
+    void testPad() {
+
+        final Context context = Context.init(ImmutableMap.of(
+                "value", "test"
+        ));
+        check("value.lpad(3, '0')", "test", context);
+        check("value.lpad(4, '0')", "test", context);
+        check("value.lpad(5, '0')", "0test", context);
+        check("value.lpad(6, '0')", "00test", context);
+        assertThrows(IllegalStateException.class, () -> cache.parse("value.lpad(5, '00')").evaluate(context));
+        check("value.rpad(3, '0')", "test", context);
+        check("value.rpad(4, '0')", "test", context);
+        check("value.rpad(5, '0')", "test0", context);
+        check("value.rpad(6, '0')", "test00", context);
+        assertThrows(IllegalStateException.class, () -> cache.parse("value.rpad(5, '00')").evaluate(context));
     }
 }

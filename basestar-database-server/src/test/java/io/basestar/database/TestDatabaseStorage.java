@@ -17,4 +17,10 @@ public class TestDatabaseStorage extends TestStorage {
                 Caller.SUPER
         );
     }
+
+    @Override
+    protected boolean supportsMultiValueIndexes() {
+
+        return false;
+    }
 }

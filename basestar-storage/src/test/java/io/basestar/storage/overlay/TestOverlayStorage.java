@@ -34,4 +34,10 @@ class TestOverlayStorage extends TestStorage {
     protected void testDeleteRecreate() {
 
     }
+
+    @Override
+    protected boolean supportsMultiValueIndexes() {
+
+        return false;
+    }
 }

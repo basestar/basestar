@@ -59,6 +59,31 @@ public class Bytes implements Serializable, Comparable<Bytes> {
         return new Bytes(BaseEncoding.base64().decode(str));
     }
 
+    public String toUpperHex() {
+
+        return BaseEncoding.base16().encode(bytes).toUpperCase();
+    }
+
+    public String toLowerHex() {
+
+        return BaseEncoding.base16().encode(bytes).toLowerCase();
+    }
+
+    public static Bytes fromHex(final String str) {
+
+        return new Bytes(BaseEncoding.base16().decode(str));
+    }
+
+    public String toBase32() {
+
+        return BaseEncoding.base32().encode(bytes);
+    }
+
+    public static Bytes fromBase32(final String str) {
+
+        return new Bytes(BaseEncoding.base32().decode(str));
+    }
+
     public byte[] getBytes() {
 
         return bytes;
@@ -109,6 +134,19 @@ public class Bytes implements Serializable, Comparable<Bytes> {
             return 1;
         } else {
             return a.length > b.length ? 1 : 0;
+        }
+    }
+
+    public Bytes xorFold(final int length) {
+
+        if (bytes.length <= length) {
+            return this;
+        } else {
+            final byte[] buffer = new byte[length];
+            for (int i = 0; i != bytes.length; ++i) {
+                buffer[i % length] ^= bytes[i];
+            }
+            return Bytes.valueOf(buffer);
         }
     }
 }

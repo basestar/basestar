@@ -114,12 +114,6 @@ class TestElasticsearchStorage extends TestStorage {
     }
 
     @Override
-    protected void testMultiValueIndex() {
-
-        // Skipped
-    }
-
-    @Override
     protected void testLarge() {
 
         // Skipped
@@ -127,6 +121,12 @@ class TestElasticsearchStorage extends TestStorage {
 
     @Override
     protected boolean supportsHistoryQuery() {
+
+        return false;
+    }
+
+    @Override
+    protected boolean supportsMultiValueIndexes() {
 
         return false;
     }
