@@ -17,6 +17,7 @@ import io.basestar.schema.use.*;
 import io.basestar.storage.sql.SQLExpressionVisitor;
 import io.basestar.storage.sql.mapping.PropertyMapping;
 import io.basestar.storage.sql.mapping.QueryMapping;
+import io.basestar.storage.sql.mapping.ValueTransform;
 import io.basestar.storage.sql.resolver.ResolvedTable;
 import io.basestar.storage.sql.resolver.TableResolver;
 import io.basestar.storage.sql.strategy.NamingStrategy;
@@ -31,6 +32,7 @@ import org.jooq.impl.DefaultDataType;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -40,11 +42,11 @@ public class SnowflakeDialect extends JSONDialect {
 
     private static final org.jooq.SQLDialect DIALECT = SQLDialect.POSTGRES;
 
-    private static final DataType<?> ARRAY_TYPE = new DefaultDataType<>(SQLDialect.POSTGRES, Object.class, "ARRAY");
+    private static final DataType<Object> ARRAY_TYPE = new DefaultDataType<>(SQLDialect.POSTGRES, Object.class, "ARRAY");
 
-    private static final DataType<?> OBJECT_TYPE = new DefaultDataType<>(SQLDialect.POSTGRES, Object.class, "OBJECT");
+    private static final DataType<Object> OBJECT_TYPE = new DefaultDataType<>(SQLDialect.POSTGRES, Object.class, "OBJECT");
 
-    private static final DataType<?> VARIANT_TYPE = new DefaultDataType<>(SQLDialect.POSTGRES, Object.class, "VARIANT");
+    private static final DataType<Object> VARIANT_TYPE = new DefaultDataType<>(SQLDialect.POSTGRES, Object.class, "VARIANT");
 
     @Override
     public org.jooq.SQLDialect dmlDialect() {
@@ -407,6 +409,38 @@ public class SnowflakeDialect extends JSONDialect {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
+    public <T> PropertyMapping<T> jsonMapping(final Use<T> type, final Set<io.basestar.util.Name> expand) {
+
+        return PropertyMapping.simple((DataType<Object>) dataType(type), new ValueTransform<T, Object>() {
+            @Override
+            public SelectField<Object> toSQLValue(final T value) {
+
+                try {
+                    return DSL.function("parse_json", Object.class, DSL.inline(value == null ? null : (Object) objectMapper.writeValueAsString(value)));
+                } catch (final IOException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+
+            @Override
+            public T fromSQLValue(final Object value, final Set<io.basestar.util.Name> expand) {
+
+                try {
+                    if (value == null) {
+                        return null;
+                    } else {
+                        final String data = unescapeJson(value.toString());
+                        return type.create(objectMapper.readValue(data, Object.class), expand);
+                    }
+                } catch (final IOException e) {
+                    throw new IllegalStateException();
+                }
+            }
+        });
+    }
+
+    @Override
     public QueryMapping schemaMapping(final LinkableSchema schema, final boolean versioned, final Set<io.basestar.util.Name> expand) {
 
         return new QueryMapping(schema, ImmutableMap.of(), null, versioned, propertyMappings(schema, expand), linkMappings(schema, expand)) {
@@ -473,7 +507,7 @@ public class SnowflakeDialect extends JSONDialect {
                 merge(merge, table.getTable(), idField);
                 mergeNotMatchedInsert(merge, record);
 
-                return DSL.query(DSL.sql(merge.toString(), mergeSelect(record)));
+                return context.query(DSL.sql(merge.toString(), mergeSelect(record)));
             }
 
             @Override
@@ -494,7 +528,7 @@ public class SnowflakeDialect extends JSONDialect {
                         .map(f -> "TARGET." + f.getFirst().getUnqualifiedName() + " = SOURCE." + f.getFirst().getUnqualifiedName())
                         .collect(Collectors.joining(",")));
 
-                return DSL.query(DSL.sql(merge.toString(), mergeSelect(record)));
+                return context.query(DSL.sql(merge.toString(), mergeSelect(record)));
             }
 
             @Override
@@ -512,7 +546,7 @@ public class SnowflakeDialect extends JSONDialect {
                 merge.append("THEN DELETE");
 
 
-                return DSL.query(DSL.sql(merge.toString(), mergeSelect(orderedRecord(ImmutableMap.of(idField, DSL.inline(id))))));
+                return context.query(DSL.sql(merge.toString(), mergeSelect(orderedRecord(ImmutableMap.of(idField, DSL.inline(id))))));
             }
 
             @Override
@@ -534,7 +568,7 @@ public class SnowflakeDialect extends JSONDialect {
                             .map(f -> "TARGET." + f.getFirst().getUnqualifiedName() + " = SOURCE." + f.getFirst().getUnqualifiedName())
                             .collect(Collectors.joining(",")));
 
-                    return DSL.query(DSL.sql(merge.toString(), mergeSelect(record)));
+                    return context.query(DSL.sql(merge.toString(), mergeSelect(record)));
                 });
             }
         };

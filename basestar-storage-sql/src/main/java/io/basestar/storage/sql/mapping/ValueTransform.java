@@ -2,6 +2,8 @@ package io.basestar.storage.sql.mapping;
 
 import io.basestar.util.Name;
 import lombok.Data;
+import org.jooq.SelectField;
+import org.jooq.impl.DSL;
 
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -9,7 +11,7 @@ import java.util.function.Function;
 
 public interface ValueTransform<T, S> {
 
-    S toSQLValue(T value);
+    SelectField<S> toSQLValue(T value);
 
     T fromSQLValue(S value, Set<Name> expand);
 
@@ -17,9 +19,9 @@ public interface ValueTransform<T, S> {
 
         return new ValueTransform<T, T>() {
             @Override
-            public T toSQLValue(final T value) {
+            public SelectField<T> toSQLValue(final T value) {
 
-                return value;
+                return DSL.inline(value);
             }
 
             @Override
@@ -38,9 +40,9 @@ public interface ValueTransform<T, S> {
         private final Function<T, S> to;
 
         @Override
-        public S toSQLValue(final T value) {
+        public SelectField<S> toSQLValue(final T value) {
 
-            return to.apply(value);
+            return DSL.inline(to.apply(value));
         }
 
         @Override

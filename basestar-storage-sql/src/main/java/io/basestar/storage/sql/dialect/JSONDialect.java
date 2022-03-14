@@ -26,7 +26,6 @@ import org.jooq.impl.SQLDataType;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -160,10 +159,10 @@ public abstract class JSONDialect implements SQLDialect {
 
         return PropertyMapping.simple(SQLDataType.JSON, new ValueTransform<T, JSON>() {
             @Override
-            public JSON toSQLValue(final T value) {
+            public SelectField<JSON> toSQLValue(final T value) {
 
                 try {
-                    return value == null ? null : JSON.valueOf(objectMapper.writeValueAsString(value));
+                    return DSL.inline(value == null ? null : JSON.valueOf(objectMapper.writeValueAsString(value)));
                 } catch (final IOException e) {
                     throw new IllegalStateException(e);
                 }
@@ -191,9 +190,9 @@ public abstract class JSONDialect implements SQLDialect {
 
         return PropertyMapping.simple(dateType(type), new ValueTransform<LocalDate, java.sql.Date>() {
             @Override
-            public java.sql.Date toSQLValue(final LocalDate value) {
+            public SelectField<java.sql.Date> toSQLValue(final LocalDate value) {
 
-                return value == null ? null : ISO8601.toSqlDate(value);
+                return DSL.inline(value == null ? null : ISO8601.toSqlDate(value));
             }
 
             @Override
@@ -209,9 +208,9 @@ public abstract class JSONDialect implements SQLDialect {
 
         return PropertyMapping.simple(dateTimeType(type), new ValueTransform<Instant, java.sql.Timestamp>() {
             @Override
-            public java.sql.Timestamp toSQLValue(final Instant value) {
+            public SelectField<java.sql.Timestamp> toSQLValue(final Instant value) {
 
-                return value == null ? null : ISO8601.toSqlTimestamp(value);
+                return DSL.inline(value == null ? null : ISO8601.toSqlTimestamp(value));
             }
 
             @Override
@@ -292,9 +291,9 @@ public abstract class JSONDialect implements SQLDialect {
         return PropertyMapping.simple(stringType(UseString.DEFAULT), new ValueTransform<Bytes, String>() {
 
             @Override
-            public String toSQLValue(final Bytes value) {
+            public SelectField<String> toSQLValue(final Bytes value) {
 
-                return value == null ? null : value.toBase64();
+                return DSL.inline(value == null ? null : value.toBase64());
             }
 
             @Override
@@ -311,9 +310,9 @@ public abstract class JSONDialect implements SQLDialect {
         return PropertyMapping.simple(stringType(UseString.DEFAULT), new ValueTransform<Secret, String>() {
 
             @Override
-            public String toSQLValue(final Secret value) {
+            public SelectField<String> toSQLValue(final Secret value) {
 
-                return value == null ? null : value.encryptedBase64();
+                return DSL.inline(value == null ? null : value.encryptedBase64());
             }
 
             @Override

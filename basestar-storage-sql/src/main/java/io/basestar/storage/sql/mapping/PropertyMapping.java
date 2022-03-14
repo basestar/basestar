@@ -126,11 +126,10 @@ public interface PropertyMapping<T> {
             } else {
                 final Object output;
                 if (transform != null) {
-                    output = transform.toSQLValue(value);
+                    return transform.toSQLValue(value);
                 } else {
-                    output = value;
+                    return DSL.inline(value, dataType);
                 }
-                return DSL.inline(output, dataType);
             }
         }
 
