@@ -804,4 +804,14 @@ class TestExpression {
         check("value.rpad(6, '0')", "test00", context);
         assertThrows(IllegalStateException.class, () -> cache.parse("value.rpad(5, '00')").evaluate(context));
     }
+
+    @Test
+    void testRegex() {
+
+        final Context context = Context.init(ImmutableMap.of(
+                "value", "hello world"
+        ));
+        check("value.regexMatch('^hello .*$')", true, context);
+        check("value.regexReplace('(\\\\w+)', 'abc')", "abc abc", context);
+    }
 }

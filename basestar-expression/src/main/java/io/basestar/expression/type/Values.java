@@ -204,7 +204,7 @@ public class Values {
         public String apply(final String value) {
 
 
-            return "\"" + value.replaceAll("\"", "\\\\\"") + "\"";
+            return "\"" + value.replaceAll("\\\\", "\\\\\\\\").replaceAll("\"", "\\\\\"") + "\"";
         }
 
         @Override
