@@ -285,7 +285,7 @@ public class AvroUtils {
     }
 
     @SuppressWarnings("unchecked")
-    private static Object encode(final Use<?> use, final Schema schema, final Set<Name> expand, final Object value, final boolean optional) {
+    public static Object encode(final Use<?> use, final Schema schema, final Set<Name> expand, final Object value, final boolean optional) {
 
         return use.visit(new Use.Visitor.Defaulting<Object>() {
 
@@ -419,7 +419,7 @@ public class AvroUtils {
         return object;
     }
 
-    private static Object decode(final Use<?> use, final Schema schema, final Set<Name> expand, final Object value) {
+    public static Object decode(final Use<?> use, final Schema schema, final Set<Name> expand, final Object value) {
 
         if (value == null) {
             return null;
