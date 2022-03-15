@@ -27,10 +27,8 @@ Comment:
       default: {}
   indexes:
     parent:
-      over:
-        blah: blah
       partition:
-        - blah.id
+        - post.id
       consistency: ASYNC
 
 User:

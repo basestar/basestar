@@ -1,6 +1,7 @@
 package io.basestar.schema;
 
 import com.google.common.collect.ImmutableSet;
+import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.use.Use;
 import io.basestar.schema.use.UseAny;
 import io.basestar.util.Immutable;
@@ -21,10 +22,17 @@ public interface Layout extends Serializable {
     @SuppressWarnings("unchecked")
     default <T> Use<T> typeOf(final Name name) {
 
-        return (Use<T>)optionalTypeOf(name).orElse(UseAny.DEFAULT);
+        return (Use<T>) optionalTypeOf(name).orElse(UseAny.DEFAULT);
     }
 
     <T> Optional<Use<T>> optionalTypeOf(Name name);
+
+    @SuppressWarnings("unchecked")
+    default <T> Use<T> requireTypeOf(final Name name) {
+
+        return (Use<T>) optionalTypeOf(name)
+                .orElseThrow(() -> new MissingMemberException(name.toString(), getSchema().keySet()));
+    }
 
     static Layout simple(final Map<String, Use<?>> schema) {
 

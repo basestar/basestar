@@ -398,6 +398,7 @@ public class ObjectSchema implements ReferableSchema {
             }
         });
         validateFieldNames(declaredNames);
+        this.indexes.forEach((name, index) -> index.validate());
     }
 
     @Override

@@ -35,9 +35,8 @@ import io.basestar.jackson.serde.NameDeserializer;
 import io.basestar.schema.exception.IndexValidationException;
 import io.basestar.schema.exception.MissingMemberException;
 import io.basestar.schema.exception.ReservedNameException;
-import io.basestar.schema.use.Use;
-import io.basestar.schema.use.UseInteger;
-import io.basestar.schema.use.UseString;
+import io.basestar.schema.exception.SchemaValidationException;
+import io.basestar.schema.use.*;
 import io.basestar.util.*;
 import lombok.Data;
 import lombok.Getter;
@@ -303,20 +302,55 @@ public class Index implements Named, Described, Serializable, Extendable {
                     throw new IndexValidationException("Multi-value keys cannot be used as sort keys");
                 }
             }
-            for(final String p : projection) {
-                if(over.containsKey(p)) {
+            for (final String p : projection) {
+                if (over.containsKey(p)) {
                     throw new IndexValidationException("Multi-value keys cannot be used in projection");
                 }
             }
         }
-        if(unique && !Consistency.ATOMIC.equals(consistency)) {
+        if (unique && !Consistency.ATOMIC.equals(consistency)) {
             throw new IndexValidationException("Unique index must have " + Consistency.ATOMIC + " consistency");
+        }
+    }
+
+    public void validate() {
+
+        for (final Name p : partition) {
+            final Use<?> checkType;
+            final Name remap = over.get(p.first());
+            if (remap != null) {
+                final Use<?> type = schema.requireTypeOf(remap).optional(false);
+                if (type instanceof UseContainer) {
+                    final Use<?> containedType = ((UseContainer<?, ?>) type).getType();
+                    checkType = containedType.typeOf(p.withoutFirst());
+                } else {
+                    throw new SchemaValidationException(qualifiedName, "Property " + remap + " referenced in over clause must be an array, set or map type");
+                }
+            } else {
+                checkType = schema.requireTypeOf(p);
+            }
+            validateKeyType(p, checkType);
+        }
+        for (final Sort s : sort) {
+            final Use<?> checkType = schema.requireTypeOf(s.getName());
+            validateKeyType(s.getName(), checkType);
+        }
+    }
+
+    private void validateKeyType(final Name name, final Use<?> type) {
+
+        final Use<?> t = type.optional(false);
+        if (!(t instanceof UseBoolean || t instanceof UseInteger
+                || t instanceof UseString || t instanceof UseEnum
+                || t instanceof UseDate || t instanceof UseDateTime
+                || t instanceof UseBinary)) {
+            throw new SchemaValidationException(qualifiedName, "Type " + t + " is not valid as an index key (property:" + name + ")");
         }
     }
 
     public Consistency getConsistency(final Consistency defaultValue) {
 
-        if(consistency == null) {
+        if (consistency == null) {
             return defaultValue;
         } else {
             return consistency;
