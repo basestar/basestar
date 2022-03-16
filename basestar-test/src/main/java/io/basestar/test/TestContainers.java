@@ -23,8 +23,10 @@ package io.basestar.test;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
+import com.github.dockerjava.api.command.PullImageCmd;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.Frame;
+import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientBuilder;
@@ -106,14 +108,20 @@ public class TestContainers {
 
             if (running.isEmpty()) {
 
+                log.info("Pulling image '{}'", spec.getImage());
+                String image = spec.getImage();
+                PullImageCmd pullImageCmd = docker.pullImageCmd(image);
+                pullImageCmd
+                        .start()
+                        .awaitCompletion();
+                log.info("Pulling image '{}' completed", spec.getImage());
                 log.info("Creating container ({})", spec);
 
-                // FIXME: deprecated port bindings
                 final CreateContainerResponse createResponse = docker.createContainerCmd(spec.getImage()) // NOSONAR
                         .withEnv(spec.getEnv())
-                        .withPortBindings(spec.getPorts().stream()
+                        .withHostConfig(HostConfig.newHostConfig().withPortBindings(spec.getPorts().stream()
                                 .map(v -> PortBinding.parse(v.toString()))
-                                .collect(Collectors.toList()))
+                                .collect(Collectors.toList())))
                         .withLabels(ImmutableMap.of("hash", hash))
                         .exec();
 
