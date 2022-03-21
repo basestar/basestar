@@ -79,6 +79,11 @@ public class FunctionSchema implements CallableSchema {
         this.using = Immutable.transformValues(descriptor.getUsing(), (k, v) -> v.build(resolver, Context.init()));
     }
 
+    @Nonnull
+    public Use<?> getReturns() {
+        return returns;
+    }
+
     @JsonDeserialize(as = Builder.class)
     public interface Descriptor extends CallableSchema.Descriptor<FunctionSchema> {
 
@@ -90,6 +95,8 @@ public class FunctionSchema implements CallableSchema {
             return TYPE;
         }
 
+        Use<?> getReturns();
+
         @Override
         default FunctionSchema build(final Namespace namespace, final Resolver.Constructing resolver, final Version version, final Name qualifiedName, final int slot) {
 
@@ -98,6 +105,11 @@ public class FunctionSchema implements CallableSchema {
 
         interface Self extends CallableSchema.Descriptor.Self<FunctionSchema>, Descriptor {
 
+            @Override
+            default Use<?> getReturns() {
+
+                return self().getReturns();
+            }
         }
     }
 
