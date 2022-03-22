@@ -465,6 +465,7 @@ The variables available in the context of a permission expression depend on the 
 
 ### String Type
 
+UTF-8 string
 
 <strong>Example</strong>
 <pre>
@@ -472,7 +473,6 @@ type: string
 </pre>
 
 ### Object Type
-
 
 Stores a reference to the object.
 
@@ -483,7 +483,6 @@ type: MyObject
 
 ### Integer Type
 
-
 Stored as 64bit (long) integer.
 
 <strong>Example</strong>
@@ -493,6 +492,7 @@ type: integer
 
 ### Array Type
 
+Array of the configured type (ordered, allows duplicates)
 
 <strong>Example</strong>
 <pre>
@@ -502,6 +502,7 @@ type:
 
 ### Set Type
 
+Set of the configured type (unordered, disallows duplicates)
 
 <strong>Example</strong>
 <pre>
@@ -511,17 +512,12 @@ type:
 
 ### Binary Type
 
-
 Input/output as a Base64 encoded string
 
 <strong>Example</strong>
 <pre>
 type: binary
 </pre>
-
-### 
-
-
 
 ### Struct Type
 
@@ -538,35 +534,20 @@ type: MyStruct
 
 ### Enum Type
 
-
 <strong>Example</strong>
 <pre>
 type: MyEnum
 </pre>
 
-### 
-
-
-
 ### Map Type
 
+Map of the configured value type, keys must be strings
 
 <strong>Example</strong>
 <pre>
 type:
   map: string
 </pre>
-
-### 
-
-
-
-### 
-
-
-
-### 
-
 
 
 ### Number Type
@@ -581,10 +562,46 @@ type: number
 
 ### Boolean Type
 
-
 <strong>Example</strong>
 <pre>
 type: boolean
 </pre>
 
+### Decimal Type
 
+Stored as a configured-precision decimal value.
+
+When operations are performed on decimal values, the following rescaling rules are applied:
+
+https://docs.cloudera.com/cdp-private-cloud-base/7.1.6/impala-sql-reference/topics/impala-decimal.html
+
+<strong>Example</strong>
+<pre>
+# With default precision: 30 scale: 6
+type: decimal
+</pre>
+<pre>
+# With configured precision
+type:
+  decimal:
+    precision: 10
+    scale: 5
+</pre>
+
+### Date time Type
+
+Stored as an ISO8601 date time string in UTC, to optional millisecond precision, e.g: `2020-01-01T00:00:00.000Z`
+
+<strong>Example</strong>
+<pre>
+type: datetime
+</pre>
+
+### Date Type
+
+Stored as an ISO8601 date string e.g: `2020-01-01`
+
+<strong>Example</strong>
+<pre>
+type: date
+</pre>
