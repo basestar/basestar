@@ -108,14 +108,17 @@ public class TestContainers {
 
             if (running.isEmpty()) {
 
-                log.info("Pulling image '{}'", spec.getImage());
-                String image = spec.getImage();
-                PullImageCmd pullImageCmd = docker.pullImageCmd(image);
-                pullImageCmd
-                        .start()
-                        .awaitCompletion();
-                log.info("Pulling image '{}' completed", spec.getImage());
-                log.info("Creating container ({})", spec);
+                // If docker_uri is supplied, assume running on a build server and no pull is needed
+                if (System.getenv("DOCKER_URI") == null) {
+                    log.info("Pulling image '{}'", spec.getImage());
+                    String image = spec.getImage();
+                    PullImageCmd pullImageCmd = docker.pullImageCmd(image);
+                    pullImageCmd
+                            .start()
+                            .awaitCompletion();
+                    log.info("Pulling image '{}' completed", spec.getImage());
+                    log.info("Creating container ({})", spec);
+                }
 
                 final CreateContainerResponse createResponse = docker.createContainerCmd(spec.getImage()) // NOSONAR
                         .withEnv(spec.getEnv())
