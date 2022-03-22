@@ -2,7 +2,6 @@ package io.basestar.storage.sql.mapping;
 
 import io.basestar.expression.Expression;
 import io.basestar.schema.Reserved;
-import io.basestar.schema.expression.InferenceContext;
 import io.basestar.storage.sql.resolver.ExpressionResolver;
 import io.basestar.storage.sql.resolver.RecordResolver;
 import io.basestar.storage.sql.resolver.TableResolver;
@@ -64,14 +63,14 @@ public class SingleLinkMapping implements LinkMapping {
 
         final Table<?> target = schema.subselect(qualifiedName.with("_"), context, tableResolver, expressionResolver, expand);
         // FIXME: remove use of inference context here
-        final Condition condition = expressionResolver.condition(name -> {
+        final Condition condition = expressionResolver.condition(context, tableResolver, name -> {
 
             if (Reserved.THIS_NAME.isParentOrEqual(name)) {
                 return Optional.of(DSL.field(QueryMapping.selectName(qualifiedName.withoutLast().with(name.withoutFirst()))));
             } else {
                 return Optional.of(DSL.field(QueryMapping.selectName(qualifiedName.with("_").with(name))));
             }
-        }, InferenceContext.empty(), expression);
+        }, schema, expression);
 
         final SelectField<?> presence = DSL.field(DSL.inline(true).as(QueryMapping.selectName(qualifiedName.with("__"))));
         return table.leftJoin(DSL.table(DSL.select(DSL.asterisk(), presence).from(target)).as(QueryMapping.selectName(qualifiedName)))

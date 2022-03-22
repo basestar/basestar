@@ -1,21 +1,22 @@
 package io.basestar.storage.sql.resolver;
 
 import io.basestar.expression.Expression;
-import io.basestar.schema.expression.InferenceContext;
+import io.basestar.storage.sql.mapping.QueryMapping;
 import io.basestar.util.Warnings;
 import org.jooq.Condition;
+import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.QueryPart;
 import org.jooq.impl.DSL;
 
 public interface ExpressionResolver {
 
-    QueryPart expression(ColumnResolver columnResolver, InferenceContext inferenceContext, Expression expression);
+    QueryPart expression(DSLContext context, TableResolver tableResolver, ColumnResolver columnResolver, QueryMapping queryMapping, Expression expression);
 
     @SuppressWarnings(Warnings.RETURN_GENERIC_WILDCARD)
-    default Field<?> field(final ColumnResolver columnResolver, final InferenceContext inferenceContext, final Expression expression) {
+    default Field<?> field(final DSLContext context, final TableResolver tableResolver, final ColumnResolver columnResolver, final QueryMapping queryMapping, final Expression expression) {
 
-        final QueryPart part = expression(columnResolver, inferenceContext, expression);
+        final QueryPart part = expression(context, tableResolver, columnResolver, queryMapping, expression);
         if (part == null) {
             return null;
         } else if (part instanceof Field<?>) {
@@ -27,9 +28,9 @@ public interface ExpressionResolver {
         }
     }
 
-    default Condition condition(final ColumnResolver columnResolver, final InferenceContext inferenceContext, final Expression expression) {
+    default Condition condition(final DSLContext context, final TableResolver tableResolver, final ColumnResolver columnResolver, final QueryMapping queryMapping, final Expression expression) {
 
-        final QueryPart part = expression(columnResolver, inferenceContext, expression);
+        final QueryPart part = expression(context, tableResolver, columnResolver, queryMapping, expression);
         if (part == null) {
             return null;
         } else if (part instanceof Field<?>) {

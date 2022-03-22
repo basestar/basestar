@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ContextIterator;
@@ -18,9 +19,9 @@ import io.basestar.storage.sql.SQLExpressionVisitor;
 import io.basestar.storage.sql.mapping.PropertyMapping;
 import io.basestar.storage.sql.mapping.QueryMapping;
 import io.basestar.storage.sql.mapping.ValueTransform;
+import io.basestar.storage.sql.resolver.ColumnResolver;
 import io.basestar.storage.sql.resolver.ResolvedTable;
 import io.basestar.storage.sql.resolver.TableResolver;
-import io.basestar.storage.sql.strategy.NamingStrategy;
 import io.basestar.util.Immutable;
 import io.basestar.util.Pair;
 import lombok.Data;
@@ -34,7 +35,6 @@ import org.jooq.impl.TableImpl;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -289,11 +289,12 @@ public class SnowflakeDialect extends JSONDialect {
         private boolean nullable;
     }
 
-    @Deprecated
-    public SQLExpressionVisitor expressionResolver(final NamingStrategy namingStrategy, final QueryableSchema schema, final Function<io.basestar.util.Name, QueryPart> columnResolver) {
+    @Override
+    public SQLExpressionVisitor expressionResolver(final DSLContext context, final TableResolver tableResolver, final ColumnResolver columnResolver, final QueryMapping queryMapping) {
 
-        final InferenceContext inferenceContext = InferenceContext.from(schema);
-        return new SQLExpressionVisitor(this, inferenceContext, columnResolver) {
+        final QueryableSchema schema = queryMapping.getSchema();
+        final InferenceContext inferenceContext = InferenceContext.from(queryMapping.getSchema());
+        return new SQLExpressionVisitor(this, inferenceContext, columnResolver::requireColumn) {
 
             private List<Field<?>> idFields(final QueryableSchema schema) {
 
@@ -304,12 +305,12 @@ public class SnowflakeDialect extends JSONDialect {
                         final List<String> primaryKey = fromSql.getPrimaryKey();
                         if (primaryKey != null && !primaryKey.isEmpty()) {
                             return primaryKey.stream()
-                                    .map(name -> DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(name))))
+                                    .map(name -> DSL.field(QueryMapping.selectName(io.basestar.util.Name.of(name))))
                                     .collect(Collectors.toList());
                         }
                     }
                 } else if (schema instanceof ReferableSchema) {
-                    return ImmutableList.of(DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(ReferableSchema.ID))));
+                    return ImmutableList.of(DSL.field(QueryMapping.selectName(io.basestar.util.Name.of(ReferableSchema.ID))));
                 }
                 throw new IllegalStateException("For any/for all only supported for object schemas, and view schemas with a primaryKey");
             }
@@ -351,7 +352,7 @@ public class SnowflakeDialect extends JSONDialect {
                 final String alias1 = Reserved.PREFIX + "1";
                 final String alias2 = Reserved.PREFIX + "2";
 
-                final Table<?> table = DSL.table(namingStrategy.entityName(schema));
+                final Table<?> table = queryMapping.baseSelect(io.basestar.util.Name.empty(), context, tableResolver, ImmutableSet.of());
 
                 final ContextIterator iterator = expression.getIterator();
                 // map keys not supported
@@ -364,19 +365,19 @@ public class SnowflakeDialect extends JSONDialect {
 
                         final List<Field<?>> idFields = idFields(schema);
 
-                        final SQLExpressionVisitor lhsVisitor = expressionResolver(namingStrategy, schema, name -> {
+                        final SQLExpressionVisitor lhsVisitor = expressionResolver(context, tableResolver, name -> {
                             if (name.first().equals(as)) {
                                 if (name.size() == 1) {
-                                    return DSL.field(DSL.name(alias2, "VALUE"));
+                                    return Optional.of(DSL.field(DSL.name(alias2, "VALUE")));
                                 } else {
-                                    return DSL.field(DSL.sql(DSL.name(alias2, "VALUE") + ":" + name.withoutFirst()
+                                    return Optional.of(DSL.field(DSL.sql(DSL.name(alias2, "VALUE") + ":" + name.withoutFirst()
                                             .stream().map(v -> DSL.name(v).toString())
-                                            .collect(Collectors.joining("."))));
+                                            .collect(Collectors.joining(".")))));
                                 }
                             } else {
-                                return DSL.field(DSL.name(alias1).append(namingStrategy.columnName(name)));
+                                return Optional.of(DSL.field(DSL.name(alias1).append(QueryMapping.selectName(name))));
                             }
-                        });
+                        }, queryMapping);
 
                         final List<Field<?>> aggFields = new ArrayList<>(idFields);
                         aggFields.add(DSL.field(DSL.sql(all ? "BOOLAND_AGG(?)" : "BOOLOR_AGG(?)", lhsVisitor.field(lhs))));
@@ -386,7 +387,7 @@ public class SnowflakeDialect extends JSONDialect {
 
                         final Field<Object> match = DSL.field(DSL.sql("(" + Joiner.on(", ").join(matchFields) + ")"));
                         final Condition query = match.in(DSL.select(aggFields).from(table.as(alias1),
-                                        DSL.table(DSL.sql("LATERAL FLATTEN(input => ?)", namingStrategy.columnName(rhs.getName()))).as(alias2))
+                                        DSL.table(DSL.sql("LATERAL FLATTEN(input => ?)", QueryMapping.selectName(rhs.getName()))).as(alias2))
                                 .groupBy(idFields));
 
                         if (all) {

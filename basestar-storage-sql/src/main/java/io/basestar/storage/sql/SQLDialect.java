@@ -11,6 +11,7 @@ import io.basestar.schema.util.Casing;
 import io.basestar.secret.Secret;
 import io.basestar.storage.sql.mapping.*;
 import io.basestar.storage.sql.resolver.ColumnResolver;
+import io.basestar.storage.sql.resolver.TableResolver;
 import io.basestar.storage.sql.util.DelegatingDatabaseMetaData;
 import io.basestar.util.Name;
 import io.basestar.util.*;
@@ -718,9 +719,9 @@ public interface SQLDialect {
         return true;
     }
 
-    default SQLExpressionVisitor expressionResolver(final InferenceContext inferenceContext, final ColumnResolver columnResolver) {
+    default SQLExpressionVisitor expressionResolver(final DSLContext context, final TableResolver tableResolver, final ColumnResolver columnResolver, final QueryMapping queryMapping) {
 
-        return new SQLExpressionVisitor(this, inferenceContext, columnResolver::requireColumn);
+        return new SQLExpressionVisitor(this, InferenceContext.from(queryMapping.getSchema()), columnResolver::requireColumn);
     }
 
     default ResultQuery<Record1<Long>> incrementSequence(final DSLContext context, final org.jooq.Name sequenceName) {

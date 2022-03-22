@@ -116,9 +116,9 @@ public class SQLStorage implements DefaultLayerStorage {
                 }
             }
         };
-        this.expressionResolver = (columnResolver, inferenceContext, expression) -> {
+        this.expressionResolver = (context, tableResolver, columnResolver, queryMapping, expression) -> {
 
-            final SQLExpressionVisitor visitor = strategy.dialect().expressionResolver(inferenceContext, columnResolver);
+            final SQLExpressionVisitor visitor = strategy.dialect().expressionResolver(context, tableResolver, columnResolver, queryMapping);
             return visitor.visit(expression);
         };
     }

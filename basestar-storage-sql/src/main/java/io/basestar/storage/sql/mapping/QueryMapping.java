@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Expression;
 import io.basestar.schema.Index;
 import io.basestar.schema.*;
-import io.basestar.schema.expression.InferenceContext;
 import io.basestar.storage.sql.resolver.*;
 import io.basestar.storage.sql.strategy.NamingStrategy;
 import io.basestar.util.Immutable;
@@ -48,14 +47,19 @@ public class QueryMapping {
         this.links = ImmutableSortedMap.copyOf(links);
     }
 
-    public Table<?> subselect(final Name qualifiedName, final DSLContext context, final TableResolver tableResolver, final ExpressionResolver expressionResolver, final Set<Name> expand) {
+    public Table<?> baseSelect(final Name qualifiedName, final DSLContext context, final TableResolver tableResolver, final Set<Name> expand) {
 
         final ResolvedTable resolvedTable = tableResolver.requireTable(context, schema, arguments, index, versioned);
         final List<Field<?>> fields = selectFields(Name.of(), resolvedTable, expand).stream()
                 .map(pair -> pair.getSecond().as(selectName(qualifiedName.with(pair.getFirst()))))
                 .collect(Collectors.toList());
 
-        Table<?> table = DSL.table(DSL.select(fields).from(resolvedTable.getTable())).as(selectName(qualifiedName));
+        return DSL.table(DSL.select(fields).from(resolvedTable.getTable())).as(selectName(qualifiedName));
+    }
+
+    public Table<?> subselect(final Name qualifiedName, final DSLContext context, final TableResolver tableResolver, final ExpressionResolver expressionResolver, final Set<Name> expand) {
+
+        Table<?> table = baseSelect(qualifiedName, context, tableResolver, expand);
         final Map<String, Set<Name>> branches = Name.branch(expand);
         for (final Map.Entry<String, PropertyMapping<?>> entry : properties.entrySet()) {
             final String name = entry.getKey();
@@ -109,8 +113,7 @@ public class QueryMapping {
 
     public Condition condition(final DSLContext context, final TableResolver tableResolver, final ExpressionResolver expressionResolver, final Expression expression) {
 
-        final InferenceContext inferenceContext = InferenceContext.from(schema);
-        return expressionResolver.condition(this::nestedField, inferenceContext, expression);
+        return expressionResolver.condition(context, tableResolver, this::nestedField, this, expression);
     }
 
     public Optional<Field<?>> nestedField(final Name name) {
