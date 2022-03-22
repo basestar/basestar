@@ -23,6 +23,11 @@ package io.basestar.schema;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.basestar.schema.exception.MissingMemberException;
+import io.basestar.schema.exception.SchemaValidationException;
+import io.basestar.schema.use.UseArray;
+import io.basestar.schema.use.UseDateTime;
+import io.basestar.schema.use.UseString;
 import io.basestar.util.Name;
 import io.basestar.util.Sort;
 import org.junit.jupiter.api.Test;
@@ -32,6 +37,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestIndex {
 
@@ -78,14 +84,64 @@ class TestIndex {
                 ImmutableList.of(1, 4, 7, 9), ImmutableList.of(2, 4, 7, 9), ImmutableList.of(3, 4, 7, 9),
                 ImmutableList.of(1, 5, 7, 9), ImmutableList.of(2, 5, 7, 9), ImmutableList.of(3, 5, 7, 9),
                 ImmutableList.of(1, 6, 7, 9), ImmutableList.of(2, 6, 7, 9), ImmutableList.of(3, 6, 7, 9),
-                ImmutableList.of(1, 4, 8, 9), ImmutableList.of(2, 4, 8, 9), ImmutableList.of(3, 4, 8, 9),
-                ImmutableList.of(1, 5, 8, 9), ImmutableList.of(2, 5, 8, 9), ImmutableList.of(3, 5, 8, 9),
-                ImmutableList.of(1, 6, 8, 9), ImmutableList.of(2, 6, 8, 9), ImmutableList.of(3, 6, 8, 9)
-        ).stream().map(partition -> Index.Key.of(partition, ImmutableList.of(10))).collect(Collectors.toSet()),
+                        ImmutableList.of(1, 4, 8, 9), ImmutableList.of(2, 4, 8, 9), ImmutableList.of(3, 4, 8, 9),
+                        ImmutableList.of(1, 5, 8, 9), ImmutableList.of(2, 5, 8, 9), ImmutableList.of(3, 5, 8, 9),
+                        ImmutableList.of(1, 6, 8, 9), ImmutableList.of(2, 6, 8, 9), ImmutableList.of(3, 6, 8, 9)
+                ).stream().map(partition -> Index.Key.of(partition, ImmutableList.of(10))).collect(Collectors.toSet()),
                 records.keySet());
 
         assertEquals(ImmutableSet.of(
                 data
         ), ImmutableSet.copyOf(records.values()));
+    }
+
+    @Test
+    void testIndexKeyValidation() {
+
+        assertThrows(MissingMemberException.class, () -> ObjectSchema.builder()
+                .setIndexes(ImmutableMap.of(
+                        "index1", Index.builder().setPartition(ImmutableList.of(Name.of("missing")))
+                ))
+                .build());
+
+        assertThrows(MissingMemberException.class, () -> ObjectSchema.builder()
+                .setProperties(ImmutableMap.of(
+                        "prop1", Property.builder().setType(UseString.DEFAULT)
+                ))
+                .setIndexes(ImmutableMap.of(
+                        "index1", Index.builder().setPartition(ImmutableList.of(Name.of("this", "prop1")))
+                ))
+                .build());
+
+        assertThrows(SchemaValidationException.class, () -> ObjectSchema.builder()
+                .setProperties(ImmutableMap.of(
+                        "prop1", Property.builder().setType(UseArray.DEFAULT)
+                ))
+                .setIndexes(ImmutableMap.of(
+                        "index1", Index.builder().setPartition(ImmutableList.of(Name.of("prop1")))
+                ))
+                .build());
+
+        assertThrows(SchemaValidationException.class, () -> ObjectSchema.builder()
+                .setProperties(ImmutableMap.of(
+                        "prop1", Property.builder().setType(UseArray.DEFAULT)
+                ))
+                .setIndexes(ImmutableMap.of(
+                        "index1", Index.builder()
+                                .setOver(ImmutableMap.of("arr", Name.of("prop1")))
+                                .setPartition(ImmutableList.of(Name.of("arr")))
+                ))
+                .build());
+
+        ObjectSchema.builder()
+                .setProperties(ImmutableMap.of(
+                        "prop1", Property.builder().setType(UseArray.from(UseDateTime.DEFAULT))
+                ))
+                .setIndexes(ImmutableMap.of(
+                        "index1", Index.builder()
+                                .setOver(ImmutableMap.of("arr", Name.of("prop1")))
+                                .setPartition(ImmutableList.of(Name.of("arr")))
+                ))
+                .build();
     }
 }

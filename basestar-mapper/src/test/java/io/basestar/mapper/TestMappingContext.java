@@ -112,6 +112,9 @@ public class TestMappingContext {
             private String id;
 
             @Nullable
+            private Post parent;
+
+            @Nullable
             private Comment comment;
 
             @Nullable
