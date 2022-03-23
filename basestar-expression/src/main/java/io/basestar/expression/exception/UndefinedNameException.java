@@ -22,7 +22,6 @@ package io.basestar.expression.exception;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import io.basestar.util.Name;
 
 import java.util.Collection;
 
@@ -33,7 +32,7 @@ public class UndefinedNameException extends RuntimeException {
         this(name, ImmutableList.of());
     }
 
-    public UndefinedNameException(final String name, final Collection<Name> names) {
+    public UndefinedNameException(final String name, final Collection<?> names) {
 
         super("Name " + name + " not found" + (names.isEmpty() ? "" : ", did you mean: " + Joiner.on(", ").join(names)));
     }

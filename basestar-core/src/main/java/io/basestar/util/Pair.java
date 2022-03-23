@@ -23,6 +23,7 @@ package io.basestar.util;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -70,6 +71,11 @@ public interface Pair<T1, T2> extends Serializable {
     static <T2> List<T2> mapToSecond(final List<? extends Pair<?, T2>> list) {
 
         return list.stream().map(Pair::getSecond).collect(Collectors.toList());
+    }
+
+    static <T1, T2> Map<T1, T2> toMap(final Collection<Pair<T1, T2>> list) {
+
+        return list.stream().collect(Collectors.toMap(Pair::getFirst, Pair::getSecond));
     }
 
     @Data

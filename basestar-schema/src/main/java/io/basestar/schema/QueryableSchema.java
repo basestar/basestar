@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 
 public interface QueryableSchema extends InstanceSchema, Link.Resolver, Permission.Resolver {
 
+    List<String> primaryKey();
+
     List<Sort> sort();
 
     default List<Sort> sort(final List<Sort> sort) {

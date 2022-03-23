@@ -2,31 +2,36 @@ package io.basestar.storage.sql.dialect;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import io.basestar.jackson.BasestarModule;
-import io.basestar.schema.Instance;
-import io.basestar.schema.Property;
+import io.basestar.schema.InstanceSchema;
 import io.basestar.schema.ReferableSchema;
+import io.basestar.schema.StructSchema;
 import io.basestar.schema.use.*;
+import io.basestar.secret.Secret;
 import io.basestar.storage.sql.SQLDialect;
-import io.basestar.storage.sql.resolver.FieldResolver;
-import io.basestar.storage.sql.resolver.ValueResolver;
+import io.basestar.storage.sql.mapping.PropertyMapping;
+import io.basestar.storage.sql.mapping.ValueTransform;
 import io.basestar.util.Bytes;
 import io.basestar.util.ISO8601;
 import io.basestar.util.Name;
 import io.basestar.util.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.StringEscapeUtils;
-import org.jooq.*;
+import org.jooq.DataType;
+import org.jooq.JSON;
+import org.jooq.JSONB;
+import org.jooq.SelectField;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 public abstract class JSONDialect implements SQLDialect {
@@ -41,7 +46,7 @@ public abstract class JSONDialect implements SQLDialect {
     }
 
     @Override
-    public DataType<?> stringType(final UseString type) {
+    public DataType<String> stringType(final UseStringLike<?> type) {
 
         return SQLDataType.LONGVARCHAR;
     }
@@ -100,280 +105,6 @@ public abstract class JSONDialect implements SQLDialect {
         return jsonType();
     }
 
-    @Override
-    public SelectField<?> booleanToSQLValue(final UseBoolean type, final Boolean value) {
-
-        return value == null ? nullToSQLValue(type) : DSL.val(value);
-    }
-
-    @Override
-    public SelectField<?> stringToSQLValue(final UseString type, final String value) {
-
-        return value == null ? nullToSQLValue(type) : DSL.val(value);
-    }
-
-    @Override
-    public SelectField<?> enumToSQLValue(final UseEnum type, final String value) {
-
-        return value == null ? nullToSQLValue(type) : DSL.val(value);
-    }
-
-    @Override
-    public SelectField<?> integerToSQLValue(final UseInteger type, final Long value) {
-
-        return value == null ? nullToSQLValue(type) : DSL.val(value);
-    }
-
-    @Override
-    public SelectField<?> numberToSQLValue(final UseNumber type, final Double value) {
-
-        return value == null ? nullToSQLValue(type) : DSL.val(value);
-    }
-
-    @Override
-    public SelectField<?> decimalToSQLValue(final UseDecimal type, final BigDecimal value) {
-
-        return value == null ? nullToSQLValue(type) : DSL.val(value);
-    }
-
-    @Override
-    public SelectField<?> dateToSQLValue(final UseDate type, final LocalDate value) {
-
-        return value == null ? nullToSQLValue(type) : DSL.val(ISO8601.toSqlDate(value));
-    }
-
-    @Override
-    public SelectField<?> dateTimeToSQLValue(final UseDateTime type, final Instant value) {
-
-        return value == null ? nullToSQLValue(type) : DSL.val(ISO8601.toSqlTimestamp(value));
-    }
-
-    @Override
-    public SelectField<?> binaryToSQLValue(final UseBinary type, final Bytes value) {
-
-        return value == null ? nullToSQLValue(type) : DSL.val(value.toBase64());
-    }
-
-    @Override
-    public <T> SelectField<?> mapToSQLValue(final UseMap<T> type, final Map<String, T> value) {
-
-        return value == null ? nullToSQLValue(type) : toJson(value);
-    }
-
-    @Override
-    public <T> SelectField<?> arrayToSQLValue(final UseArray<T> type, final List<T> value) {
-
-        return value == null ? nullToSQLValue(type) : toJson(value);
-    }
-
-    @Override
-    public <T> SelectField<?> setToSQLValue(final UseSet<T> type, final Set<T> value) {
-
-        return value == null ? nullToSQLValue(type) : toJson(value);
-    }
-
-    @Override
-    public <T> SelectField<?> pageToSQLValue(final UsePage<T> type, final Page<T> value) {
-
-        return value == null ? nullToSQLValue(type) : toJson(value);
-    }
-
-    @Override
-    public SelectField<?> refToSQLValue(final UseRef type, final Instance value) {
-
-        return value == null ? nullToSQLValue(type) : toJson(value);
-    }
-
-    @Override
-    public SelectField<?> structToSQLValue(final UseStruct type, final Instance value) {
-
-        return value == null ? nullToSQLValue(type) : toJson(value);
-    }
-
-    @Override
-    public SelectField<?> viewToSQLValue(final UseView type, final Instance value) {
-
-        return value == null ? nullToSQLValue(type) : toJson(value);
-    }
-
-    @Override
-    public SelectField<?> anyToSQLValue(final UseAny type, final Object value) {
-
-        return value == null ? nullToSQLValue(type) : toJson(value);
-    }
-
-    @Override
-    public Map<Field<?>, SelectField<?>> structToSQLValues(final UseStruct type, final FieldResolver field, final Instance value) {
-
-        final Map<Field<?>, SelectField<?>> fields = new HashMap<>();
-        for (final Map.Entry<String, Property> entry : type.getSchema().getProperties().entrySet()) {
-            final FieldResolver column = field.resolver(Name.of(entry.getKey()));
-            final Use<?> propType = entry.getValue().typeOf();
-            fields.putAll(toSQLValues(propType, column, value == null ? null : value.get(entry.getKey())));
-        }
-        return fields;
-    }
-
-    @Override
-    public Map<Field<?>, SelectField<?>> refToSQLValues(final UseRef type, final FieldResolver field, final Instance value) {
-
-        final Map<Field<?>, SelectField<?>> fields = new HashMap<>(toSQLValues(UseString.DEFAULT, field.resolver(Name.of(ReferableSchema.ID)), value == null ? null : value.getId()));
-        if (type.isVersioned()) {
-            fields.putAll(toSQLValues(UseInteger.DEFAULT, field.resolver(Name.of(ReferableSchema.VERSION)), value == null ? null : value.getVersion()));
-        }
-        return fields;
-    }
-
-    @Override
-    public <T> List<T> arrayFromSQLValue(final UseArray<T> type, final ValueResolver value) {
-
-        final Object v = value.value();
-        if (v == null) {
-            return null;
-        } else {
-            final Collection<?> results = fromJson(v, new TypeReference<Collection<?>>() {
-            });
-            return type.create(results);
-        }
-    }
-
-    @Override
-    public <T> Page<T> pageFromSQLValue(final UsePage<T> type, final ValueResolver value) {
-
-        final Object v = value.value();
-        if (v == null) {
-            return null;
-        } else {
-            final Collection<?> results = fromJson(v, new TypeReference<Collection<?>>() {
-            });
-            return type.create(results);
-        }
-    }
-
-    @Override
-    public <T> Set<T> setFromSQLValue(final UseSet<T> type, final ValueResolver value) {
-
-        final Object v = value.value();
-        if (v == null) {
-            return null;
-        } else {
-            final Collection<?> results = fromJson(v, new TypeReference<Collection<?>>() {
-            });
-            return type.create(results);
-        }
-    }
-
-    @Override
-    public <T> Map<String, T> mapFromSQLValue(final UseMap<T> type, final ValueResolver value) {
-
-        final Object v = value.value();
-        if (v == null) {
-            return null;
-        } else {
-            return type.create(fromJson(v, new TypeReference<Map<String, ?>>() {
-            }));
-        }
-    }
-
-    @Override
-    public Instance structFromSQLValue(final UseStruct type, final ValueResolver value) {
-
-        final Map<String, Object> result = new HashMap<>();
-        for (final Map.Entry<String, Property> entry : type.getSchema().getProperties().entrySet()) {
-            result.put(entry.getKey(), fromSQLValue(entry.getValue().typeOf(), value.resolver(Name.of(entry.getKey()))));
-        }
-        return new Instance(result);
-    }
-
-    @Override
-    public Instance viewFromSQLValue(final UseView type, final ValueResolver value) {
-
-        final Object v = value.value();
-        if (v == null) {
-            return null;
-        } else {
-            return type.create(fromJson(v, new TypeReference<Map<String, Object>>() {
-            }));
-        }
-    }
-
-    @Override
-    public Instance refFromSQLValue(final UseRef type, final ValueResolver value) {
-
-        final String id = (String) value.value(Name.of(ReferableSchema.ID));
-        if (id != null) {
-            final Map<String, Object> result = new HashMap<>();
-            result.put(ReferableSchema.ID, id);
-            if (type.isVersioned()) {
-                result.put(ReferableSchema.VERSION, UseInteger.DEFAULT.create(value.value(Name.of(ReferableSchema.VERSION))));
-            }
-            return new Instance(result);
-        } else {
-            return null;
-        }
-    }
-
-    @Override
-    public Bytes binaryFromSQLValue(final UseBinary type, final ValueResolver value) {
-
-        final Object v = value.value();
-        if (v == null) {
-            return null;
-        } else {
-            return Bytes.fromBase64((String) v);
-        }
-    }
-
-    @Override
-    public Object anyFromSQLValue(final UseAny type, final ValueResolver value) {
-
-        final Object v = value.value();
-        if (v == null) {
-            return null;
-        } else {
-            return fromJson(v, new TypeReference<Object>() {
-            });
-        }
-    }
-
-    @Override
-    public <V, T extends Collection<V>> List<Field<?>> selectCollection(final UseCollection<V, T> type, final Name name, final FieldResolver field) {
-
-        return field.field().<List<Field<?>>>map(f -> ImmutableList.of(f.cast(jsonType()).as(columnName(name)))).orElseGet(ImmutableList::of);
-    }
-
-    @Override
-    public List<Field<?>> selectRef(final UseRef type, final Name name, final FieldResolver field) {
-
-        final List<Field<?>> fields = new ArrayList<>(selectFields(field.resolver(Name.of(ReferableSchema.ID)), name.with(ReferableSchema.ID), UseString.DEFAULT));
-        if (type.isVersioned()) {
-            fields.addAll(selectFields(field.resolver(Name.of(ReferableSchema.VERSION)), name.with(ReferableSchema.VERSION), UseInteger.DEFAULT));
-        }
-        return fields;
-    }
-
-    @Override
-    public <V> List<Field<?>> selectMap(final UseMap<V> type, final Name name, final FieldResolver field) {
-
-        return field.field().<List<Field<?>>>map(f -> ImmutableList.of(f.cast(jsonType()).as(columnName(name)))).orElseGet(ImmutableList::of);
-    }
-
-    @Override
-    public List<Field<?>> selectStruct(final UseStruct type, final Name name, final FieldResolver field) {
-
-        final List<Field<?>> fields = new ArrayList<>();
-        for (final Map.Entry<String, Property> entry : type.getSchema().getProperties().entrySet()) {
-            fields.addAll(selectFields(field.resolver(Name.of(entry.getKey())), name.with(entry.getKey()), entry.getValue().typeOf()));
-        }
-        return fields;
-    }
-
-    @Override
-    public List<Field<?>> selectView(final UseView type, final Name name, final FieldResolver field) {
-
-        return field.field().<List<Field<?>>>map(f -> ImmutableList.of(f.cast(jsonType()).as(columnName(name)))).orElseGet(ImmutableList::of);
-    }
-
     protected SelectField<?> toJson(final Object value) {
 
         if (value == null) {
@@ -417,10 +148,184 @@ public abstract class JSONDialect implements SQLDialect {
 
     protected String unescapeJson(final String data) {
 
-        if(isJsonEscaped()) {
+        if (isJsonEscaped()) {
             return StringEscapeUtils.unescapeJava(data.substring(1, data.length() - 1));
         } else {
             return data;
         }
+    }
+
+    public <T> PropertyMapping<T> jsonMapping(final Use<T> type, final Set<Name> expand) {
+
+        return PropertyMapping.simple(SQLDataType.JSON, new ValueTransform<T, JSON>() {
+            @Override
+            public SelectField<JSON> toSQLValue(final T value) {
+
+                try {
+                    return DSL.inline(value == null ? null : JSON.valueOf(objectMapper.writeValueAsString(value)));
+                } catch (final IOException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+
+            @Override
+            public T fromSQLValue(final JSON value, final Set<Name> expand) {
+
+                try {
+                    if (value == null) {
+                        return null;
+                    } else {
+                        final String data = unescapeJson(value.data());
+                        return type.create(objectMapper.readValue(data, Object.class), expand);
+                    }
+                } catch (final IOException e) {
+                    throw new IllegalStateException();
+                }
+            }
+        });
+    }
+
+    @Override
+    public PropertyMapping<LocalDate> dateMapping(final UseDate type) {
+
+        return PropertyMapping.simple(dateType(type), new ValueTransform<LocalDate, java.sql.Date>() {
+            @Override
+            public SelectField<java.sql.Date> toSQLValue(final LocalDate value) {
+
+                return DSL.inline(value == null ? null : ISO8601.toSqlDate(value));
+            }
+
+            @Override
+            public LocalDate fromSQLValue(final java.sql.Date value, final Set<Name> expand) {
+
+                return value == null ? null : ISO8601.toDate(value);
+            }
+        });
+    }
+
+    @Override
+    public PropertyMapping<Instant> dateTimeMapping(final UseDateTime type) {
+
+        return PropertyMapping.simple(dateTimeType(type), new ValueTransform<Instant, java.sql.Timestamp>() {
+            @Override
+            public SelectField<java.sql.Timestamp> toSQLValue(final Instant value) {
+
+                return DSL.inline(value == null ? null : ISO8601.toSqlTimestamp(value));
+            }
+
+            @Override
+            public Instant fromSQLValue(final java.sql.Timestamp value, final Set<Name> expand) {
+
+                return value == null ? null : ISO8601.toDateTime(value);
+            }
+        });
+    }
+
+    @Override
+    public PropertyMapping<Map<String, Object>> refMapping(final UseRef type, final Set<Name> expand) {
+
+        final Map<String, PropertyMapping<?>> mappings = new HashMap<>();
+        mappings.put(ReferableSchema.ID, stringMapping(UseString.DEFAULT));
+        if (type.isVersioned()) {
+            mappings.put(ReferableSchema.VERSION, integerMapping(UseInteger.DEFAULT));
+        }
+        final PropertyMapping<Map<String, Object>> mapping = PropertyMapping.flattenedRef(mappings);
+        if (expand == null) {
+            return mapping;
+        } else {
+            return PropertyMapping.expandedRef(mapping, schemaMapping(type.getSchema(), type.isVersioned(), expand));
+        }
+    }
+
+    @Override
+    public PropertyMapping<Map<String, Object>> structMapping(final UseStruct type, final Set<Name> expand) {
+
+        final StructSchema structSchema = type.getSchema();
+        return PropertyMapping.flattenedStruct(flattenedMappings(structSchema, expand));
+    }
+
+    protected Map<String, PropertyMapping<?>> flattenedMappings(final InstanceSchema schema, final Set<Name> expand) {
+
+        final Map<String, PropertyMapping<?>> mappings = new HashMap<>();
+        final Map<String, Set<Name>> branches = Name.branch(expand);
+        schema.layoutSchema(expand).forEach((propName, propType) -> {
+            final Set<Name> branch = branches.get(propName);
+            mappings.put(propName, propertyMapping(propType, branch));
+        });
+        return mappings;
+    }
+
+    @Override
+    public PropertyMapping<Map<String, Object>> viewMapping(final UseView type, final Set<Name> expand) {
+
+        return jsonMapping(UseMap.DEFAULT, expand);
+    }
+
+    @Override
+    public <T> PropertyMapping<List<T>> arrayMapping(final UseArray<T> type, final Set<Name> expand) {
+
+        return jsonMapping(type, expand);
+    }
+
+    @Override
+    public <T> PropertyMapping<Page<T>> pageMapping(final UsePage<T> type, final Set<Name> expand) {
+
+        return jsonMapping(type, expand);
+    }
+
+    @Override
+    public <T> PropertyMapping<Set<T>> setMapping(final UseSet<T> type, final Set<Name> expand) {
+
+        return jsonMapping(type, expand);
+    }
+
+    @Override
+    public <T> PropertyMapping<Map<String, T>> mapMapping(final UseMap<T> type, final Set<Name> expand) {
+
+        return jsonMapping(type, expand);
+    }
+
+    @Override
+    public PropertyMapping<Bytes> binaryMapping(final UseBinary type) {
+
+        return PropertyMapping.simple(stringType(UseString.DEFAULT), new ValueTransform<Bytes, String>() {
+
+            @Override
+            public SelectField<String> toSQLValue(final Bytes value) {
+
+                return DSL.inline(value == null ? null : value.toBase64());
+            }
+
+            @Override
+            public Bytes fromSQLValue(final String value, final Set<Name> expand) {
+
+                return value == null ? null : Bytes.fromBase64(value);
+            }
+        });
+    }
+
+    @Override
+    public PropertyMapping<Secret> secretMapping(final UseSecret type) {
+
+        return PropertyMapping.simple(stringType(UseString.DEFAULT), new ValueTransform<Secret, String>() {
+
+            @Override
+            public SelectField<String> toSQLValue(final Secret value) {
+
+                return DSL.inline(value == null ? null : value.encryptedBase64());
+            }
+
+            @Override
+            public Secret fromSQLValue(final String value, final Set<Name> expand) {
+
+                return value == null ? null : Secret.encrypted(value);
+            }
+        });
+    }
+
+    @Override
+    public <T> PropertyMapping<Object> anyMapping(final UseAny type) {
+
+        return jsonMapping(type, null);
     }
 }

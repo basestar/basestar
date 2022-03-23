@@ -180,3 +180,11 @@ OrderId:
 Order:
   type: object
   sequence: OrderId
+
+WithStorageSupportedExpand:
+  type: object
+  properties:
+    order1:
+      type: Order
+    order2:
+      type: Order

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.expression.Expression;
 import io.basestar.expression.constant.NameConstant;
 import io.basestar.expression.iterate.ContextIterator;
@@ -13,23 +14,27 @@ import io.basestar.expression.iterate.ForAny;
 import io.basestar.schema.*;
 import io.basestar.schema.expression.InferenceContext;
 import io.basestar.schema.from.FromSql;
-import io.basestar.schema.use.UseAny;
-import io.basestar.schema.use.UseArray;
-import io.basestar.schema.use.UseMap;
-import io.basestar.schema.use.UseSet;
+import io.basestar.schema.use.*;
 import io.basestar.storage.sql.SQLExpressionVisitor;
-import io.basestar.storage.sql.strategy.NamingStrategy;
+import io.basestar.storage.sql.mapping.PropertyMapping;
+import io.basestar.storage.sql.mapping.QueryMapping;
+import io.basestar.storage.sql.mapping.ValueTransform;
+import io.basestar.storage.sql.resolver.ColumnResolver;
+import io.basestar.storage.sql.resolver.ResolvedTable;
+import io.basestar.storage.sql.resolver.TableResolver;
+import io.basestar.util.Immutable;
 import io.basestar.util.Pair;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.jooq.Query;
 import org.jooq.*;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultDataType;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TableImpl;
 
+import java.io.IOException;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -37,11 +42,11 @@ public class SnowflakeDialect extends JSONDialect {
 
     private static final org.jooq.SQLDialect DIALECT = SQLDialect.POSTGRES;
 
-    private static final DataType<?> ARRAY_TYPE = new DefaultDataType<>(SQLDialect.POSTGRES, Object.class, "ARRAY");
+    private static final DataType<Object> ARRAY_TYPE = new DefaultDataType<>(SQLDialect.POSTGRES, Object.class, "ARRAY");
 
-    private static final DataType<?> OBJECT_TYPE = new DefaultDataType<>(SQLDialect.POSTGRES, Object.class, "OBJECT");
+    private static final DataType<Object> OBJECT_TYPE = new DefaultDataType<>(SQLDialect.POSTGRES, Object.class, "OBJECT");
 
-    private static final DataType<?> VARIANT_TYPE = new DefaultDataType<>(SQLDialect.POSTGRES, Object.class, "VARIANT");
+    private static final DataType<Object> VARIANT_TYPE = new DefaultDataType<>(SQLDialect.POSTGRES, Object.class, "VARIANT");
 
     @Override
     public org.jooq.SQLDialect dmlDialect() {
@@ -54,7 +59,6 @@ public class SnowflakeDialect extends JSONDialect {
 
         return VARIANT_TYPE;
     }
-
     @Override
     public <T> DataType<?> arrayType(final UseArray<T> type) {
 
@@ -77,6 +81,53 @@ public class SnowflakeDialect extends JSONDialect {
     public DataType<?> anyType(final UseAny type) {
 
         return VARIANT_TYPE;
+    }
+
+    @Override
+    public PropertyMapping<Map<String, Object>> structMapping(final UseStruct type, final Set<io.basestar.util.Name> expand) {
+
+        final StructSchema structSchema = type.getSchema();
+        return new SnowflakeFlattenedStructMapping(flattenedMappings(structSchema, expand));
+    }
+
+    private static class SnowflakeFlattenedStructMapping extends PropertyMapping.FlattenedStruct {
+
+        public SnowflakeFlattenedStructMapping(final Map<String, PropertyMapping<?>> mappings) {
+
+            super(mappings);
+        }
+
+        @Override
+        public DataType<?> mergedDataType() {
+
+            return OBJECT_TYPE;
+        }
+
+        @Override
+        public SelectField<?> emitMerged(final Map<String, Object> value, final Set<io.basestar.util.Name> expand) {
+
+            if (value == null) {
+                return DSL.castNull(mergedDataType());
+            } else {
+                final List<String> args = new ArrayList<>();
+                final List<QueryPart> parts = new ArrayList<>();
+                for (final Pair<io.basestar.util.Name, SelectField<?>> entry : emit(io.basestar.util.Name.of(), value, expand)) {
+                    args.add(DSL.name(entry.getFirst().toString()).toString());
+                    args.add("?");
+                    parts.add(entry.getSecond());
+                }
+                return DSL.field(DSL.sql("OBJECT_CONSTRUCT(" + Joiner.on(",").join(args) + ")", parts.toArray(new QueryPart[0])));
+            }
+        }
+
+        @Override
+        public SnowflakeFlattenedStructMapping nullable() {
+
+            return new SnowflakeFlattenedStructMapping(getMappings().entrySet().stream().collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    e -> e.getValue().nullable()
+            )));
+        }
     }
 
     @Override
@@ -122,19 +173,8 @@ public class SnowflakeDialect extends JSONDialect {
     }
 
     @Override
-    public Optional<? extends Field<?>> missingMetadataValue(final LinkableSchema schema, final String name) {
-
-        if (schema instanceof ViewSchema && ViewSchema.ID.equals(name)) {
-            return Optional.of(DSL.inline((String) null));
-        } else {
-            return Optional.empty();
-        }
-    }
-
-    @Override
     public boolean supportsMaterializedView(final ViewSchema schema) {
 
-//        return schema.getFrom() instanceof FromSql && (((FromSql) schema.getFrom()).getUsing().size() == 1);
         return false;
     }
 
@@ -250,10 +290,11 @@ public class SnowflakeDialect extends JSONDialect {
     }
 
     @Override
-    public SQLExpressionVisitor expressionResolver(final NamingStrategy namingStrategy, final QueryableSchema schema, final Function<io.basestar.util.Name, QueryPart> columnResolver) {
+    public SQLExpressionVisitor expressionResolver(final DSLContext context, final TableResolver tableResolver, final ColumnResolver columnResolver, final QueryMapping queryMapping) {
 
-        final InferenceContext inferenceContext = InferenceContext.from(schema);
-        return new SQLExpressionVisitor(this, inferenceContext, columnResolver) {
+        final QueryableSchema schema = queryMapping.getSchema();
+        final InferenceContext inferenceContext = InferenceContext.from(queryMapping.getSchema());
+        return new SQLExpressionVisitor(this, inferenceContext, columnResolver::requireColumn) {
 
             private List<Field<?>> idFields(final QueryableSchema schema) {
 
@@ -264,12 +305,12 @@ public class SnowflakeDialect extends JSONDialect {
                         final List<String> primaryKey = fromSql.getPrimaryKey();
                         if (primaryKey != null && !primaryKey.isEmpty()) {
                             return primaryKey.stream()
-                                    .map(name -> DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(name))))
+                                    .map(name -> DSL.field(QueryMapping.selectName(io.basestar.util.Name.of(name))))
                                     .collect(Collectors.toList());
                         }
                     }
                 } else if (schema instanceof ReferableSchema) {
-                    return ImmutableList.of(DSL.field(namingStrategy.columnName(io.basestar.util.Name.of(ReferableSchema.ID))));
+                    return ImmutableList.of(DSL.field(QueryMapping.selectName(io.basestar.util.Name.of(ReferableSchema.ID))));
                 }
                 throw new IllegalStateException("For any/for all only supported for object schemas, and view schemas with a primaryKey");
             }
@@ -311,7 +352,7 @@ public class SnowflakeDialect extends JSONDialect {
                 final String alias1 = Reserved.PREFIX + "1";
                 final String alias2 = Reserved.PREFIX + "2";
 
-                final Table<?> table = DSL.table(namingStrategy.entityName(schema));
+                final Table<?> table = queryMapping.baseSelect(io.basestar.util.Name.empty(), context, tableResolver, ImmutableSet.of());
 
                 final ContextIterator iterator = expression.getIterator();
                 // map keys not supported
@@ -324,19 +365,19 @@ public class SnowflakeDialect extends JSONDialect {
 
                         final List<Field<?>> idFields = idFields(schema);
 
-                        final SQLExpressionVisitor lhsVisitor = expressionResolver(namingStrategy, schema, name -> {
+                        final SQLExpressionVisitor lhsVisitor = expressionResolver(context, tableResolver, name -> {
                             if (name.first().equals(as)) {
                                 if (name.size() == 1) {
-                                    return DSL.field(DSL.name(alias2, "VALUE"));
+                                    return Optional.of(DSL.field(DSL.name(alias2, "VALUE")));
                                 } else {
-                                    return DSL.field(DSL.sql(DSL.name(alias2, "VALUE") + ":" + name.withoutFirst()
+                                    return Optional.of(DSL.field(DSL.sql(DSL.name(alias2, "VALUE") + ":" + name.withoutFirst()
                                             .stream().map(v -> DSL.name(v).toString())
-                                            .collect(Collectors.joining("."))));
+                                            .collect(Collectors.joining(".")))));
                                 }
                             } else {
-                                return DSL.field(DSL.name(alias1).append(namingStrategy.columnName(name)));
+                                return Optional.of(DSL.field(DSL.name(alias1).append(QueryMapping.selectName(name))));
                             }
-                        });
+                        }, queryMapping);
 
                         final List<Field<?>> aggFields = new ArrayList<>(idFields);
                         aggFields.add(DSL.field(DSL.sql(all ? "BOOLAND_AGG(?)" : "BOOLOR_AGG(?)", lhsVisitor.field(lhs))));
@@ -346,7 +387,7 @@ public class SnowflakeDialect extends JSONDialect {
 
                         final Field<Object> match = DSL.field(DSL.sql("(" + Joiner.on(", ").join(matchFields) + ")"));
                         final Condition query = match.in(DSL.select(aggFields).from(table.as(alias1),
-                                        DSL.table(DSL.sql("LATERAL FLATTEN(input => ?)", namingStrategy.columnName(rhs.getName()))).as(alias2))
+                                        DSL.table(DSL.sql("LATERAL FLATTEN(input => ?)", QueryMapping.selectName(rhs.getName()))).as(alias2))
                                 .groupBy(idFields));
 
                         if (all) {
@@ -368,108 +409,170 @@ public class SnowflakeDialect extends JSONDialect {
         return context.select(DSL.field(DSL.sql(sequenceName + ".nextval")).cast(Long.class));
     }
 
-    private void merge(final StringBuilder merge, final org.jooq.Table<?> table, final Field<String> idField) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> PropertyMapping<T> jsonMapping(final Use<T> type, final Set<io.basestar.util.Name> expand) {
 
-        merge.append("MERGE INTO ");
-        merge.append(table.getQualifiedName());
-        merge.append(" AS TARGET USING (?) AS SOURCE ON SOURCE.");
-        merge.append(idField.getUnqualifiedName());
-        merge.append(" = TARGET.");
-        merge.append(idField.getUnqualifiedName());
-        merge.append(" ");
-    }
+        return PropertyMapping.simple((DataType<Object>) dataType(type), new ValueTransform<T, Object>() {
+            @Override
+            public SelectField<Object> toSQLValue(final T value) {
 
-    private void merge(final StringBuilder merge, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField) {
+                try {
+                    return DSL.function("parse_json", Object.class, DSL.inline(value == null ? null : (Object) objectMapper.writeValueAsString(value)));
+                } catch (final IOException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
 
-        merge(merge, table, idField);
-        merge.append("AND SOURCE.");
-        merge.append(versionField.getUnqualifiedName());
-        merge.append(" = TARGET.");
-        merge.append(versionField.getUnqualifiedName());
-        merge.append(" ");
-    }
+            @Override
+            public T fromSQLValue(final Object value, final Set<io.basestar.util.Name> expand) {
 
-    private void mergeNotMatchedInsert(final StringBuilder merge, final List<Pair<Field<?>, SelectField<?>>> record) {
-
-        merge.append("WHEN NOT MATCHED THEN INSERT (");
-        merge.append(record.stream().map(Pair::getFirst).map(f -> f.getUnqualifiedName().toString()).collect(Collectors.joining(",")));
-        merge.append(") VALUES (");
-        merge.append(record.stream().map(Pair::getFirst).map(f -> "SOURCE." + f.getUnqualifiedName().toString()).collect(Collectors.joining(",")));
-        merge.append(") ");
-    }
-
-    private void mergeWhenMatched(final StringBuilder merge, final Field<Long> versionField, final Long version) {
-
-        merge.append("WHEN MATCHED");
-        if (version != null) {
-            merge.append(" AND TARGET.");
-            merge.append(versionField.getUnqualifiedName());
-            merge.append(" = ");
-            merge.append(DSL.inline(version));
-        }
-        merge.append(" ");
-    }
-
-    private QueryPart mergeSelect(final List<Pair<Field<?>, SelectField<?>>> record) {
-
-        return DSL.select(record.stream()
-                .map(e -> DSL.field(e.getSecond()).as(e.getFirst().getUnqualifiedName()))
-                .toArray(SelectFieldOrAsterisk[]::new));
+                try {
+                    if (value == null) {
+                        return null;
+                    } else {
+                        final String data = unescapeJson(value.toString());
+                        return type.create(objectMapper.readValue(data, Object.class), expand);
+                    }
+                } catch (final IOException e) {
+                    throw new IllegalStateException();
+                }
+            }
+        });
     }
 
     @Override
-    public int createObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final String id, final Map<Field<?>, SelectField<?>> record) {
+    public QueryMapping schemaMapping(final LinkableSchema schema, final boolean versioned, final Set<io.basestar.util.Name> expand) {
 
-        final List<Pair<Field<?>, SelectField<?>>> orderedRecord = orderedRecord(record);
+        return new QueryMapping(schema, ImmutableMap.of(), null, versioned, propertyMappings(schema, expand), linkMappings(schema, expand)) {
 
-        final StringBuilder merge = new StringBuilder();
-        merge(merge, table, idField);
-        mergeNotMatchedInsert(merge, orderedRecord);
+            private void merge(final StringBuilder merge, final org.jooq.Table<?> table, final Field<String> idField) {
 
-        return context.execute(DSL.sql(merge.toString(), mergeSelect(orderedRecord)));
-    }
+                merge.append("MERGE INTO ");
+                merge.append(table.getQualifiedName());
+                merge.append(" AS TARGET USING (?) AS SOURCE ON SOURCE.");
+                merge.append(idField.getUnqualifiedName());
+                merge.append(" = TARGET.");
+                merge.append(idField.getUnqualifiedName());
+                merge.append(" ");
+            }
 
-    @Override
-    public int updateObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version, final Map<Field<?>, SelectField<?>> record) {
+            private void merge(final StringBuilder merge, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField) {
 
-        final List<Pair<Field<?>, SelectField<?>>> orderedRecord = orderedRecord(record);
+                merge(merge, table, idField);
+                merge.append("AND SOURCE.");
+                merge.append(versionField.getUnqualifiedName());
+                merge.append(" = TARGET.");
+                merge.append(versionField.getUnqualifiedName());
+                merge.append(" ");
+            }
 
-        final StringBuilder merge = new StringBuilder();
-        merge(merge, table, idField);
-        mergeWhenMatched(merge, versionField, version);
-        merge.append("THEN UPDATE SET ");
-        merge.append(record.keySet().stream()
-                .map(f -> "TARGET." + f.getUnqualifiedName() + " = SOURCE." + f.getUnqualifiedName())
-                .collect(Collectors.joining(",")));
+            private void mergeNotMatchedInsert(final StringBuilder merge, final List<Pair<Field<?>, SelectField<?>>> record) {
 
-        return context.execute(DSL.sql(merge.toString(), mergeSelect(orderedRecord)));
-    }
+                merge.append("WHEN NOT MATCHED THEN INSERT (");
+                merge.append(record.stream().map(Pair::getFirst).map(f -> f.getUnqualifiedName().toString()).collect(Collectors.joining(",")));
+                merge.append(") VALUES (");
+                merge.append(record.stream().map(Pair::getFirst).map(f -> "SOURCE." + f.getUnqualifiedName().toString()).collect(Collectors.joining(",")));
+                merge.append(") ");
+            }
 
-    @Override
-    public int deleteObjectLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version) {
+            private void mergeWhenMatched(final StringBuilder merge, final Field<Long> versionField, final Long version) {
 
-        final StringBuilder merge = new StringBuilder();
-        merge(merge, table, idField);
-        mergeWhenMatched(merge, versionField, version);
-        merge.append("THEN DELETE");
+                merge.append("WHEN MATCHED");
+                if (version != null) {
+                    merge.append(" AND TARGET.");
+                    merge.append(versionField.getUnqualifiedName());
+                    merge.append(" = ");
+                    merge.append(DSL.inline(version));
+                }
+                merge.append(" ");
+            }
 
-        return context.execute(DSL.sql(merge.toString(), mergeSelect(orderedRecord(ImmutableMap.of(idField, DSL.inline(id))))));
-    }
+            private QueryPart mergeSelect(final List<Pair<Field<?>, SelectField<?>>> record) {
 
-    @Override
-    public int createHistoryLayer(final DSLContext context, final org.jooq.Table<?> table, final Field<String> idField, final Field<Long> versionField, final String id, final Long version, final Map<Field<?>, SelectField<?>> record) {
+                return DSL.select(record.stream()
+                        .map(e -> DSL.field(e.getSecond()).as(e.getFirst().getUnqualifiedName()))
+                        .toArray(SelectFieldOrAsterisk[]::new));
+            }
 
-        final List<Pair<Field<?>, SelectField<?>>> orderedRecord = orderedRecord(record);
+            @Override
+            @SuppressWarnings("unchecked")
+            public Query createObjectLayer(final DSLContext context, final TableResolver tableResolver, final Map<String, Object> after) {
 
-        final StringBuilder merge = new StringBuilder();
-        merge(merge, table, idField, versionField);
-        mergeNotMatchedInsert(merge, orderedRecord);
-        merge.append("WHEN MATCHED THEN UPDATE SET ");
-        merge.append(record.keySet().stream()
-                .map(f -> "TARGET." + f.getUnqualifiedName() + " = SOURCE." + f.getUnqualifiedName())
-                .collect(Collectors.joining(",")));
+                final ResolvedTable table = tableResolver.requireTable(context, schema, Immutable.map(), null, false);
+                final List<Pair<Field<?>, SelectField<?>>> record = emitRecord(table, after);
 
-        return context.execute(DSL.sql(merge.toString(), mergeSelect(orderedRecord)));
+                final Field<String> idField = (Field<String>) table.requireColumn(io.basestar.util.Name.of(ReferableSchema.ID));
+
+                final StringBuilder merge = new StringBuilder();
+                merge(merge, table.getTable(), idField);
+                mergeNotMatchedInsert(merge, record);
+
+                return context.query(DSL.sql(merge.toString(), mergeSelect(record)));
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public Query updateObjectLayer(final DSLContext context, final TableResolver tableResolver, final String id, final Long version, final Map<String, Object> after) {
+
+                final ResolvedTable table = tableResolver.requireTable(context, schema, Immutable.map(), null, false);
+                final List<Pair<Field<?>, SelectField<?>>> record = emitRecord(table, after);
+
+                final Field<String> idField = (Field<String>) table.requireColumn(io.basestar.util.Name.of(ReferableSchema.ID));
+                final Field<Long> versionField = (Field<Long>) table.requireColumn(io.basestar.util.Name.of(ReferableSchema.VERSION));
+
+                final StringBuilder merge = new StringBuilder();
+                merge(merge, table.getTable(), idField);
+                mergeWhenMatched(merge, versionField, version);
+                merge.append("THEN UPDATE SET ");
+                merge.append(record.stream()
+                        .map(f -> "TARGET." + f.getFirst().getUnqualifiedName() + " = SOURCE." + f.getFirst().getUnqualifiedName())
+                        .collect(Collectors.joining(",")));
+
+                return context.query(DSL.sql(merge.toString(), mergeSelect(record)));
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public Query deleteObjectLayer(final DSLContext context, final TableResolver tableResolver, final String id, final Long version) {
+
+                final ResolvedTable table = tableResolver.requireTable(context, schema, Immutable.map(), null, false);
+
+                final Field<String> idField = (Field<String>) table.requireColumn(io.basestar.util.Name.of(ReferableSchema.ID));
+                final Field<Long> versionField = (Field<Long>) table.requireColumn(io.basestar.util.Name.of(ReferableSchema.VERSION));
+
+                final StringBuilder merge = new StringBuilder();
+                merge(merge, table.getTable(), idField);
+                mergeWhenMatched(merge, versionField, version);
+                merge.append("THEN DELETE");
+
+
+                return context.query(DSL.sql(merge.toString(), mergeSelect(orderedRecord(ImmutableMap.of(idField, DSL.inline(id))))));
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public Optional<Query> createHistoryLayer(final DSLContext context, final TableResolver tableResolver, final String id, final Long version, final Map<String, Object> after) {
+
+                return tableResolver.table(context, schema, Immutable.map(), null, true).map(table -> {
+
+                    final List<Pair<Field<?>, SelectField<?>>> record = emitRecord(table, after);
+
+                    final Field<String> idField = (Field<String>) table.requireColumn(io.basestar.util.Name.of(ReferableSchema.ID));
+                    final Field<Long> versionField = (Field<Long>) table.requireColumn(io.basestar.util.Name.of(ReferableSchema.VERSION));
+
+                    final StringBuilder merge = new StringBuilder();
+                    merge(merge, table.getTable(), idField, versionField);
+                    mergeNotMatchedInsert(merge, record);
+                    merge.append("WHEN MATCHED THEN UPDATE SET ");
+                    merge.append(record.stream()
+                            .map(f -> "TARGET." + f.getFirst().getUnqualifiedName() + " = SOURCE." + f.getFirst().getUnqualifiedName())
+                            .collect(Collectors.joining(",")));
+
+                    return context.query(DSL.sql(merge.toString(), mergeSelect(record)));
+                });
+            }
+        };
     }
 
     @Override

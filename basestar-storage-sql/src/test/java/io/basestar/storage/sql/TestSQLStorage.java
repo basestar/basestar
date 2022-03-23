@@ -29,6 +29,7 @@ import io.basestar.storage.Storage;
 import io.basestar.storage.TestStorage;
 import io.basestar.storage.sql.strategy.DefaultNamingStrategy;
 import io.basestar.storage.sql.strategy.DefaultSQLStrategy;
+import io.basestar.storage.sql.strategy.NamingStrategy;
 import io.basestar.storage.sql.strategy.SQLStrategy;
 import io.basestar.util.Immutable;
 import org.jooq.DSLContext;
@@ -61,6 +62,15 @@ abstract class TestSQLStorage extends TestStorage {
         // FIXME: versioned ref storage will need a strategy that supports multiple output columns per input value
     }
 
+    protected NamingStrategy namingStrategy(final SQLDialect dialect, final String objectSchema, final String historySchema) {
+
+        return DefaultNamingStrategy.builder()
+                .objectSchemaName(objectSchema)
+                .historySchemaName(historySchema)
+                .dialect(dialect)
+                .build();
+    }
+
     @Override
     protected Storage storage(final Namespace namespace) {
 
@@ -70,15 +80,12 @@ abstract class TestSQLStorage extends TestStorage {
         final String objectSchema = "obj_" + UUID.randomUUID().toString().replaceAll("-", "_");
         final String historySchema = "his_" + UUID.randomUUID().toString().replaceAll("-", "_");
         final SQLStrategy strategy = DefaultSQLStrategy.builder()
-                .namingStrategy(DefaultNamingStrategy.builder()
-                        .objectSchemaName(objectSchema)
-                        .historySchemaName(historySchema)
-                        .dialect(dialect)
-                        .build())
+                .namingStrategy(namingStrategy(dialect, objectSchema, historySchema))
                 .useMetadata(useMetadata())
                 .objectSchemaName(objectSchema)
                 .historySchemaName(historySchema)
                 .dialect(dialect)
+                .ignoreInvalidDDL(true)
                 .build();
 
         try(final Connection conn = ds.getConnection()) {
@@ -118,7 +125,7 @@ abstract class TestSQLStorage extends TestStorage {
     @Override
     protected boolean supportsAggregation() {
 
-        return true;
+        return false;
     }
 
     @Override

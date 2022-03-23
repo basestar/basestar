@@ -425,6 +425,16 @@ public class ViewSchema implements LinkableSchema {
     }
 
     @Override
+    public List<String> primaryKey() {
+
+        if (from instanceof FromSql) {
+            return ((FromSql) from).getPrimaryKey();
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
     public Use<?> typeOfId() {
 
         return isGrouping() || isAggregating() ? UseBinary.DEFAULT : from.typeOfId();

@@ -266,7 +266,7 @@ public class OverlayStorage implements Storage {
     }
 
     @Override
-    public Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
+    public Set<Name> supportedExpand(final QueryableSchema schema, final Set<Name> expand) {
 
         return Sets.intersection(baseline.supportedExpand(schema, expand), overlay.supportedExpand(schema, expand));
     }

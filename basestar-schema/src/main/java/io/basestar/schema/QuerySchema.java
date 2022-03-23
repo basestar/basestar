@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import io.basestar.expression.Context;
@@ -315,6 +316,12 @@ public class QuerySchema implements QueryableSchema {
     @Override
     public Set<Constraint.Violation> validate(final Context context, final Name name, final Instance after) {
         return null;
+    }
+
+    @Override
+    public List<String> primaryKey() {
+
+        return ImmutableList.of();
     }
 
     @Override

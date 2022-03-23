@@ -110,6 +110,12 @@ class TestDatabaseServer {
 
     private static final Name WITH_VERSIONED_REF = Name.of("WithVersionedRef");
 
+    private static final Name WITH_STORAGE_SUPPORTED_EXPAND = Name.of("WithStorageSupportedExpand");
+
+    private static final Name ORDER_1 = Name.of("order1");
+
+    private static final Name ORDER_2 = Name.of("order2");
+
     private static final Name ORDER = Name.of("Order");
 
     private Namespace namespace;
@@ -180,6 +186,20 @@ class TestDatabaseServer {
 
                 } else {
                     return DelegatingStorage.super.query(consistency, schema, arguments, query, sort, expand);
+                }
+            }
+
+            @Override
+            public Set<Name> supportedExpand(final QueryableSchema schema, final Set<Name> expand) {
+
+                if (schema.getQualifiedName().equals(WITH_STORAGE_SUPPORTED_EXPAND)) {
+                    if (expand != null && expand.contains(ORDER_1)) {
+                        return ImmutableSet.of(ORDER_1);
+                    } else {
+                        return ImmutableSet.of();
+                    }
+                } else {
+                    return DelegatingStorage.super.supportedExpand(schema, expand);
                 }
             }
         };
@@ -1184,6 +1204,42 @@ class TestDatabaseServer {
 
         final Map<String, Object> create1 = database.create(caller, ORDER, data).get();
         assertObject(ORDER, "ORDER-1", 1, data, create1);
+    }
+
+    @Test
+    void testStorageSupportedExpand() throws Exception {
+
+        final String orderId1 = Instance.getId(database.create(caller, ORDER, ImmutableMap.of(
+        )).get());
+        final String orderId2 = Instance.getId(database.create(caller, ORDER, ImmutableMap.of(
+        )).get());
+
+        final String id = Instance.getId(database.create(caller, WITH_STORAGE_SUPPORTED_EXPAND, ImmutableMap.of(
+                "order1", ImmutableMap.of(
+                        "id", orderId1
+                ),
+                "order2", ImmutableMap.of(
+                        "id", orderId2
+                )
+        )).get());
+
+        final Map<String, Object> read = database.read(caller, ReadOptions.builder()
+                .setSchema(WITH_STORAGE_SUPPORTED_EXPAND)
+                .setId(id)
+                .setExpand(ImmutableSet.of(ORDER_1, ORDER_2))
+                .build()).get();
+
+        assertEquals(orderId1, Instance.get(read, ORDER_1.with(ReferableSchema.ID)));
+        assertNull(Instance.get(read, ORDER_1.with(ReferableSchema.SCHEMA)));
+        assertNull(Instance.get(read, ORDER_1.with(ReferableSchema.VERSION)));
+        assertNull(Instance.get(read, ORDER_1.with(ReferableSchema.CREATED)));
+        assertNull(Instance.get(read, ORDER_1.with(ReferableSchema.UPDATED)));
+
+        assertEquals(orderId2, Instance.get(read, ORDER_2.with(ReferableSchema.ID)));
+        assertEquals(ORDER.toString(), Instance.get(read, ORDER_2.with(ReferableSchema.SCHEMA)));
+        assertEquals(1L, (Long) Instance.get(read, ORDER_2.with(ReferableSchema.VERSION)));
+        assertNotNull(Instance.get(read, ORDER_2.with(ReferableSchema.CREATED)));
+        assertNotNull(Instance.get(read, ORDER_2.with(ReferableSchema.UPDATED)));
     }
 
 }

@@ -279,6 +279,12 @@ public interface ReferableSchema extends LinkableSchema, Index.Resolver, Transie
     }
 
     @Override
+    default List<String> primaryKey() {
+
+        return Immutable.list(ID);
+    }
+
+    @Override
     default String id(final Map<String, Object> data) {
 
         return Instance.getId(data);

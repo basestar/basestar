@@ -423,11 +423,13 @@ public class SQLExpressionVisitor implements ExpressionVisitor.Defaulting<QueryP
         return DSL.array(items.toArray(new Field<?>[0]));
     }
 
+    @Deprecated
     public Condition condition(final Expression expression) {
 
         return dialect.condition(visit(expression));
     }
 
+    @Deprecated
     public Field<?> field(final Expression expression) {
 
         return dialect.field(visit(expression));

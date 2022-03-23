@@ -32,6 +32,19 @@ public interface NamingStrategy {
         }
     }
 
+    default Optional<org.jooq.Name> entityName(final Schema schema, final boolean versioned) {
+
+        if (versioned) {
+            if (schema instanceof ReferableSchema) {
+                return historyTableName((ReferableSchema) schema);
+            } else {
+                throw new IllegalStateException("Schema " + schema.getQualifiedName() + " cannot be versioned");
+            }
+        } else {
+            return Optional.of(entityName(schema));
+        }
+    }
+
     default org.jooq.Name reference(final Schema schema) {
         return entityName(schema);
     }
@@ -42,11 +55,17 @@ public interface NamingStrategy {
 
     String getDelimiter();
 
-    Optional<Name> historyTableName(ReferableSchema schema);
+    Optional<org.jooq.Name> historyTableName(ReferableSchema schema);
+
+    default org.jooq.Name requireHistoryTableName(final ReferableSchema schema) {
+
+        return historyTableName(schema).orElseThrow(() -> new IllegalStateException("History not enabled for " + schema.getQualifiedName()));
+    }
 
     Optional<Name> indexTableName(ReferableSchema schema, Index index);
 
     Optional<Name> getSchema(Schema schema);
 
     Optional<Name> getCatalog(Schema schema);
+
 }

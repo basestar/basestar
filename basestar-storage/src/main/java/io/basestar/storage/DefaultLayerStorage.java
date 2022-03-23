@@ -1,6 +1,6 @@
 package io.basestar.storage;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableSet;
 import io.basestar.event.Event;
 import io.basestar.expression.Expression;
 import io.basestar.schema.*;
@@ -21,9 +21,9 @@ public interface DefaultLayerStorage extends LayeredStorage, ValidatingStorage {
     WriteTransaction write(Consistency consistency, Versioning versioning);
 
     @Override
-    default Set<Name> supportedExpand(final LinkableSchema schema, final Set<Name> expand) {
+    default Set<Name> supportedExpand(final QueryableSchema schema, final Set<Name> expand) {
 
-        return Sets.intersection(expand, schema.getExpand());
+        return ImmutableSet.of();
     }
 
 //    @Override
