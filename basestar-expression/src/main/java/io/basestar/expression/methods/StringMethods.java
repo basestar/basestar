@@ -26,6 +26,8 @@ import io.basestar.util.ISO8601;
 import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @SuppressWarnings("unused")
 public class StringMethods implements Serializable {
@@ -156,5 +158,19 @@ public class StringMethods implements Serializable {
     public String _concat(final Object a, final Object b, final Object c) {
 
         return Coercion.toString(a) + Coercion.toString(b) + Coercion.toString(c);
+    }
+
+    public static boolean regexmatch(final String target, final String regex) {
+
+        final Pattern pattern = Pattern.compile(regex);
+        final Matcher matcher = pattern.matcher(target);
+        return matcher.find();
+    }
+
+    public static String regexreplace(final String target, final String regex, final String replacement) {
+
+        final Pattern pattern = Pattern.compile(regex);
+        final Matcher matcher = pattern.matcher(target);
+        return matcher.replaceAll(replacement);
     }
 }

@@ -59,7 +59,7 @@ MyObject:
       partition:
         - test1
       sort:
-        - test2
+        - mydate
 
 Point:
   type: struct

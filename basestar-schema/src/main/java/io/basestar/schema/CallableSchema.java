@@ -27,8 +27,6 @@ public interface CallableSchema extends Schema {
 
     List<Argument> getArguments();
 
-    Use<?> getReturns();
-
     String getDefinition();
 
     default String getReplacedDefinition(final Function<Schema, String> replacer) {
@@ -46,8 +44,6 @@ public interface CallableSchema extends Schema {
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
         List<Argument.Descriptor> getArguments();
 
-        Use<?> getReturns();
-
         String getDefinition();
 
         @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -64,12 +60,6 @@ public interface CallableSchema extends Schema {
             default List<Argument.Descriptor> getArguments() {
 
                 return Immutable.transform(self().getArguments(), Argument::descriptor);
-            }
-
-            @Override
-            default Use<?> getReturns() {
-
-                return self().getReturns();
             }
 
             @Override
@@ -92,8 +82,6 @@ public interface CallableSchema extends Schema {
 
         @JsonSetter(nulls = Nulls.FAIL, contentNulls = Nulls.FAIL)
         B setArguments(List<Argument.Descriptor> arguments);
-
-        B setReturns(Use<?> returns);
 
         B setDefinition(String definition);
 
