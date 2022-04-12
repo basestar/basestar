@@ -25,7 +25,7 @@
         <avro.version>1.9.2</avro.version>
         <scala.version>2.12.12</scala.version>
         <spark.version>3.0.1</spark.version>
-        <hadoop.version>2.8.5</hadoop.version>
+        <hadoop.version>3.2.3</hadoop.version>
         <hazelcast.version>4.0</hazelcast.version>
         <swagger.version>2.1.2</swagger.version>
         <okhttp.version>3.14.4</okhttp.version>
