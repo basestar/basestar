@@ -13,6 +13,7 @@ import io.basestar.util.Nullsafe;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,7 +30,7 @@ public interface CallableSchema extends Schema {
 
     String getDefinition();
 
-    default String getReplacedDefinition(final Function<Schema, String> replacer) {
+    default String getReplacedDefinition(final BiFunction<Schema, Boolean, String> replacer) {
 
         return getReplacedDefinition(getDefinition(), getUsing(), replacer);
     }
@@ -112,7 +113,7 @@ public interface CallableSchema extends Schema {
     }
 
     static String replaceConcrete(final String definition, final Map<String, From> using,
-                                  final Function<Schema, String> replacer) {
+                                  final BiFunction<Schema, Boolean, String> replacer) {
 
         final Matcher matcher = DEFINITION_REPLACEMENT_REGEX.matcher(definition);
         final StringBuffer buffer = new StringBuffer();
@@ -120,7 +121,7 @@ public interface CallableSchema extends Schema {
             final String name = Nullsafe.orDefault(matcher.group(1), matcher.group(2));
             final From use = using.get(name);
             if (use instanceof FromSchema) {
-                matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacer.apply(((FromSchema) use).getSchema())));
+                matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacer.apply(((FromSchema) use).getSchema(), ((FromSchema) use).getVersioned())));
             } else {
                 throw new IllegalStateException("SQL view schema does not declare " + name);
             }
@@ -131,7 +132,7 @@ public interface CallableSchema extends Schema {
 
 
     static String getReplacedDefinition(final String definition, final Map<String, From> using,
-                                        final Function<Schema, String> replacer) {
+                                        final BiFunction<Schema, Boolean, String> replacer) {
 
         if (using.keySet().size() == 0) {
             return definition;
@@ -150,7 +151,7 @@ public interface CallableSchema extends Schema {
     }
 
     static String replace(final String definition, final Map<String, From> using,
-                          final Function<Schema, String> replacer,
+                          final BiFunction<Schema, Boolean, String> replacer,
                           final int groupToReplace, Pattern pattern) {
 
         final StringBuilder stringBuilder = new StringBuilder(definition);
@@ -160,7 +161,7 @@ public interface CallableSchema extends Schema {
 
             final From use = using.getOrDefault(name, using.get(name.replaceAll("^\"|\"$", "")));
             if (use instanceof FromSchema) {
-                stringBuilder.replace(matcher.start(groupToReplace), matcher.end(groupToReplace), replacer.apply(((FromSchema) use).getSchema()));
+                stringBuilder.replace(matcher.start(groupToReplace), matcher.end(groupToReplace), replacer.apply(((FromSchema) use).getSchema(), ((FromSchema) use).getVersioned()));
                 return replace(stringBuilder.toString(), using, replacer, groupToReplace, pattern);
             } else {
                 throw new IllegalStateException("SQL view schema does not declare " + name);

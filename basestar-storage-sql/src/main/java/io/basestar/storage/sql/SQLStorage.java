@@ -95,7 +95,7 @@ public class SQLStorage implements DefaultLayerStorage {
 
                 final io.basestar.schema.from.From from = schema.getFrom();
                 if (from instanceof FromSql) {
-                    final String initialSql = ((FromSql) from).getReplacedSql(s -> tableResolver.requireTable(context, s, ImmutableMap.of(), null, false).getTable().getQualifiedName().toString());
+                    final String initialSql = ((FromSql) from).getReplacedSql((s, v) -> tableResolver.requireTable(context, s, ImmutableMap.of(), null, v).getTable().getQualifiedName().toString());
                     final SQL sql = strategy.dialect().getReplacedSqlWithBindings(initialSql, schema.getArguments(), arguments);
                     final Table<?> table = DSL.table(sql);
                     return Optional.of(new ResolvedTable() {

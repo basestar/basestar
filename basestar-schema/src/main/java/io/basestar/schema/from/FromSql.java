@@ -14,6 +14,7 @@ import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -163,7 +164,7 @@ public class FromSql implements From {
         return impl == null;
     }
 
-    public String getReplacedSql(final Function<Schema, String> replacer) {
+    public String getReplacedSql(final BiFunction<Schema, Boolean, String> replacer) {
 
         return CallableSchema.getReplacedDefinition(sql, using, replacer);
     }

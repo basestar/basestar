@@ -232,6 +232,9 @@ public interface From extends Serializable {
         @JsonInclude(JsonInclude.Include.NON_NULL)
         String getAs();
 
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        Boolean getVersioned();
+
         default From buildUndecorated(final Schema.Resolver.Constructing resolver, final Context context) {
 
             final Logger log = LoggerFactory.getLogger(Descriptor.class);
@@ -274,7 +277,7 @@ public interface From extends Serializable {
                     final Join joinFrom = join.build(resolver, context);
                     return new FromJoin(joinFrom);
                 } else if(schema != null) {
-                    return new FromSchema(schema.resolve(resolver), Nullsafe.orDefault(getExpand()));
+                    return new FromSchema(schema.resolve(resolver), Nullsafe.orDefault(getExpand()),Nullsafe.orDefault(getVersioned()) );
                 } else {
                     throw new UnsupportedOperationException();
                 }
@@ -396,6 +399,12 @@ public interface From extends Serializable {
 
                 return null;
             }
+
+            @Override
+            default Boolean getVersioned() {
+
+                return false;
+            }
         }
 
         interface Delegating extends Descriptor {
@@ -485,6 +494,12 @@ public interface From extends Serializable {
 
                 return delegate().getAs();
             }
+
+            @Override
+            default Boolean getVersioned() {
+
+                return delegate().getVersioned();
+            }
         }
     }
 
@@ -549,6 +564,9 @@ public interface From extends Serializable {
 
         @Nullable
         private Integer offset;
+
+        @Nullable
+        private Boolean versioned;
 
         @JsonCreator
         @SuppressWarnings("unused")

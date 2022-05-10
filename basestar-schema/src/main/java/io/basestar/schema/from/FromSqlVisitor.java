@@ -55,7 +55,7 @@ public class FromSqlVisitor implements ExpressionVisitor.Defaulting<From> {
             return resolved;
         } else {
             final LinkableSchema schema = resolver.requireLinkableSchema(name);
-            return new FromSchema(schema, ImmutableSet.of());
+            return new FromSchema(schema, ImmutableSet.of(), false);
         }
     }
 

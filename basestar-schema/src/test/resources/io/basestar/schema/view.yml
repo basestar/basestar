@@ -112,7 +112,9 @@ WithSqlNested:
   from:
     sql: SELECT refId, COUNT(1) AS count FROM (SELECT name AS refId FROM A) GROUP BY refId
     using:
-      A: WithSqlSimple
+      A:
+        schema: WithSqlSimple
+        versioned: true
   properties:
     refId:
       type: string

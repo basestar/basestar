@@ -107,7 +107,7 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
 
             log.info("Creating function {}", functionName);
 
-            final String definition = schema.getReplacedDefinition(s -> namingStrategy.reference(s).toString());
+            final String definition = schema.getReplacedDefinition((s, v) -> namingStrategy.reference(s, v).toString());
             final String sql = dialect().createFunctionDDL(context, functionName, schema.getReturns(), schema.getArguments(), schema.getLanguage(), definition);
             queries.add(DDLStep.from(context, sql));
         }
@@ -139,7 +139,7 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
 
         final String query;
         if (schema.getFrom() instanceof FromSql) {
-            query = ((FromSql) schema.getFrom()).getReplacedSql(s -> namingStrategy.reference(s).toString());
+            query = ((FromSql) schema.getFrom()).getReplacedSql((s, v) -> namingStrategy.reference(s, v).toString());
         } else {
             throw new UnsupportedOperationException("Simple views no longer supported in SQL storage");
         }
@@ -173,7 +173,7 @@ public abstract class BaseSQLStrategy implements SQLStrategy {
 
         if (schema.getFrom() instanceof FromSql) {
             queries.add(DDLStep.from(context.createOrReplaceView(viewName)
-                    .as(DSL.sql(((FromSql) schema.getFrom()).getReplacedSql(s -> namingStrategy.reference(s).toString())))));
+                    .as(DSL.sql(((FromSql) schema.getFrom()).getReplacedSql((s, v) -> namingStrategy.reference(s, v).toString())))));
         } else if (!(schema.getFrom() instanceof FromExternal)) {
             log.error("Simple views no longer supported in SQL storage");
         }

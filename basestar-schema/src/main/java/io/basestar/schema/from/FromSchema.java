@@ -29,10 +29,14 @@ public class FromSchema implements From {
     @Nonnull
     private final Set<Name> expand;
 
-    public FromSchema(final Schema schema, final Set<Name> expand) {
+    @Nonnull
+    private final Boolean versioned;
+
+    public FromSchema(final Schema schema, final Set<Name> expand, boolean versioned) {
 
         this.schema = Nullsafe.require(schema);
         this.expand = Immutable.set(expand);
+        this.versioned = versioned;
     }
 
 //
@@ -57,7 +61,7 @@ public class FromSchema implements From {
             @Override
             public SchemaRef getSchema() {
 
-                if(schema.isAnonymous()) {
+                if (schema.isAnonymous()) {
                     return SchemaRef.withInline(schema.descriptor());
                 } else {
                     return SchemaRef.withName(schema.getQualifiedName());
@@ -68,6 +72,12 @@ public class FromSchema implements From {
             public Set<Name> getExpand() {
 
                 return expand;
+            }
+
+
+            public Boolean getVersioned() {
+
+                return versioned;
             }
         };
     }

@@ -49,6 +49,19 @@ public interface NamingStrategy {
         return entityName(schema);
     }
 
+    default org.jooq.Name reference(final Schema schema, final boolean versioned) {
+        if (versioned) {
+            if (schema instanceof ReferableSchema) {
+                return historyTableName((ReferableSchema) schema)
+                        .orElseThrow(() -> new IllegalStateException("Schema " + schema.getQualifiedName() + " cannot be versioned"));
+            } else {
+                throw new IllegalStateException("Schema " + schema.getQualifiedName() + " cannot be versioned");
+            }
+        } else {
+            return entityName(schema);
+        }
+    }
+
     Casing getColumnCasing();
 
     Casing getEntityCasing();

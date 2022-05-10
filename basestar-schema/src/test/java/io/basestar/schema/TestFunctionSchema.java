@@ -22,7 +22,7 @@ public class TestFunctionSchema {
         final String input = "SELECT * FROM @{test}";
         final String output = CallableSchema.getReplacedDefinition(input, ImmutableMap.of("test", new FromSchema(
                 ObjectSchema.builder().build(Name.of("test", "Object")), ImmutableSet.of()
-        )), v -> v.getQualifiedName().toString());
+        , false)), (v, s) -> v.getQualifiedName().toString());
 
         assertEquals("SELECT * FROM test.Object", output);
     }
@@ -33,8 +33,8 @@ public class TestFunctionSchema {
         //if dots not replaced it can match any char i.e. DOG,CONTEST would match for DOG.CONTEST
         final String output = CallableSchema.getReplacedDefinition(
                 input,
-                ImmutableMap.of(searchTerm, new FromSchema(ObjectSchema.builder().build(Name.of("dog", "contestWinners")), ImmutableSet.of())),
-                v -> v.getQualifiedName().toString());
+                ImmutableMap.of(searchTerm, new FromSchema(ObjectSchema.builder().build(Name.of("dog", "contestWinners")), ImmutableSet.of(), false)),
+                (v, s) -> v.getQualifiedName().toString());
 
         assertEquals(expected, output);
     }
@@ -56,8 +56,8 @@ public class TestFunctionSchema {
 
         final String output = CallableSchema.getReplacedDefinition(
                 input,
-                ImmutableMap.of(searchTerm, new FromSchema(ObjectSchema.builder().build(Name.of("dog", "contest")), ImmutableSet.of())),
-                v -> v.getQualifiedName().toString());
+                ImmutableMap.of(searchTerm, new FromSchema(ObjectSchema.builder().build(Name.of("dog", "contest")), ImmutableSet.of(), false)),
+                (v, s) -> v.getQualifiedName().toString());
 
         assertEquals(expected, output);
     }
@@ -79,8 +79,8 @@ public class TestFunctionSchema {
 
 
         final String output = CallableSchema.getReplacedDefinition(input, ImmutableMap.of(searchTerm, new FromSchema(
-                ObjectSchema.builder().build(Name.of("test", "Object")), ImmutableSet.of()
-        )), v -> v.getQualifiedName().toString());
+                ObjectSchema.builder().build(Name.of("test", "Object")), ImmutableSet.of(), false
+        )), (v, s) -> v.getQualifiedName().toString());
 
         assertEquals(expected, output);
     }
@@ -101,8 +101,8 @@ public class TestFunctionSchema {
     public void shouldReplaceIfSearchTermIsInTheMiddle(final String input, final String searchTerm, final String expected) {
 
         final String output = CallableSchema.getReplacedDefinition(input, ImmutableMap.of(searchTerm, new FromSchema(
-                ObjectSchema.builder().build(Name.of("test", "Object")), ImmutableSet.of()
-        )), v -> v.getQualifiedName().toString());
+                ObjectSchema.builder().build(Name.of("test", "Object")), ImmutableSet.of(), false
+        )), (v, s) -> v.getQualifiedName().toString());
 
         assertEquals(expected, output);
     }
@@ -121,13 +121,13 @@ public class TestFunctionSchema {
 
         final String input = "SELECT first.function(second.function(someValue)) as transformed FROM test where result is null JOIN \"badTestRuns\" btr ON btr.id = id JOIN @{example_test_runs} on id JOIN badTestRuns ON id";
         final String output = CallableSchema.getReplacedDefinition(input,
-                ImmutableMap.of("test", new FromSchema(ObjectSchema.builder().build(Name.of("test", "Object")), ImmutableSet.of()),
-                        "badTestRuns", new FromSchema(ObjectSchema.builder().build(Name.of("bad", "test", "runs")), ImmutableSet.of()),
-                        "first.function", new FromSchema(ObjectSchema.builder().build(Name.of("first", "good")), ImmutableSet.of()),
-                        "second.function", new FromSchema(ObjectSchema.builder().build(Name.of("second", "good")), ImmutableSet.of()),
-                        "example_test_runs", new FromSchema(ObjectSchema.builder().build(Name.of("example_test_runs")), ImmutableSet.of())
+                ImmutableMap.of("test", new FromSchema(ObjectSchema.builder().build(Name.of("test", "Object")), ImmutableSet.of(), false),
+                        "badTestRuns", new FromSchema(ObjectSchema.builder().build(Name.of("bad", "test", "runs")), ImmutableSet.of(), false),
+                        "first.function", new FromSchema(ObjectSchema.builder().build(Name.of("first", "good")), ImmutableSet.of(), false),
+                        "second.function", new FromSchema(ObjectSchema.builder().build(Name.of("second", "good")), ImmutableSet.of(), false),
+                        "example_test_runs", new FromSchema(ObjectSchema.builder().build(Name.of("example_test_runs")), ImmutableSet.of(), false)
                 ),
-                v -> v.getQualifiedName().toString());
+                (v, s) -> v.getQualifiedName().toString());
 
         assertEquals("SELECT first.good(second.good(someValue)) as transformed FROM test.Object where result is null JOIN bad.test.runs btr ON btr.id = id JOIN example_test_runs on id JOIN bad.test.runs ON id", output);
     }
