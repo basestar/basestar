@@ -11,7 +11,7 @@
 
     <properties>
         <dbcp2.version>2.8.0</dbcp2.version>
-        <h2.version>1.4.200</h2.version>
+        <h2.version>2.1.210</h2.version>
         <trino.version>358</trino.version>
         <postgres.version>42.2.20</postgres.version>
         <mysql.version>8.0.25</mysql.version>
